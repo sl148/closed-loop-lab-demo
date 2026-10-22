@@ -1,0 +1,30 @@
+# Level 2 result noise (semi-oracle): 3 drugs x 3 cell lines x 3 timepoints on the O'Neil
+# emulator, 384-well plates, measurement noise 7% + edge bias + pipetting error. Each round's
+# reads differ by noise, so every new plan differs.
+# Panel from scripts/select_panel.py (neighbor-supported synergy pockets, all pairs screened).
+name: level2
+rounds: 5
+plates_per_round: 3
+designer: bo-ts
+layout: optimized
+scheduler: fifo
+mode: sync
+landscape_eval: true
+
+space:
+  cell_lines: [ZR751, NCIH2122, MDAMB436]
+  doses:                      # O'Neil max concentration, 3-fold, 7 steps (+ 0)
+    - {max: 10.0, steps: 7, fold: 3}    # MK-4827 (niraparib)
+    - {max: 20.0, steps: 7, fold: 3}    # sorafenib
+    - {max: 0.04, steps: 7, fold: 3}    # vinblastine
+  timepoints_h: [24, 48, 72]
+
+oracle:
+  source: oneil
+  drugs: [MK-4827, SORAFENIB, VINBLASTINE]
+  cell_lines: [ZR751, NCIH2122, MDAMB436]
+
+noise: {rel_sigma: 0.07, edge_bias: 0.08, pipette_cv: 0.03}
+plate: {rows: 16, cols: 24}
+resources: {liquid_handlers: 1, readers: 1, arms: 1, incubators: 1, incubator_slots: 8}
+durations: {}

@@ -1,0 +1,35 @@
+# Level 1 basic scheduling: 2-4 96-well plates per round over 2 cell lines x 3 timepoints,
+# one of each device plus arm transport. Deterministic. Scheduler comparison point.
+name: level1
+rounds: 4
+plates_per_round: 4
+designer: grid_then_refine
+layout: sequential
+scheduler: fifo
+mode: sync
+
+space:
+  cell_lines: [L1, L2]
+  n_drugs: 2
+  dose: {max: 10.0, steps: 7, fold: 3}
+  timepoints_h: [24, 48, 72]
+
+oracle:
+  cell_lines:
+    L1:
+      drugs:
+        - {name: drugA, ec50: 1.0, hill: 1.2, emax: 0.8}
+        - {name: drugB, ec50: 0.5, hill: 1.0, emax: 0.7}
+      pockets:
+        - {drugs: [0, 1], center_log10: [0.05, -0.43], width_log10: 0.2, strength: 0.25}
+    L2:
+      drugs:
+        - {name: drugA, ec50: 3.0, hill: 1.0, emax: 0.6}
+        - {name: drugB, ec50: 0.2, hill: 1.5, emax: 0.9}
+      pockets:
+        - {drugs: [0, 1], center_log10: [-0.9, -1.4], width_log10: 0.25, strength: 0.3}
+
+noise: {}
+plate: {rows: 8, cols: 12}
+resources: {liquid_handlers: 1, readers: 1, arms: 1, incubators: 1, incubator_slots: 6}
+durations: {}

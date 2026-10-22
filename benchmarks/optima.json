@@ -1,0 +1,5 @@
+{
+  "_source": "JSSP optima from JSPLIB instances.json (tamy0612/JSPLIB); Brandimarte mk01-03 best known / optimal from the FJSP literature",
+  "jssp": {"ft06": 55, "ft10": 930, "la01": 666, "ta01": 1231, "ta02": 1244},
+  "fjsp": {"mk01": 40, "mk02": 26, "mk03": 204}
+}

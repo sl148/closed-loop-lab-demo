@@ -1,0 +1,31 @@
+# Level 0 smoke test: 2 drugs, 1 cell line, 8x8 dose matrix, one 96-well plate per round,
+# deterministic oracle and durations, one of each device.
+name: level0
+rounds: 4
+plates_per_round: 1
+designer: grid_then_refine
+layout: sequential
+scheduler: fifo
+mode: sync
+
+space:
+  cell_lines: [L1]
+  n_drugs: 2
+  dose: {max: 10.0, steps: 7, fold: 3}   # uM; 0 plus a 3-fold series 10 -> 0.0137
+  timepoints_h: [48]
+
+oracle:
+  cell_lines:
+    L1:
+      drugs:
+        - {name: drugA, ec50: 1.0, hill: 1.2, emax: 0.8}
+        - {name: drugB, ec50: 0.5, hill: 1.0, emax: 0.7}
+      pockets:
+        # Narrow synergy region near (1.1 uM, 0.37 uM).
+        - {drugs: [0, 1], center_log10: [0.05, -0.43], width_log10: 0.2, strength: 0.3}
+
+noise: {}
+plate: {rows: 8, cols: 12}
+resources: {liquid_handlers: 1, readers: 1, arms: 1, incubators: 1, incubator_slots: 10}
+durations: {motion_costs: false}
+plr_verify: true     # run every plate's protocol on the PLR STARlet simulator

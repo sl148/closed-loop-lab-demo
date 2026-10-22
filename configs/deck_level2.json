@@ -1,0 +1,111 @@
+{
+ "config": "configs/level2.yaml",
+ "sample_plates": 4,
+ "best": {
+  "design": {
+   "tip_rail": 25,
+   "source_rail": 13,
+   "dest_rail": 19,
+   "cell_tip": "1000uL",
+   "drug_tip": "50uL",
+   "racks_on_deck": 5,
+   "cell_source": "trough",
+   "tip_reuse": true
+  },
+  "protocol_min": 13.98,
+  "swaps_per_plate": 0.9,
+  "lh_min_per_plate": 14.37
+ },
+ "top": [
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 13,
+    "dest_rail": 19,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 5,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "protocol_min": 13.98,
+   "swaps_per_plate": 0.9,
+   "lh_min_per_plate": 14.37
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 13,
+    "dest_rail": 19,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 5,
+    "cell_source": "plate",
+    "tip_reuse": true
+   },
+   "protocol_min": 13.98,
+   "swaps_per_plate": 0.9,
+   "lh_min_per_plate": 14.37
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 13,
+    "dest_rail": 19,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 5,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "protocol_min": 14.11,
+   "swaps_per_plate": 0.63,
+   "lh_min_per_plate": 14.38
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 13,
+    "dest_rail": 19,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 5,
+    "cell_source": "plate",
+    "tip_reuse": true
+   },
+   "protocol_min": 14.11,
+   "swaps_per_plate": 0.63,
+   "lh_min_per_plate": 14.38
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 5,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "protocol_min": 14.13,
+   "swaps_per_plate": 0.63,
+   "lh_min_per_plate": 14.4
+  }
+ ],
+ "baseline": {
+  "design": {
+   "tip_rail": 15,
+   "source_rail": 8,
+   "dest_rail": 21,
+   "cell_tip": "300uL",
+   "drug_tip": "300uL",
+   "racks_on_deck": 5,
+   "cell_source": "plate",
+   "tip_reuse": false
+  },
+  "protocol_min": 92.57,
+  "swaps_per_plate": 2.38,
+  "lh_min_per_plate": 93.6
+ }
+}

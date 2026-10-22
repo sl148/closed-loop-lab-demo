@@ -1,0 +1,1299 @@
+<meta charset="utf-8">
+<title>labloop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a full-window instrument app. A slim top bar (name, tabs); each tab fills the rest of
+   the window. Console = four quadrants on one clock: workcell, liquid handler, schedule, and a
+   tabbed optimization / lab-state / plate panel. Cool steel neutrals, assay-teal accent. */
+:root {
+  --bg: #eef1f3; --surface: #fcfcfb; --surface-2: #eef1f2; --ink: #0f1418; --ink-2: #48525a;
+  --muted: #7b858c; --grid: #e2e6e8; --axis: #c2c8cc; --line: rgba(15,20,24,.10);
+  --accent: #0b6e78; --accent-ink: #ffffff; --accent-soft: rgba(11,110,120,.14);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+  --heat-0: #f2f7fd; --heat-1: #0d366b; --scene: #e3e9ec; --liquid: #8fb9d6; --cells: #c9b9a6; --scrim: rgba(15,20,24,.42);
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b0e10; --surface: #151a1d; --surface-2: #1c2226; --ink: #eef1f2; --ink-2: #b7bfc4;
+  --muted: #8a9399; --grid: #252b2f; --axis: #3a4247; --line: rgba(255,255,255,.10);
+  --accent: #3fb3bf; --accent-ink: #061a1c; --accent-soft: rgba(63,179,191,.18);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  --heat-0: #1b2733; --heat-1: #9ec5f4; --scene: #182024; --liquid: #3f7aa3; --cells: #8a7a68; --scrim: rgba(0,0,0,.6); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0b0e10; --surface: #151a1d; --surface-2: #1c2226; --ink: #eef1f2; --ink-2: #b7bfc4;
+  --muted: #8a9399; --grid: #252b2f; --axis: #3a4247; --line: rgba(255,255,255,.10);
+  --accent: #3fb3bf; --accent-ink: #061a1c; --accent-soft: rgba(63,179,191,.18);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  --heat-0: #1b2733; --heat-1: #9ec5f4; --scene: #182024; --liquid: #3f7aa3; --cells: #8a7a68; --scrim: rgba(0,0,0,.6); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 13.5px/1.45 var(--body); margin: 0; overflow: hidden;
+  display: grid; grid-template-rows: auto minmax(0, 1fr); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-size: 19px; } h3 { font-size: 14px; }
+p { margin: 0; max-width: 78ch; }
+.eyebrow { font: 500 10.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.muted { color: var(--muted); } .ink2 { color: var(--ink-2); } .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-visible, [role=tab]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* top bar */
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-block: 7px; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 { font-size: 19px; letter-spacing: -.01em; }
+.brand span { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.tabs [role=tab] { font: 500 13px var(--body); color: var(--ink-2); background: transparent; border: 0; border-bottom: 2px solid transparent;
+  padding: 6px 10px 5px; cursor: pointer; }
+.tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs [role=tab]:hover { color: var(--ink); }
+.help-btn { margin-left: auto; font: 500 12.5px var(--body); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+.explain { position: fixed; inset: 0; z-index: 50; background: var(--scrim); display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.explain-card { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; width: min(820px, 100%); max-height: 100%; overflow: auto;
+  padding: 20px 22px 18px; display: grid; gap: 14px; box-shadow: 0 18px 48px rgba(0,0,0,.25); }
+.explain-card h2 { font: 600 22px/1.15 var(--display); text-wrap: balance; }
+.explain-card p { color: var(--ink-2); font-size: 14px; line-height: 1.5; max-width: 66ch; }
+.loop-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; counter-reset: step;  margin: 0; padding: 0; }
+.loop-steps li { list-style: none; background: var(--surface-2); border-radius: 8px; padding: 10px 11px; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.loop-steps li b { display: block; color: var(--ink); font-size: 13.5px; margin-bottom: 3px; }
+.loop-steps li b::before { counter-increment: step; content: counter(step) "  "; font: 500 11px var(--mono); color: var(--accent); }
+.loop-back { font: 11.5px var(--mono); color: var(--muted); text-align: right; margin-top: -8px; }
+.explain-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: center; }
+.explain-grid figure { margin: 0; }
+.explain-grid figcaption { font: 11px var(--mono); color: var(--muted); margin-top: 4px; text-align: center; }
+.panel-map { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 4px 12px; font-size: 13px; color: var(--ink-2); }
+.panel-map b { color: var(--ink); font-weight: 600; }
+.explain-foot { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 720px) { .loop-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .explain-grid { grid-template-columns: minmax(0, 1fr); } }
+.view { min-height: 0; height: 100%; padding: 10px; padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 6px 10px; flex-wrap: wrap; flex: 0 0 auto; }
+.fill { flex: 1 1 auto; min-height: 0; position: relative; }
+.fill > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+svg .label-ink { fill: var(--ink-2); }
+svg .ink { fill: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.legend i.box { height: 9px; width: 9px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+button.chip { font: 500 12.5px var(--body); color: var(--ink-2); background: var(--surface); border: 1px solid var(--axis); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+button.chip[aria-pressed=true], button.chip[aria-selected=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.table-scroll { overflow: auto; min-height: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 500 10.5px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+td.best { color: var(--accent); font-weight: 600; }
+.empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+.callout { border-left: 3px solid var(--accent); padding: 3px 0 3px 10px; color: var(--ink-2); font-size: 12.5px; }
+
+/* console */
+#view-console { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+.ctrl { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.ctrl label { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.ctrl .grow { flex: 1 1 220px; min-width: 0; display: flex; gap: 8px; align-items: center; }
+#scrub { flex: 1; min-width: 0; accent-color: var(--accent); }
+.clock { font: 600 16px var(--display); font-variant-numeric: tabular-nums; min-width: 82px; }
+button.play { font: 600 12.5px var(--body); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 5px 13px; cursor: pointer; min-width: 64px; }
+button.ghost { font: 500 12px var(--body); background: transparent; color: var(--ink-2); border: 1px solid var(--axis); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+button.ghost:hover { border-color: var(--accent); color: var(--ink); }
+select { font: 12.5px var(--body); background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 3px 6px; max-width: 100%; }
+.console-body { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 8px; min-height: 0; }
+.rail { display: flex; flex-direction: column; gap: 3px; overflow: auto; min-height: 0; padding-right: 2px; }
+.rail .arrow { text-align: center; color: var(--muted); font: 11px var(--mono); line-height: 1; }
+.stage { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 9px; cursor: pointer; color: var(--ink); font: inherit; }
+.stage:hover { border-color: var(--axis); }
+.stage.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.stage .top { display: flex; align-items: center; gap: 6px; }
+.stage .name { font: 600 13.5px var(--display); flex: 1; }
+.stage .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grid); flex: 0 0 auto; }
+.stage.active .dot { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .stage.active .dot { animation: none; } }
+.stage .chev { color: var(--muted); font-size: 11px; }
+.stage .live { font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
+.stage .subs { display: grid; gap: 3px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--grid); }
+.sub { display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 5px; font-size: 12px; color: var(--ink-2); align-items: baseline; }
+.sub i { width: 6px; height: 6px; border-radius: 50%; background: var(--grid); display: inline-block; }
+.sub.on i { background: var(--accent); } .sub.on { color: var(--ink); }
+.sub span { min-width: 0; overflow-wrap: anywhere; }
+.loopback { text-align: center; font: 11px var(--mono); color: var(--muted); padding: 2px 0; }
+.quads { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(0, 1.7fr) minmax(0, 1fr); gap: 8px; min-height: 0; --insw: clamp(150px, 27%, 300px); }
+#cell3d { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% - var(--insw) - 6px); height: 100%; display: block; cursor: grab; touch-action: none; border-radius: 6px; background: var(--scene); }
+#cell3d:active { cursor: grabbing; }
+.scene-cap { position: absolute; left: 8px; right: calc(var(--insw) + 14px); top: 24px; display: flex; flex-wrap: wrap; gap: 5px; pointer-events: none; }
+.insets { position: absolute; top: 0; right: 0; bottom: 0; width: var(--insw); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.insets figure { margin: 0; position: relative; flex: 1 1 0; min-height: 0; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; background: var(--scene); }
+.insets canvas { width: 100%; height: 100%; display: block; }
+.insets figcaption { position: absolute; left: 5px; top: 3px; font: 500 10px var(--mono); color: var(--ink-2); background: var(--surface); padding: 0 4px; border-radius: 3px; }
+.scene-hint { position: absolute; left: 8px; top: 4px; font: 10.5px var(--mono); color: var(--ink-2); background: var(--surface); border-radius: 3px; padding: 0 5px; pointer-events: none; }
+.pill { font: 500 11px var(--mono); background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+.pill b { color: var(--ink); font-weight: 600; }
+.lh-action { font: 12.5px var(--mono); color: var(--ink); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-action b { color: var(--accent); }
+.subtabs { display: flex; gap: 4px; }
+.devices { display: grid; gap: 5px; font-size: 12.5px; overflow: auto; min-height: 0; }
+.dev { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px; align-items: center; }
+.dev .name { font: 500 11.5px var(--mono); color: var(--muted); }
+.dev .what { min-width: 0; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.prog { flex: 0 0 64px; height: 5px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.prog > span { display: block; height: 100%; background: var(--accent); }
+.slot { font: 500 11px var(--mono); border: 1px solid var(--axis); border-radius: 4px; padding: 0 5px; cursor: pointer; background: var(--surface); color: var(--ink-2); }
+.slot.sel { border-color: var(--accent); color: var(--accent); }
+.disc-best { display: grid; gap: 4px; flex: 0 0 auto; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.disc-best .k { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.disc-best .recipe { font-size: 13px; color: var(--ink); line-height: 1.35; }
+.disc-best .recipe b { font-weight: 600; }
+.disc-meter { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.disc-meter .bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.disc-meter .bar span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.disc-meter .pct { font: 600 13px var(--display); font-variant-numeric: tabular-nums; color: var(--ink); }
+.disc-best .gap { font-size: 12px; color: var(--ink-2); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 0 0 auto; }
+.kpi { background: var(--surface-2); border-radius: 6px; padding: 5px 8px; display: grid; }
+.kpi .k { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kpi .v { font: 600 16px var(--display); font-variant-numeric: tabular-nums; }
+.ticker { display: grid; gap: 2px; font-size: 12px; flex: 0 0 auto; }
+.ticker div { display: flex; gap: 8px; min-width: 0; }
+.ticker .t { font: 11.5px var(--mono); color: var(--muted); flex: 0 0 52px; }
+.ticker .x { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { font: 500 10px var(--mono); border-radius: 3px; padding: 0 4px; margin-right: 4px; white-space: nowrap; }
+.tag.fail { color: var(--critical); border: 1px solid var(--critical); }
+.tag.replan { color: var(--accent); border: 1px solid var(--accent); }
+
+/* other tabs */
+.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; height: 100%; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; height: 100%; }
+#view-results { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+.log { overflow: auto; display: grid; gap: 7px; font-size: 12.5px; align-content: start; min-height: 0; }
+.ev { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; padding: 5px 7px; border-radius: 6px; background: var(--surface-2); }
+.ev .t { font: 11.5px var(--mono); color: var(--muted); }
+.ev .what { font-weight: 500; } .ev .why { color: var(--ink-2); }
+.about { overflow: auto; height: 100%; display: grid; gap: 14px; align-content: start; max-width: 980px; }
+.about ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.flow { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font: 500 12px var(--mono); color: var(--ink-2); }
+.flow span.step { border: 1px solid var(--axis); border-radius: 4px; padding: 2px 7px; background: var(--surface); }
+.tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px;
+  padding: 5px 8px; font: 11.5px/1.45 var(--mono); box-shadow: 0 4px 14px rgba(0,0,0,.15); z-index: 20; max-width: 320px; }
+
+@media (max-width: 1000px) {
+  body { overflow: auto; display: block; }
+  .console-body { grid-template-columns: minmax(0, 1fr); }
+  .rail { flex-direction: row; overflow-x: auto; } .rail .stage { min-width: 170px; } .rail .arrow, .loopback { display: none; }
+  .view { height: auto; }
+  .quads, .two, .three { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; }
+  .quads > .panel { height: 440px; }
+  .two > .panel, .three > .panel { min-height: 360px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<header class="topbar">
+  <div class="brand"><h1>labloop</h1><span>self-driving drug-combination lab · simulated</span></div>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" id="tab-console" aria-controls="view-console" aria-selected="true">Console</button>
+    <button role="tab" id="tab-results" aria-controls="view-results" aria-selected="false">Results</button>
+    <button role="tab" id="tab-recovery" aria-controls="view-recovery" aria-selected="false">Recovery</button>
+    <button role="tab" id="tab-calibration" aria-controls="view-calibration" aria-selected="false">Workcell calibration</button>
+    <button role="tab" id="tab-about" aria-controls="view-about" aria-selected="false">About</button>
+  </nav>
+  <button class="help-btn" id="help-open" type="button">What am I looking at?</button>
+</header>
+
+<main style="min-height:0">
+  <section class="view" id="view-console" role="tabpanel" aria-labelledby="tab-console">
+    <div class="ctrl">
+      <label for="scenario">Run</label><select id="scenario"></select>
+      <button class="play" id="play" type="button">Play</button>
+      <label for="speed">Speed</label>
+      <select id="speed"><option value="0.2">12 s / s</option><option value="1">1 min / s</option><option value="10">10 min / s</option>
+        <option value="60" selected>1 h / s</option><option value="360">6 h / s</option></select>
+      <div class="grow"><input type="range" id="scrub" min="0" max="10000" value="0" aria-label="Simulation time"><span class="clock" id="clock">0 h 00 m</span></div>
+      <button class="ghost" id="next-disp" type="button">Next dispense</button>
+      <button class="ghost" id="next-eject" type="button">Next tip eject</button>
+      <button class="ghost" id="next-move" type="button">Next arm move</button>
+      <button class="ghost" id="next-fail" type="button">Next failure</button>
+      <button class="ghost" id="next-read" type="button">Next read</button>
+    </div>
+    <div class="console-body">
+    <nav class="rail" id="rail" aria-label="Loop stages"></nav>
+    <div class="quads">
+      <div class="panel">
+        <div class="qhead"><h3>Workcell</h3><span class="eyebrow">MuJoCo motion · replayed schedule</span></div>
+        <div class="fill">
+          <canvas id="cell3d" tabindex="0" aria-label="3D workcell: drag to orbit, shift or right drag to pan, wheel to move in and out, click a plate"></canvas>
+          <div class="scene-hint">drag orbit · shift/right-drag pan · wheel fly · click a plate</div>
+          <div class="insets">
+            <figure><canvas id="cam-deck" aria-label="Deck camera above the liquid handler"></canvas><figcaption>deck camera</figcaption></figure>
+            <figure><canvas id="cam-lh" aria-label="Camera on the liquid handler's pipetting head"></canvas><figcaption>pipetting-head camera</figcaption></figure>
+            <figure><canvas id="cam-ee" aria-label="Camera on the arm's end effector"></canvas><figcaption>arm end-effector camera</figcaption></figure>
+          </div>
+          <div class="scene-cap" id="scene-cap"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="qhead"><h3>Liquid handler</h3><div class="chips" id="lh-pick"></div></div>
+        <div class="lh-action" id="lh-action"></div>
+        <div class="fill" id="lh"></div>
+        <div class="legend" id="lh-legend"></div>
+      </div>
+      <div class="panel">
+        <div class="qhead"><h3>Schedule</h3><span class="legend" id="gantt-legend"></span>
+          <span><label class="muted mono" style="font-size:10.5px" for="window">window </label><select id="window">
+            <option value="60">1 h</option><option value="360">6 h</option><option value="1440" selected>24 h</option><option value="4320">72 h</option></select></span></div>
+        <div id="gantt-overview" style="flex:0 0 auto"></div>
+        <div class="fill" id="gantt-detail"></div>
+      </div>
+      <div class="panel">
+        <div class="qhead">
+          <div class="subtabs" role="tablist" aria-label="Detail">
+            <button class="chip" role="tab" id="st-opt" aria-selected="true">Discovery</button>
+            <button class="chip" role="tab" id="st-state" aria-selected="false">Lab state</button>
+            <button class="chip" role="tab" id="st-plate" aria-selected="false">Plate reader</button>
+          </div>
+          <span class="legend" id="prog-legend"></span>
+        </div>
+        <div id="sub-opt" style="display:contents">
+          <div class="disc-best" id="disc-best"></div>
+          <div class="fill" id="progress"></div>
+          <div class="legend" id="disc-legend"><span><i class="box" style="background:var(--surface-2);border:1px solid var(--axis)"></i>not tested yet</span>
+            <span><i class="box" style="background:color-mix(in srgb, var(--heat-1) 70%, var(--heat-0))"></i>tested (darker = stronger synergy)</span>
+            <span>★ lab's current pick</span><span>◯ true best</span><span class="muted" id="disc-axes"></span></div>
+        </div>
+        <div id="sub-state" class="devices fill" hidden></div>
+        <div id="sub-plate" class="fill" hidden style="display:none;flex-direction:column;gap:4px">
+          <div class="mono" style="font-size:12px" id="plate-title"></div>
+          <div class="muted" style="font-size:11.5px" id="plate-sub"></div>
+          <div class="fill" id="plate"></div>
+          <div class="legend" id="plate-legend"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-results" role="tabpanel" aria-labelledby="tab-results" hidden>
+    <div class="chips" id="exp-chips" role="group" aria-label="Experiment"></div>
+    <div class="two">
+      <div class="panel">
+        <div><h3 id="exp-title"></h3><p class="muted" id="exp-note" style="font-size:12.5px"></p></div>
+        <div class="legend" id="exp-legend"></div>
+        <p class="muted" style="font-size:12px">Synergy still missed · median, 25–75% band</p>
+        <div class="fill" id="exp-chart"></div>
+      </div>
+      <div class="panel">
+        <h3>Per-variant metrics</h3>
+        <div class="table-scroll"><table id="exp-table"></table></div>
+        <div id="exp-callout"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-recovery" role="tabpanel" aria-labelledby="tab-recovery" hidden>
+    <div class="two">
+      <div class="panel">
+        <h2>Recovery planner: rules vs Claude</h2>
+        <p class="muted" style="font-size:12px">Same injected failures · 5 seeds · decisions replay with no API calls</p>
+        <div class="table-scroll"><table id="m6-table"></table></div>
+        <p class="muted" id="m6-note" style="font-size:12px"></p>
+      </div>
+      <div class="panel">
+        <h3>Claude's reasoning, by failure type</h3>
+        <div class="log" id="m6-examples"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-calibration" role="tabpanel" aria-labelledby="tab-calibration" hidden>
+    <div class="three">
+      <div class="panel"><h3>Motion times (MuJoCo)</h3>
+        <div class="table-scroll"><table id="motion-table"></table></div></div>
+      <div class="panel"><h3>Tip pickup failure</h3>
+        <div class="legend"><span><i style="background:var(--s1)"></i>simulated contact</span><span><i style="background:var(--muted)"></i>analytic tail</span></div>
+        <div class="fill" id="tips"></div></div>
+      <div class="panel"><h3>Misplaced-plate detection</h3>
+        <div class="fill" id="perception"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-about" role="tabpanel" aria-labelledby="tab-about" hidden>
+    <div class="about">
+      <h2>labloop</h2>
+      <div class="flow"><span class="step">design</span>→<span class="step">layout</span>→<span class="step">schedule</span>→<span class="step">dispense · incubate · read</span>→<span class="step">recover</span>→<span class="step">update</span>→</div>
+      <ul class="ink2">
+        <li><b>Online repair scheduling</b>: replan only what a disruption touches.</li>
+        <li><b>Throughput-aware BO</b>: pick plates by expected gain per hour-to-result.</li>
+        <li><b>LLM recovery</b>: Claude chooses validated recovery actions; rules as fallback.</li>
+      </ul>
+      <p class="muted">Simulated lab · biology fitted to the O'Neil 2016 screen · protocols via PyLabRobot · motion via MuJoCo.</p>
+    </div>
+  </section>
+</main>
+
+<div class="explain" id="explain" hidden role="dialog" aria-modal="true" aria-labelledby="explain-title">
+  <div class="explain-card">
+    <div>
+      <div class="eyebrow">In plain words</div>
+      <h2 id="explain-title">A robot lab hunting for two cancer drugs that work better together</h2>
+    </div>
+    <p>Think of it as searching for the best two-ingredient recipe when every taste test takes two days. There are thousands of
+      possible dose pairs, too many to try them all, so the lab tries a few, learns, and decides what to try next. Nobody steps in.</p>
+    <ol class="loop-steps">
+      <li><b>Choose</b>Pick a handful of dose pairs worth testing.</li>
+      <li><b>Mix</b>The pipetting robot fills a plate: cancer cells plus the two drugs in each tiny well.</li>
+      <li><b>Wait and measure</b>Two days in the incubator, then a reader checks how many cells survived.</li>
+      <li><b>Learn</b>Update the guess of where the best pair is, and choose again.</li>
+    </ol>
+    <div class="loop-back">↺ repeat until the best pair is found</div>
+    <div class="explain-grid">
+      <figure>
+        <svg viewBox="0 0 120 120" width="200" height="200" role="img" aria-label="A dose map with one bright sweet spot">
+          <g id="explain-heat"></g>
+          <text x="60" y="118" text-anchor="middle" style="font: 9px var(--mono); fill: var(--muted)">drug A dose →</text>
+          <text x="6" y="56" text-anchor="middle" transform="rotate(-90 6 56)" style="font: 9px var(--mono); fill: var(--muted)">drug B dose →</text>
+        </svg>
+        <figcaption>dark = the pair works better together than apart</figcaption>
+      </figure>
+      <div style="display:grid;gap:10px;min-width:0">
+        <p><b style="color:var(--ink)">Synergy</b> is the "salt and caramel" effect: the pair does more than you would expect from each drug
+          alone. It usually hides in a small patch of the dose map, which is why searching smartly beats testing everything.</p>
+        <div class="panel-map">
+          <b>Workcell</b><span>the robot arm moving plates between machines</span>
+          <b>Liquid handler</b><span>the pipetting robot filling one plate, pass by pass</span>
+          <b>Schedule</b><span>which machine does what, when: the incubator is small and every test takes days</span>
+          <b>Optimization</b><span>how close the lab's current best guess is to the true best pair</span>
+        </div>
+      </div>
+    </div>
+    <div class="explain-foot"><button class="play" id="help-close" type="button">Got it</button></div>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// "What am I looking at?" card: shown on the first visit, reopened from the header
+(function () {
+  const box = document.getElementById("explain"), heat = document.getElementById("explain-heat");
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { // a smooth dose map with one sweet spot
+    const v = Math.exp(-((i - 5.2) ** 2 + (j - 2.4) ** 2) / 2.2);
+    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    r.setAttribute("x", 14 + i * 13); r.setAttribute("y", 2 + j * 13); r.setAttribute("width", 12); r.setAttribute("height", 12); r.setAttribute("rx", 2);
+    r.setAttribute("style", `fill: color-mix(in srgb, var(--heat-1) ${Math.round(8 + 92 * v)}%, var(--heat-0))`);
+    heat.appendChild(r);
+  }
+  const open = () => { box.hidden = false; document.getElementById("help-close").focus(); };
+  const close = () => { box.hidden = true; try { localStorage.setItem("labloop.explained", "1"); } catch (_) {} };
+  document.getElementById("help-open").addEventListener("click", open);
+  document.getElementById("help-close").addEventListener("click", close);
+  box.addEventListener("click", (e) => { if (e.target === box) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !box.hidden) close(); });
+  let seen = false; try { seen = localStorage.getItem("labloop.explained") === "1"; } catch (_) {}
+  if (!seen) open();
+})();
+"use strict";
+const $ = (s) => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const SERIES = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7"].map((v) => `var(${v})`);
+const DRUG_COLOR = ["var(--s1)", "var(--s2)", "var(--s7)", "var(--s5)"];
+const KIND_COLOR = { dispense: "var(--s1)", read: "var(--s2)", incubate: "var(--s3)", transfer: "var(--s4)", tip_swap: "var(--s6)" };
+const ROUTES = ["hotel>lh", "lh>incubator", "incubator>reader", "reader>hotel"];
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmtH = (min) => (min / 60).toFixed(1) + " h";
+const fmtHM = (min) => `${Math.floor(min / 60)} h ${String(Math.floor(min % 60)).padStart(2, "0")} m`;
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; }
+function svgRoot(host, w, h) { host.innerHTML = ""; const s = el("svg", { viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: "xMidYMid meet", role: "img" }); host.appendChild(s); return s; }
+const tipEl = $("#tip");
+function showTip(evt, html) { tipEl.innerHTML = html; tipEl.hidden = false; tipEl.style.left = Math.min(evt.clientX + 14, innerWidth - tipEl.offsetWidth - 8) + "px"; tipEl.style.top = Math.min(evt.clientY + 14, innerHeight - tipEl.offsetHeight - 8) + "px"; }
+function hideTip() { tipEl.hidden = true; }
+function niceTicks(max, n = 5) { if (!(max > 0)) return [0]; const step = Math.pow(10, Math.floor(Math.log10(max / n))); const m = [1, 2, 2.5, 5, 10].find((k) => max / (k * step) <= n) * step; const out = []; for (let v = 0; v <= max + 1e-9; v += m) out.push(+v.toFixed(6)); return out; }
+function boxSize(host) { const r = host.getBoundingClientRect(); return [Math.max(200, r.width), Math.max(120, r.height)]; }
+
+/* ================================================================ tabs */
+const TABS = ["console", "results", "recovery", "calibration", "about"];
+function showTab(name) {
+  if (!TABS.includes(name)) name = "console";
+  for (const t of TABS) { $(`#tab-${t}`).setAttribute("aria-selected", t === name); $(`#view-${t}`).hidden = t !== name; }
+  try { history.replaceState(null, "", "#" + name); } catch (_) {}
+  requestAnimationFrame(() => { if (name === "console") update(); if (name === "results" && CUR_EXP) renderExperiment(CUR_EXP); if (name === "calibration" && CELL) calibration(CELL); });
+}
+for (const t of TABS) $(`#tab-${t}`).addEventListener("click", () => showTab(t));
+let SUB = "opt";
+function showSub(name) {
+  SUB = name;
+  for (const s of ["opt", "state", "plate"]) $(`#st-${s}`).setAttribute("aria-selected", s === name);
+  $("#sub-opt").style.display = name === "opt" ? "contents" : "none";
+  $("#sub-state").hidden = name !== "state";
+  $("#sub-plate").style.display = name === "plate" ? "flex" : "none";
+  update();
+}
+for (const s of ["opt", "state", "plate"]) $(`#st-${s}`).addEventListener("click", () => showSub(s));
+
+/* ================================================================ replay model */
+let RP = null, T = 0, TMAX = 1, playing = false, selPlate = null, pinned = false, LHSEL = null;
+function buildJobs() {
+  RP.jobs = {};
+  for (const o of RP.ops) (RP.jobs[o[0]] ||= { ops: [] }).ops.push(o);
+  for (const [j, J] of Object.entries(RP.jobs)) {
+    J.ops.sort((a, b) => a[3] - b[3]); let k = 0;
+    for (const o of J.ops) if (RP.kinds[o[1]] === "transfer") o.route = o[5] || ROUTES[Math.min(k++, ROUTES.length - 1)];
+    J.submit = (RP.submits && RP.submits[j] != null) ? RP.submits[j] : J.ops[0][3];
+    J.read = J.ops.find((o) => RP.kinds[o[1]] === "read");
+    J.disp = J.ops.find((o) => RP.kinds[o[1]] === "dispense");
+  }
+}
+const DEST = { "hotel>lh": "lh", "lh>incubator": "incubator", "incubator>reader": "reader", "reader>hotel": "done" };
+const AT = { dispense: "lh", incubate: "incubator", read: "reader" };
+function jobState(j, t) {
+  const J = RP.jobs[j]; if (t < J.submit) return null; let last = null;
+  for (const o of J.ops) {
+    if (t < o[3]) break; const kind = RP.kinds[o[1]];
+    if (t < o[4]) return { where: kind === "transfer" ? "arm" : AT[kind], kind, op: o, u: (t - o[3]) / Math.max(1, o[4] - o[3]) };
+    last = o;
+  }
+  if (!last) return { where: "hotel", kind: "queued" };
+  const k = RP.kinds[last[1]];
+  return { where: k === "transfer" ? DEST[last.route] : AT[k], kind: "waiting", op: last, u: 1 };
+}
+function snapshot(t) { const out = { hotel: [], lh: [], incubator: [], reader: [], arm: [], done: [] }; for (const j of Object.keys(RP.jobs)) { if (j.startsWith("TIPS")) continue; const s = jobState(j, t); if (s) out[s.where].push({ job: j, ...s }); } return out; }
+
+/* ================================================================ liquid handler */
+// Deck geometry (PyLabRobot STARlet, meters). Row A of a plate is at the back (+y).
+const DK = { RAIL0: 0.100, PITCH: 0.0225, CAR_W: 0.135, CAR_D: 0.497, CAR_Y0: 0.063, CAR_TOP: 0.183, SITE_Y0: 0.111, SITE_P: 0.096,
+  PLATE: [0.12776, 0.08548, 0.0142], WASTE: { x: 0.800, y0: 0.1906, y1: 0.4318 }, HEAD_SPAN: 0.063 };
+const DEFAULT_DECK = { tip_rail: 1, source_rail: 8, dest_rail: 15, cell_tip: "300uL", drug_tip: "300uL", racks_on_deck: 5, cell_source: "plate", tip_reuse: false };
+const deckOf = () => (RP && RP.deck) || DEFAULT_DECK;
+const carrierX = (rail) => DK.RAIL0 + (rail - 1) * DK.PITCH + DK.CAR_W / 2;
+const siteY = (i) => DK.SITE_Y0 + i * DK.SITE_P;
+function wellXY(rail, site, r, c, n) { // well center on a labware at (rail, site)
+  const p = n > 96 ? 0.0045 : 0.009, a1x = n > 96 ? 0.01213 : 0.01438, a1y = n > 96 ? 0.07649 : 0.07424;
+  return [carrierX(rail) - DK.PLATE[0] / 2 + a1x + c * p, siteY(site) - DK.PLATE[1] / 2 + a1y - r * p];
+}
+function rackSplit(tips, racks) { // mirrors protocol/optimizer.rack_split
+  const types = Object.keys(tips).sort(); if (types.length === 1) return { [types[0]]: racks };
+  const split = Object.fromEntries(types.map((t) => [t, 1]));
+  for (let i = 0; i < racks - types.length; i++) { const t = types.reduce((a, b) => tips[a] / (96 * split[a]) >= tips[b] / (96 * split[b]) ? a : b); split[t]++; }
+  return split;
+}
+// Normalize a plate's trace: planned protocols carry per-channel well lists; the legacy
+// fresh-tip trace gets channels from rows.
+function passesOf(plate) {
+  const P = RP.protocols && RP.protocols[plate]; if (!P) return null;
+  if (P._norm) return P;
+  const pm = RP.plates[plate], deck = deckOf();
+  P.norm = P.passes.map((p) => {
+    let chans = p[9];
+    if (!chans) { const by = {}; for (const w of p[3]) { const r = Math.floor(w / pm.cols); const k = pm.rows > 8 ? Math.floor(r / 2) : r; (by[k] ||= []).push(w); } chans = Object.entries(by).map(([k, ws]) => [+k, ws]); }
+    const cols = [...new Set(p[3].map((w) => w % pm.cols))].sort((a, b) => a - b);
+    return { what: p[0], dose: p[1], col: p[2], wells: p[3], vol: p[4], tipStart: p[5], swaps: p[6], left: p[7], nasp: p[8] || 1, chans,
+      tipType: p[10] || (p[0] === 0 ? deck.cell_tip : deck.drug_tip), cols, parity: pm.rows > 8 ? Math.floor(p[3][0] / pm.cols) % 2 : 0 };
+  });
+  const tot = {}; for (const p of P.norm) tot[p.tipType] = (tot[p.tipType] || 0) + p.chans.length;
+  P.split = rackSplit(tot, deck.racks_on_deck || 5);
+  P._norm = true; return P;
+}
+const STAGES = [["pick", 0, .15], ["aspirate", .15, .33], ["dispense", .33, .9], ["eject", .9, 1]];
+// Protocol state at pass position `pos` (integer part = pass, fraction = progress within it).
+function lhState(plate, pos) {
+  const P = passesOf(plate); if (!P) return null;
+  const n = P.norm.length, done = pos >= n, idx = Math.max(0, Math.min(n - 1, Math.floor(pos))), f = done ? 1 : pos - Math.floor(pos);
+  const [stage, s0, s1] = done ? ["idle", 0, 1] : STAGES.find(([, a, b]) => f >= a && f < b) || STAGES[3];
+  const g = (f - s0) / (s1 - s0);
+  const cur = done ? null : P.norm[idx];
+  const wells = new Map(), srcLeft = {}, tipsUsed = {}; let swaps = 0;
+  const addWell = (w, what) => { const s = wells.get(w) || { cells: false, drugs: new Set() }; if (what === 0) s.cells = true; else s.drugs.add(what - 1); wells.set(w, s); };
+  for (let i = 0; i < (done ? n : idx); i++) { const p = P.norm[i]; for (const w of p.wells) addWell(w, p.what); srcLeft[`${p.what}:${p.col}`] = p.left; }
+  let colIdx = -1;
+  if (cur) {
+    if (stage === "dispense" || stage === "eject") {
+      colIdx = stage === "eject" ? cur.cols.length : Math.min(cur.cols.length, Math.floor(g * cur.cols.length) + 1);
+      const doneCols = new Set(cur.cols.slice(0, colIdx));
+      for (const [, ws] of cur.chans) for (const w of ws) if (doneCols.has(w % RP.plates[plate].cols)) addWell(w, cur.what);
+    }
+    if (f >= .33) srcLeft[`${cur.what}:${cur.col}`] = cur.left;
+  }
+  // tips: per type, used = position in the stream since the last rack swap
+  for (const p of P.norm.slice(0, done ? n : idx + 1)) { tipsUsed[p.tipType] = p.tipStart + (p === cur && f < .1 ? 0 : p.chans.length); swaps = p.swaps; }
+  return { P, n, idx, f, stage, g, done, cur, wells, srcLeft, tipsUsed, swaps, colIdx };
+}
+function activeDispense() { // the dispense running on the selected LH now, else its latest
+  const lhs = Object.keys(RP.meta.resources).filter((r) => r.startsWith("lh"));
+  if (!LHSEL || !lhs.includes(LHSEL)) LHSEL = lhs[0];
+  const ops = RP.ops.filter((o) => o[2] === LHSEL && RP.kinds[o[1]] === "dispense");
+  let op = ops.find((o) => o[3] <= T && o[4] > T); const running = !!op;
+  if (!op) op = ops.filter((o) => o[4] <= T).pop();
+  if (!op) return { lhs, op: null };
+  const P = passesOf(op[0]); if (!P) return { lhs, op, running };
+  const u = running ? (T - op[3]) / Math.max(1, op[4] - op[3]) : 1;
+  return { lhs, op, running, st: lhState(op[0], u * P.norm.length) };
+}
+function tipsDiscarded(st) { // tips ejected into the waste so far in this protocol
+  const upto = st.done ? st.n : st.idx + (st.stage === "eject" && st.g > .8 ? 1 : 0);
+  return st.P.norm.slice(0, upto).reduce((a, p) => a + p.chans.length, 0);
+}
+const drugLabel = (i) => ((RP.drugs || [])[i] || "drug " + (i + 1)).toLowerCase();
+function drawLH() {
+  const host = $("#lh"), A = activeDispense(), drugs = RP.drugs || [];
+  $("#lh-pick").innerHTML = A.lhs.length > 1 ? A.lhs.map((r) => `<button class="chip" type="button" data-lh="${r}" aria-pressed="${r === LHSEL}">${r}</button>`).join("") : "";
+  $("#lh-pick").querySelectorAll("[data-lh]").forEach((b) => b.addEventListener("click", () => { LHSEL = b.dataset.lh; update(); }));
+  const deck = deckOf();
+  $("#lh-legend").innerHTML = `<span><i class="box" style="background:var(--cells)"></i>cells</span>` + drugs.map((d, i) => `<span><i class="box" style="background:${DRUG_COLOR[i]}"></i>${d.toLowerCase()}</span>`).join("") +
+    `<span class="muted">deck: tips rail ${deck.tip_rail} · sources ${deck.source_rail} · plate ${deck.dest_rail} · ${deck.tip_reuse ? "tip reuse" : "fresh tips"}</span>`;
+  if (!A.op || !A.st) { host.innerHTML = `<div class="empty">No dispense yet on ${LHSEL}. Use “Next dispense”.</div>`; $("#lh-action").textContent = ""; return; }
+  const plate = A.op[0], st = A.st, P = st.P, pm = RP.plates[plate], cur = st.cur;
+  if (st.done) $("#lh-action").innerHTML = `${A.running ? "" : "idle · "}last protocol <b>${plate}</b>: ${st.n} passes · ${P.tips} tips · ${P.swaps} rack swaps · volume check ${P.bad.length ? `<span style="color:var(--critical)">${P.bad.length} wells off</span>` : "all wells correct"}`;
+  else {
+    const nw = cur.chans.reduce((a, [, ws]) => a + ws.length, 0);
+    $("#lh-action").innerHTML = `pass <b>${st.idx + 1}</b>/${st.n} · <b>${cur.what === 0 ? "cells" : drugLabel(cur.what - 1) + " " + (+cur.dose).toPrecision(3) + " µM"}</b> · ${cur.chans.length} ch × ${cur.tipType} tips · ${nw} wells × ${cur.vol} µL · <b>${st.stage}</b>${st.stage === "dispense" ? ` col ${cur.cols[Math.max(0, st.colIdx - 1)] + 1}` : ""}`;
+  }
+  const [bw, bh] = boxSize(host), W = 760, H = Math.max(360, Math.min(560, W * bh / bw)), s = svgRoot(host, W, H);
+  // head strip: 8 channels, tip + liquid level
+  const on = cur && st.f >= .1 && st.f < .93, chanSet = new Set(cur ? cur.chans.map(([k]) => k) : []);
+  const remain = (k) => { if (!cur) return 0; const ws = (cur.chans.find(([c]) => c === k) || [0, []])[1]; const tot = ws.length * cur.vol;
+    if (st.stage === "pick") return 0; if (st.stage === "aspirate") return tot * st.g; if (st.stage === "eject") return 0;
+    const done = ws.filter((w) => cur.cols.slice(0, st.colIdx).includes(w % pm.cols)).length; return Math.max(0, tot - done * cur.vol); };
+  el("text", { x: 8, y: 14, class: "label-ink" }, s).textContent = "head";
+  const cap = cur ? ({ "50uL": 50, "300uL": 300, "1000uL": 1000 })[cur.tipType] || 300 : 300;
+  for (let k = 0; k < 8; k++) {
+    const x = 52 + k * 34, act = chanSet.has(k);
+    el("rect", { x, y: 4, width: 22, height: 14, rx: 2, fill: act ? "var(--ink-2)" : "var(--axis)" }, s);
+    if (act && on) {
+      el("path", { d: `M${x + 4},18 L${x + 18},18 L${x + 13},54 L${x + 9},54 Z`, fill: "var(--surface-2)", stroke: "var(--ink-2)", "stroke-width": 1 }, s);
+      const lv = Math.min(1, remain(k) / cap) * 34;
+      if (lv > .4) el("path", { d: `M${x + 9 - lv / 24},${54 - lv} L${x + 13 + lv / 24},${54 - lv} L${x + 13},54 L${x + 9},54 Z`, fill: cur.what === 0 ? "var(--cells)" : DRUG_COLOR[cur.what - 1] }, s);
+      el("text", { x: x + 11, y: 66, "text-anchor": "middle", style: "font-size:9px", class: "label-ink" }, s).textContent = remain(k).toFixed(0);
+    } else el("text", { x: x + 11, y: 66, "text-anchor": "middle", style: "font-size:9px" }, s).textContent = `ch${k + 1}`;
+  }
+  el("text", { x: 340, y: 30, class: "label-ink" }, s).textContent = cur ? `µL in each tip · ${cur.nasp} aspiration${cur.nasp > 1 ? "s" : ""}` : "head parked";
+  // tip waste: highlighted while the head ejects, with this protocol's discarded-tip count
+  const ejecting = cur && !st.done && st.stage === "eject", wx = W - 150;
+  el("rect", { x: wx, y: 6, width: 144, height: 58, rx: 4, fill: "var(--surface-2)", stroke: ejecting ? "var(--accent)" : "var(--axis)", "stroke-width": ejecting ? 2 : 1 }, s);
+  el("path", { d: `M${wx + 12},22 L${wx + 34},22 L${wx + 31},56 L${wx + 15},56 Z`, fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4 }, s);
+  el("line", { x1: wx + 9, y1: 19, x2: wx + 37, y2: 19, stroke: "var(--ink-2)", "stroke-width": 1.6 }, s);
+  el("text", { x: wx + 46, y: 26, class: "label-ink", style: "font-size:10px" }, s).textContent = "tip waste";
+  el("text", { x: wx + 46, y: 46, style: "font-size:15px;font-weight:600", class: "label-ink" }, s).textContent = tipsDiscarded(st);
+  el("text", { x: wx + 46, y: 58, style: "font-size:9px" }, s).textContent = ejecting ? "ejecting now" : "tips discarded";
+  // tip racks (split by type)
+  el("text", { x: 8, y: 82, class: "label-ink" }, s).textContent = "tips";
+  el("text", { x: 8, y: 94, style: "font-size:9.5px" }, s).textContent = `${st.swaps} rack swap${st.swaps === 1 ? "" : "s"}`;
+  const rackH = (H - 104) / 5; let rk = 0;
+  for (const [t, nr] of Object.entries(P.split || { "300uL": 5 })) {
+    const used = st.tipsUsed[t] || 0;
+    for (let r = 0; r < nr && rk < 5; r++, rk++) {
+      el("text", { x: 96, y: 104 + rk * rackH + 6, style: "font-size:8.5px", "text-anchor": "end" }, s).textContent = t.replace("uL", "");
+      for (let i = 0; i < 96; i++) { const gi = r * 96 + i, row = i % 8, col = Math.floor(i / 8);
+        const onHead = cur && on && cur.tipType === t && gi >= cur.tipStart && gi < cur.tipStart + cur.chans.length;
+        el("circle", { cx: 8 + col * 7, cy: 108 + rk * rackH + row * Math.min(6.6, (rackH - 8) / 8), r: 2.3, fill: onHead ? "var(--accent)" : gi < used ? "var(--grid)" : "var(--ink-2)" }, s); }
+    }
+  }
+  // source plates
+  const nd = Math.max(1, drugs.length), srcX = 112, srcW = 238, srcH = (H - 92) / (nd + 1) - 8;
+  [{ k: 0, name: deck.cell_source === "trough" ? "cell trough" : "cell reservoir" }].concat(drugs.map((d, i) => ({ k: i + 1, name: d.toLowerCase() }))).forEach((pl, pi) => {
+    const y0 = 86 + pi * (srcH + 8), cw = (srcW - 12) / 12, bhh = srcH - 20;
+    el("rect", { x: srcX, y: y0, width: srcW, height: srcH, rx: 4, fill: "var(--surface-2)", stroke: "var(--axis)" }, s);
+    el("text", { x: srcX + 6, y: y0 + 11, class: "label-ink", style: "font-size:10px" }, s).textContent = pl.name;
+    for (let c = 1; c <= 12; c++) {
+      if (pl.k && !P.norm.some((p) => p.what === pl.k && p.col === c)) continue;
+      const left = st.srcLeft[`${pl.k}:${c}`] != null ? st.srcLeft[`${pl.k}:${c}`] : 350, lv = bhh * Math.max(0, Math.min(1, left / 350));
+      const isCur = cur && cur.what === pl.k && cur.col === c, bx = srcX + 6 + (c - 1) * cw;
+      el("rect", { x: bx + 1, y: y0 + 15, width: cw - 3, height: bhh, rx: 2, fill: "var(--surface)", stroke: isCur ? "var(--accent)" : "var(--grid)", "stroke-width": isCur ? 2 : 1 }, s);
+      el("rect", { x: bx + 1, y: y0 + 15 + bhh - lv, width: cw - 3, height: lv, rx: 2, fill: pl.k === 0 ? "var(--cells)" : DRUG_COLOR[pl.k - 1], "fill-opacity": .75 }, s);
+      const hit = el("rect", { x: bx, y: y0 + 13, width: cw - 1, height: bhh + 4, fill: "transparent" }, s), dose = pl.k ? (P.norm.find((p) => p.what === pl.k && p.col === c) || {}).dose : null;
+      hit.addEventListener("pointermove", (evt) => showTip(evt, `<b>${pl.name}</b> col ${c}${dose ? ` · ${(+dose).toPrecision(3)} µM` : ""}<br>${left.toFixed(0)} µL per well left`)); hit.addEventListener("pointerleave", hideTip);
+    }
+  });
+  // assay plate
+  const ax = 372, ay = 86, aw = W - ax - 6, ah = H - ay - 6, rows = pm.rows, cols = pm.cols, cell = Math.min((aw - 16) / cols, (ah - 14) / rows);
+  el("text", { x: ax, y: 80, class: "label-ink" }, s).textContent = `assay plate ${plate} · ${pm.cell_line} · ${rows * cols}-well`;
+  const target = new Set(cur ? cur.wells : []), colNow = cur && st.stage === "dispense" ? cur.cols[Math.max(0, st.colIdx - 1)] : -1;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = r * cols + c, content = pm.wells[String.fromCharCode(65 + r) + (c + 1)], x = ax + 14 + c * cell, y = ay + 12 + r * cell, w = st.wells.get(i);
+    const hot = target.has(i) && c === colNow;
+    el("rect", { x: x + .5, y: y + .5, width: cell - 1, height: cell - 1, rx: cell / 2 - .5, fill: w && w.cells ? "var(--cells)" : "var(--surface)", "fill-opacity": w && w.cells ? .55 : 1,
+      stroke: hot ? "var(--accent)" : target.has(i) ? "var(--accent-soft)" : content ? "var(--axis)" : "var(--grid)", "stroke-width": hot ? 2 : target.has(i) ? 1.4 : .5 }, s);
+    if (w) [...w.drugs].forEach((d, k) => el("circle", { cx: x + cell / 2 + (k - (w.drugs.size - 1) / 2) * cell * .24, cy: y + cell / 2, r: Math.max(1, cell * .13), fill: DRUG_COLOR[d] }, s));
+  }
+  for (let c = 0; c < cols; c += cols > 12 ? 4 : 2) el("text", { x: ax + 14 + c * cell + cell / 2, y: ay + 8, "text-anchor": "middle", style: "font-size:8.5px" }, s).textContent = c + 1;
+  for (let r = 0; r < rows; r += rows > 8 ? 4 : 2) el("text", { x: ax + 6, y: ay + 12 + r * cell + cell / 2 + 3, "text-anchor": "middle", style: "font-size:8.5px" }, s).textContent = String.fromCharCode(65 + r);
+}
+
+/* ================================================================ lab state + plate reader */
+function drawDevices(snap) {
+  if (SUB !== "state") return;
+  const res = Object.keys(RP.meta.resources), order = ["lh", "arm", "reader", "incubator"];
+  const rows = [];
+  for (const r of res.sort((a, b) => order.findIndex((k) => a.startsWith(k)) - order.findIndex((k) => b.startsWith(k)) || a.localeCompare(b))) {
+    if (r.startsWith("incubator")) {
+      const inside = RP.ops.filter((o) => o[2] === r && o[3] <= T && o[4] > T).sort((a, b) => a[4] - b[4]);
+      rows.push(`<div class="dev"><span class="name">${r}</span><span class="what">${inside.length}/${RP.meta.resources[r]} slots ${inside.map((o) => `<span class="slot ${o[0] === selPlate ? "sel" : ""}" data-plate="${o[0]}">${o[0].slice(-4)} · ${((o[4] - T) / 60).toFixed(0)}h</span>`).join("")}</span></div>`);
+      continue;
+    }
+    const o = RP.ops.find((x) => x[2] === r && x[3] <= T && x[4] > T);
+    if (o) { const u = (T - o[3]) / Math.max(1, o[4] - o[3]);
+      rows.push(`<div class="dev"><span class="name">${r}</span><span class="what"><span class="slot ${o[0] === selPlate ? "sel" : ""}" data-plate="${o[0]}">${o[0]}</span>${o.route ? o.route.replace(">", " → ") : RP.kinds[o[1]]}<span class="prog"><span style="width:${(100 * u).toFixed(0)}%"></span></span>${Math.max(0, o[4] - T).toFixed(0)} min left</span></div>`);
+    } else rows.push(`<div class="dev"><span class="name">${r}</span><span class="what muted">idle</span></div>`);
+  }
+  rows.push(`<div class="dev"><span class="name">hotel queue</span><span class="what">${snap.hotel.length ? snap.hotel.map((x) => `<span class="slot" data-plate="${x.job}">${x.job.slice(-4)}</span>`).join("") : '<span class="muted">empty</span>'}</span></div>`);
+  rows.push(`<div class="dev"><span class="name">finished</span><span class="what">${snap.done.length} plates</span></div>`);
+  $("#sub-state").innerHTML = rows.join("");
+  $("#sub-state").querySelectorAll("[data-plate]").forEach((e) => e.addEventListener("click", () => { selPlate = e.dataset.plate; pinned = true; showSub("plate"); }));
+}
+function heat(v) { const a = css("--heat-0"), b = css("--heat-1"), k = Math.max(0, Math.min(1, 1 - v)); const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b); return `rgb(${Math.round(r1 + (r2 - r1) * k)},${Math.round(g1 + (g2 - g1) * k)},${Math.round(b1 + (b2 - b1) * k)})`; }
+function autoPlate(snap) { for (const w of ["reader", "lh", "arm"]) if (snap[w].length) return snap[w][0].job; const read = RP.reads.filter((r) => r.t <= T); if (read.length) return read[read.length - 1].plate; return snap.incubator.length ? snap.incubator[0].job : null; }
+function drawPlate(snap) {
+  if (!pinned) selPlate = autoPlate(snap);
+  if (SUB !== "plate") return;
+  const p = RP.plates[selPlate];
+  if (!p) { $("#plate").innerHTML = `<div class="empty">No plate yet.</div>`; $("#plate-title").textContent = ""; $("#plate-sub").textContent = ""; return; }
+  const readAt = RP.reads.find((r) => r.plate === selPlate), isRead = readAt && readAt.t <= T, st = jobState(selPlate, T);
+  $("#plate-title").textContent = `${selPlate} · ${p.cell_line} · ${p.timepoint_h} h${pinned ? " (pinned)" : ""}`;
+  $("#plate-sub").textContent = isRead ? `read at ${fmtH(readAt.t)}${p.status === "invalid" ? " · invalidated" : ""}: viability` : `${st ? (st.where === "arm" ? "on the arm" : st.where) : "not submitted"}: layout`;
+  const [bw, bh] = boxSize($("#plate")); const cell = Math.min((bw - 18) / p.cols, (bh - 14) / p.rows), L = 16, Tp = 12;
+  const s = svgRoot($("#plate"), L + p.cols * cell + 2, Tp + p.rows * cell + 2);
+  for (let c = 0; c < p.cols; c += p.cols > 12 ? 4 : 2) el("text", { x: L + c * cell + cell / 2, y: 9, "text-anchor": "middle", style: "font-size:9px" }, s).textContent = c + 1;
+  for (let r = 0; r < p.rows; r++) {
+    const row = String.fromCharCode(65 + r);
+    if (r % (p.rows > 8 ? 4 : 2) === 0) el("text", { x: 7, y: Tp + r * cell + cell / 2 + 3, "text-anchor": "middle", style: "font-size:9px" }, s).textContent = row;
+    for (let c = 0; c < p.cols; c++) {
+      const name = row + (c + 1), content = p.wells[name], x = L + c * cell, y = Tp + r * cell, rd = isRead ? p.reads[name] : null, ctrl = content === "NEG" || content === "POS";
+      const g = el("rect", { x: x + .6, y: y + .6, width: cell - 1.2, height: cell - 1.2, rx: cell / 2 - 1, fill: content && rd ? heat(rd[0]) : (content && !ctrl ? "var(--surface-2)" : "var(--surface)"),
+        stroke: ctrl ? "var(--ink-2)" : (content ? "var(--axis)" : "var(--grid)"), "stroke-width": ctrl ? 1.2 : .5, "stroke-dasharray": content === "POS" ? "2 1.5" : "" }, s);
+      if (rd && !rd[1]) el("path", { d: `M${x + 3},${y + 3}L${x + cell - 3},${y + cell - 3}M${x + cell - 3},${y + 3}L${x + 3},${y + cell - 3}`, stroke: "var(--critical)", "stroke-width": 1.1 }, s);
+      if (content) { g.addEventListener("pointermove", (evt) => showTip(evt, `<b>${name}</b> ${content === "NEG" ? "vehicle control" : content === "POS" ? "kill control" : "doses (µM): " + content.replaceAll("|", " · ")}` + (rd ? `<br>viability ${rd[0].toFixed(3)}${rd[1] ? "" : " · invalidated"}` : ""))); g.addEventListener("pointerleave", hideTip); }
+    }
+  }
+  $("#plate-legend").innerHTML = `<span><i class="box" style="background:${heat(1)};border:1px solid var(--axis)"></i>alive</span><span><i class="box" style="background:${heat(0)}"></i>killed</span><span><i class="box" style="border:1.2px solid var(--ink-2)"></i>vehicle</span><span style="color:var(--critical)">✕ invalid</span>` +
+    (pinned ? ` <button class="ghost" style="padding:0 6px;font-size:11px" id="unpin" type="button">follow automatically</button>` : "");
+  const up = $("#unpin"); if (up) up.addEventListener("click", () => { pinned = false; update(); });
+}
+
+/* ================================================================ schedule */
+function lanes(ops) {
+  const byRes = {}; for (const o of ops) (byRes[o[2]] ||= []).push(o);
+  const order = (r) => ["lh", "arm", "incubator", "reader"].findIndex((k) => r.startsWith(k));
+  return Object.keys(byRes).sort((a, b) => order(a) - order(b) || a.localeCompare(b)).map((r) => {
+    const list = byRes[r].slice().sort((a, b) => a[3] - b[3]); const ends = [];
+    for (const o of list) { let k = ends.findIndex((e) => e <= o[3]); if (k < 0) { k = ends.length; ends.push(0); } ends[k] = o[4]; o.lane = k; }
+    return { res: r, n: Math.max(1, ends.length), ops: list };
+  });
+}
+function drawGantt(host, t0, t1, opts) {
+  const rows = RP.rows, [bw, bh] = opts.compact ? [900, 0] : boxSize(host);
+  const W = opts.compact ? 900 : bw, L = 64, R = 6, nl = rows.reduce((a, r) => a + r.n, 0);
+  const gap = opts.compact ? 2 : 5, laneH = opts.compact ? 1.6 : Math.max(2.5, (bh - 26 - gap * rows.length) / nl);
+  let y = 10; const ys = rows.map((r) => { const y0 = y; y += r.n * laneH + gap; return y0; });
+  const H = opts.compact ? y + 2 : bh;
+  const s = svgRoot(host, W, H); if (opts.compact) s.style.height = "auto";
+  const X = (t) => L + (t - t0) / (t1 - t0) * (W - L - R);
+  if (!opts.compact) for (const tk of niceTicks((t1 - t0) / 60, 7)) { const t = t0 + tk * 60; if (t > t1) break; el("line", { x1: X(t), x2: X(t), y1: 8, y2: H - 14, stroke: "var(--grid)" }, s); el("text", { x: X(t), y: H - 3, "text-anchor": "middle" }, s).textContent = (t / 60).toFixed((t1 - t0) < 600 ? 1 : 0) + "h"; }
+  rows.forEach((r, i) => {
+    if (!opts.compact) el("text", { x: L - 6, y: ys[i] + r.n * laneH / 2 + 4, "text-anchor": "end", class: "label-ink" }, s).textContent = r.res;
+    for (const o of r.ops) {
+      if (o[4] < t0 || o[3] > t1) continue;
+      const x0 = Math.max(X(o[3]), L), x1 = Math.min(X(o[4]), W - R), kind = RP.kinds[o[1]];
+      const rect = el("rect", { x: x0, y: ys[i] + o.lane * laneH, width: Math.max(1, x1 - x0 - (opts.compact ? 0 : .8)), height: Math.max(1, laneH - (opts.compact ? 0 : .8)), fill: KIND_COLOR[kind], "fill-opacity": pinned ? (o[0] === selPlate ? 1 : .3) : .9 }, s);
+      if (!opts.compact) { rect.style.cursor = "pointer"; rect.addEventListener("pointermove", (evt) => showTip(evt, `<b>${o[0]}</b> ${o.route || kind}<br>${r.res} · ${fmtH(o[3])} → ${fmtH(o[4])} (${o[4] - o[3]} min)`)); rect.addEventListener("pointerleave", hideTip);
+        rect.addEventListener("click", () => { selPlate = o[0]; pinned = true; if (kind === "dispense") { LHSEL = o[2]; } update(); }); }
+    }
+  });
+  for (const rp of RP.replans) if (rp.t >= t0 && rp.t <= t1) el("line", { x1: X(rp.t), x2: X(rp.t), y1: 1, y2: 7, stroke: "var(--accent)", "stroke-width": 1.3 }, s);
+  for (const fl of RP.failures) { if (fl.t < t0 || fl.t > t1) continue; const ri = rows.findIndex((r) => r.res === fl.resource), yy = ri >= 0 ? ys[ri] - 1 : 8, x = X(fl.t);
+    const tri = el("path", { d: `M${x - 4},${yy - 6} L${x + 4},${yy - 6} L${x},${yy + 1} Z`, fill: "var(--critical)", stroke: "var(--surface)", "stroke-width": 1 }, s);
+    if (!opts.compact) { tri.addEventListener("pointermove", (evt) => showTip(evt, `<b>${fl.type.replace("_", " ")}</b> · ${fmtH(fl.t)}<br>${fl.plate || fl.resource || ""} → ${fl.actions.join(", ")}<br><i>${fl.rationale}</i>`)); tri.addEventListener("pointerleave", hideTip); } }
+  el("line", { x1: X(T), x2: X(T), y1: 0, y2: H - (opts.compact ? 0 : 14), stroke: "var(--ink)", "stroke-width": 1.4 }, s);
+  if (opts.window) { const a = Math.max(L, X(opts.window[0])), b = Math.min(W - R, X(opts.window[1]));
+    el("rect", { x: a, y: 0, width: Math.max(2, b - a), height: H, fill: "var(--accent)", "fill-opacity": .1, stroke: "var(--accent)", "stroke-opacity": .45 }, s);
+    el("text", { x: L - 6, y: H / 2 + 4, "text-anchor": "end" }, s).textContent = "whole run"; s.style.cursor = "pointer";
+    s.addEventListener("click", (evt) => { const r = s.getBoundingClientRect(); T = clampT(t0 + ((evt.clientX - r.left) / r.width * W - L) / (W - L - R) * (t1 - t0)); update(); }); }
+}
+function drawTicker() {
+  if (!$("#ticker")) return;
+  const evs = RP.failures.map((f) => ({ t: f.t, html: `<span class="tag fail">▲ ${f.type.replace("_", " ")}</span>${f.plate || f.resource || ""} → ${f.actions.join(", ")}`, title: f.rationale }))
+    .concat(RP.replans.filter((r) => !(r.reasons.length === 1 && r.reasons[0] === "new_batch")).map((r) => ({ t: r.t, html: `<span class="tag replan">replan</span>${r.reasons.join(", ").replaceAll("failure:", "")} · ${r.solver} ${r.ms} ms · ${r.moved} moved`, title: "" })))
+    .filter((e) => e.t <= T).sort((a, b) => b.t - a.t).slice(0, 3);
+  $("#ticker").innerHTML = evs.length ? evs.map((e) => `<div title="${e.title.replaceAll('"', "'")}"><span class="t">${fmtH(e.t)}</span><span class="x">${e.html}</span></div>`).join("") : `<div class="muted">No failures or replans yet.</div>`;
+}
+
+/* ================================================================ optimization */
+let DISC = null; // campaign shown in the Discovery panel
+function drawProgress() {
+  const names = Object.keys(RP.progress);
+  if (!names.includes(DISC)) DISC = names[0];
+  $("#prog-legend").innerHTML = SUB === "opt" && names.length > 1 ? names.map((n) => `<button class="chip" type="button" data-camp="${n}" aria-pressed="${n === DISC}">campaign ${n}</button>`).join("") : "";
+  $("#prog-legend").querySelectorAll("[data-camp]").forEach((b) => b.addEventListener("click", () => { DISC = b.dataset.camp; update(); }));
+  if (SUB !== "opt") return;
+  const P = RP.progress[DISC], D = P.discovery, opt = P.optimum, optX = opt.excess, drugs = RP.drugs || [];
+  const nPlates = RP.reads.filter((r) => r.t <= T).length, cur = P.points.filter((x) => x.t <= T).pop();
+  const fmtDose = (d) => (+d).toPrecision(2).replace(/\.?0+$/, "");
+  const recipe = (c) => `<b>${c.cell_line}</b> cells · ` + c.doses.map((d, i) => d ? `${drugLabel(i)} <b>${fmtDose(d)} µM</b>` : null).filter(Boolean).join(" + ") + ` · read at <b>${c.timepoint_h} h</b>`;
+  if (!cur || !cur.best) {
+    const next = RP.reads.filter((r) => r.t > T)[0];
+    $("#disc-best").innerHTML = `<div class="k">Best recipe so far</div><div class="recipe">No result yet: the first plates are still incubating${next ? ` (first read at ${fmtH(next.t)})` : ""}.</div>`;
+  } else {
+    const frac = Math.max(0, Math.min(1, (cur.best_true != null ? cur.best_true : cur.best_est) / optX)), b = cur.best, gaps = [];
+    if (b.cell_line !== opt.condition.cell_line) gaps.push(`cell line ${b.cell_line} → ${opt.condition.cell_line}`);
+    if (b.timepoint_h !== opt.condition.timepoint_h) gaps.push(`read time ${b.timepoint_h} h → ${opt.condition.timepoint_h} h`);
+    b.doses.forEach((d, i) => { if (Math.abs(Math.log10((d || 1e-9) / (opt.condition.doses[i] || 1e-9))) > 0.05) gaps.push(`${drugLabel(i)} ${fmtDose(d)} → ${fmtDose(opt.condition.doses[i])} µM`); });
+    $("#disc-best").innerHTML = `<div class="k">Best recipe so far · after ${nPlates} of ${RP.reads.length} plates</div><div class="recipe">${recipe(b)}</div>
+      <div class="disc-meter"><div class="bar"><span style="width:${(100 * frac).toFixed(1)}%"></span></div><span class="pct">${Math.round(100 * frac)}% of the best possible</span><span id="disc-spark" title="% of best possible over the run" style="width:120px;height:22px;display:block"></span></div>
+      <div class="gap">${gaps.length ? "still off: " + gaps.join(" · ") : "matches the best possible combination"}</div>`;
+  }
+  // settings grid: one tile per (cell line, read time); each tile is a dose map that fills in once
+  // a plate for that setting has been read
+  const host = $("#progress"), [W, H] = boxSize(host), s = svgRoot(host, W, H), nd = D.levels.length;
+  const A = 0, B = nd > 1 ? 1 : 0, la = D.levels[A].length, lb = D.levels[B].length;
+  const lines = [...new Set(D.tested.map((r) => r[1]).concat(opt.condition.cell_line))].sort();
+  const tps = [...new Set(D.tested.map((r) => r[2]).concat(opt.condition.timepoint_h))].sort((x, y) => x - y);
+  // one row of tiles, grouped by cell line; read times under each tile
+  const G = lines.length, nT = tps.length, gx = 6, gg = 18, padT = 15, padB = 15, padX = 6;
+  const side = Math.max(14, Math.min((W - 2 * padX - gg * (G - 1) - gx * G * (nT - 1)) / (G * nT), H - padT - padB));
+  const groupW = nT * side + (nT - 1) * gx, ox = Math.max(padX, (W - (G * groupW + (G - 1) * gg)) / 2), cw = side / la, ch = side / lb;
+  const near = (i, d) => { const L = D.levels[i]; let k = 0; for (let j = 1; j < L.length; j++) if (Math.abs(L[j] - d) < Math.abs(L[k] - d)) k = j; return k; };
+  const seen = D.tested.filter((r) => r[0] <= T);
+  $("#disc-axes").textContent = `tile = one plate setting · ${drugLabel(A)} dose → × ${drugLabel(B)} dose ↑${nd > 2 ? " (best over the other drug)" : ""}`;
+  lines.forEach((line, gi) => {
+    const gx0 = ox + gi * (groupW + gg), ty = padT;
+    el("text", { x: gx0 + groupW / 2, y: padT - 4, "text-anchor": "middle", class: "label-ink", style: "font-size:10.5px" }, s).textContent = line;
+    tps.forEach((tp, ci) => {
+      const tx = gx0 + ci * (side + gx), cells = {};
+      el("text", { x: tx + side / 2, y: ty + side + 11, "text-anchor": "middle", style: "font-size:9.5px" }, s).textContent = `${tp} h`;
+      for (const r of seen) if (r[1] === line && r[2] === tp) { const k = r[3 + A] + "," + r[3 + B]; const c = cells[k] || (cells[k] = { v: -1, n: 0 }); c.v = Math.max(c.v, r[3 + nd]); c.n++; }
+      const read = Object.keys(cells).length > 0;
+      el("rect", { x: tx - 1, y: ty - 1, width: side + 2, height: side + 2, rx: 3, fill: read ? "none" : "var(--surface-2)", stroke: "var(--grid)" }, s);
+      if (!read) { const q = el("text", { x: tx + side / 2, y: ty + side / 2 + 3, "text-anchor": "middle", style: "font-size:9px" }, s); q.textContent = "not read"; }
+      for (let i = 0; i < la && read; i++) for (let j = 0; j < lb; j++) {
+        const c = cells[i + "," + j], x = tx + i * cw, y = ty + (lb - 1 - j) * ch;
+        const fill = c ? `color-mix(in srgb, var(--heat-1) ${Math.round(6 + 94 * Math.max(0, Math.min(1, c.v / optX)))}%, var(--heat-0))` : "var(--surface-2)";
+        const r = el("rect", { x: x + 0.3, y: y + 0.3, width: Math.max(1, cw - 0.6), height: Math.max(1, ch - 0.6), style: `fill:${fill}` }, s);
+        r.addEventListener("pointermove", (evt) => showTip(evt, `<b>${line}</b> · read at ${tp} h<br>${drugLabel(A)} <b>${fmtDose(D.levels[A][i])} µM</b> × ${drugLabel(B)} <b>${fmtDose(D.levels[B][j])} µM</b><br>` +
+          (c ? `best synergy here: ${c.v.toFixed(2)} of a possible ${optX.toFixed(2)}` : "not tested")));
+        r.addEventListener("pointerleave", hideTip);
+      }
+      const mark = (cond, kind) => { if (!cond || cond.cell_line !== line || cond.timepoint_h !== tp) return;
+        const x = tx + (near(A, cond.doses[A]) + .5) * cw, y = ty + (lb - 1 - near(B, cond.doses[B]) + .5) * ch;
+        if (kind === "ring") el("circle", { cx: x, cy: y, r: Math.max(4, Math.min(cw, ch) * .7), fill: "none", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
+        else el("text", { x, y: y + 4.5, "text-anchor": "middle", style: "font-size:13px;fill:var(--warning);stroke:var(--ink);stroke-width:.6;paint-order:stroke" }, s).textContent = "★"; };
+      mark(opt.condition, "ring"); mark(cur && cur.best, "star");
+    });
+  });
+  // progress sparkline inside the best-recipe card: % of the best possible after each read
+  const sp = $("#disc-spark"); if (sp) {
+    const sw = 120, sh = 22, sv = svgRoot(sp, sw, sh), X = (t) => 2 + t / TMAX * (sw - 4), Y = (f) => 2 + (1 - f) * (sh - 4);
+    const frac = (q) => Math.max(0, Math.min(1, (q.best_true != null ? q.best_true : q.best_est) / optX));
+    el("line", { x1: 2, x2: sw - 2, y1: Y(1), y2: Y(1), stroke: "var(--grid)", "stroke-dasharray": "2 2" }, sv);
+    let d = `M${X(0)},${Y(0)}`, pv = 0; for (const q of P.points) { if (q.t > T) break; d += `L${X(q.t)},${Y(pv)}L${X(q.t)},${Y(frac(q))}`; pv = frac(q); } d += `L${X(T)},${Y(pv)}`;
+    el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 1.6 }, sv);
+  }
+}
+
+/* ================================================================ 3D workcell */
+// Procedural Hamilton STARlet + PF400-class SCARA, meters, z up. Deck frame = PyLabRobot deck.
+// The arm uses the same inverse kinematics as the MuJoCo cell (sim3d/cell.py).
+const SIM = { ready: false };
+const ARM = { base: [0.62, -0.30], L1: 0.302, L2: 0.289, drop: 0.16, safeZ: 0.72 };
+const ST3 = { hotel: [1.05, -0.45, 0.25], incubator: [0.25, -0.55, 0.30], reader: [0.80, -0.735, 0.20], rackhotel: [0.50, -0.62, 0.31], rackwaste: [0.99, -0.25, 0.30] };
+// Same motion structure as sim3d/motion.py: rotate only while folded; enter and leave stations inside
+// the housing on a straight line through the open front via a staging point.
+const MOTION = { stageY: -0.13, fold: 2.2, step: 0.08, inside: ["lh", "tiprack"] };
+function scaraIK(x, y, zTip, yaw = 0) {
+  const dx = x - ARM.base[0], dy = y - ARM.base[1], r2 = dx * dx + dy * dy;
+  const c2 = Math.max(-1, Math.min(1, (r2 - ARM.L1 ** 2 - ARM.L2 ** 2) / (2 * ARM.L1 * ARM.L2)));
+  const wrap = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  for (const sg of [1, -1]) {
+    const q2 = Math.acos(c2) * sg, q1 = wrap(Math.atan2(dy, dx) - Math.atan2(ARM.L2 * Math.sin(q2), ARM.L1 + ARM.L2 * Math.cos(q2)));
+    if (Math.abs(q1) <= 3.14 && Math.abs(q2) <= 2.8) return [zTip + ARM.drop, q1, q2, wrap(yaw - q1 - q2)];
+  }
+  return [zTip + ARM.drop, 0, 0, 0];
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = (t) => t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+function initThree() {
+  if (!window.THREE) { $("#scene-cap").innerHTML = `<span class="pill">3D viewer unavailable: three.js did not load</span>`; return; }
+  const mk = (id) => { const c = $(id); const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true }); return { c, r }; };
+  const V = { main: mk("#cell3d"), deck: mk("#cam-deck"), ee: mk("#cam-ee"), lh: mk("#cam-lh") };
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4450, 0.85));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(0.8, -1.2, 2.5); scene.add(sun);
+  const M = (hex, o = {}) => new THREE.MeshStandardMaterial({ color: hex, roughness: .65, metalness: .08, ...o });
+  const box = (sx, sy, sz, mat, x, y, z, parent = scene) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat); m.position.set(x, y, z); parent.add(m); return m; };
+  const cyl = (r, h, mat, parent) => { const g = new THREE.CylinderGeometry(r, r, h, 20); g.rotateX(Math.PI / 2); const m = new THREE.Mesh(g, mat); parent && parent.add(m); return m; };
+  const mats = { steel: M(0xb9c2c8, { metalness: .4, roughness: .45 }), dark: M(0x3b4248), deck: M(0x8f989f, { metalness: .3 }), carrier: M(0x6f7a83),
+    plate: M(0xf3f1ea), rack: M(0x2d58b3), tip50: M(0xe9eef2), tip300: M(0x9fc4e8), tip1000: M(0x7aa9d6), glass: M(0xcfe3ee, { transparent: true, opacity: .18, depthWrite: false }),
+    accent: M(0x0b6e78, { emissive: 0x05363b }), white: M(0xf7f7f5), black: M(0x22272b), cells: M(0xc9b9a6), floor: M(0x8a9399, { transparent: true, opacity: .14 }) };
+  const drugMats = ["#2a78d6", "#eb6834", "#6250d6", "#e87ba4"].map((h) => M(new THREE.Color(h)));
+  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(5, 5), mats.floor));
+  // ---- STARlet: table, deck, rails, housing, X-arm gantry, waste
+  box(1.10, 0.80, 0.08, mats.dark, 0.52, 0.30, 0.04);
+  box(1.005, 0.6535, 0.02, mats.deck, 0.5025, 0.3268, 0.09);
+  for (let r = 0; r < 32; r++) box(0.004, 0.62, 0.006, mats.steel, DK.RAIL0 + r * DK.PITCH, 0.33, 0.103);
+  box(1.06, 0.03, 0.80, M(0xdfe4e7), 0.5, 0.67, 0.50); // back panel
+  for (const x of [-0.02, 1.02]) box(0.04, 0.72, 0.80, M(0xd2d8dc), x, 0.31, 0.50);
+  box(1.06, 0.72, 0.03, M(0xd2d8dc), 0.5, 0.31, 0.915); // roof
+  box(1.04, 0.03, 0.10, M(0xd2d8dc), 0.5, -0.04, 0.87); // front header; the front below it is open for the arm
+  // X rails (back, and front inside the header): the X-arm beam rides on them along x
+  box(0.98, 0.04, 0.03, mats.steel, 0.5, 0.63, 0.50); box(0.98, 0.03, 0.03, mats.steel, 0.5, -0.01, 0.80);
+  // waste block along the right end of the deck (PLR STARlet, rail 31) with the tip-eject slot,
+  // a chute out the front, and the tip bin on the floor
+  const W = DK.WASTE, wy = (W.y0 + W.y1) / 2;
+  box(0.030, 0.4452, 0.10, mats.steel, 0.790, 0.3376, 0.15);
+  box(0.008, W.y1 - W.y0, 0.003, mats.black, W.x, wy, 0.2015);
+  const chute = box(0.05, 0.30, 0.008, mats.dark, W.x, 0.04, 0.13); chute.rotation.x = -0.15;
+  const binMat = M(0xd8a531), bx = W.x, by = -0.17;
+  box(0.16, 0.14, 0.004, binMat, bx, by, 0.002); // floor of the bin
+  for (const [w, d, x, y] of [[0.16, 0.004, bx, by - 0.07], [0.16, 0.004, bx, by + 0.07], [0.004, 0.14, bx - 0.08, by], [0.004, 0.14, bx + 0.08, by]])
+    box(w, d, 0.13, binMat, x, y, 0.065);
+  const wasteFill = box(0.15, 0.13, 1, M(0xf4f1e6), bx, by, 0.005); wasteFill.scale.z = 0.001;
+  // ---- carriers + labware from the deck design
+  const deckGroup = new THREE.Group(); scene.add(deckGroup);
+  const head = new THREE.Group(); scene.add(head);
+  // X-arm: a beam spanning the deck front to back, moving along x with the head group
+  box(0.06, 0.66, 0.05, M(0x5b646b), 0, 0.31, 0.50, head);
+  box(0.08, 0.05, 0.06, mats.dark, 0, 0.63, 0.50, head); box(0.08, 0.04, 0.06, mats.dark, 0, -0.01, 0.50, head);
+  const Z_TOP = 0.465; // underside of the Y head
+  const channels = [];
+  for (let k = 0; k < 8; k++) {
+    const g = new THREE.Group(); head.add(g);
+    const body = cyl(0.006, 1, mats.steel, g); // unit length, scaled to the Z stroke each frame
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.0035, 0.05, 12), mats.tip300); tip.rotation.x = -Math.PI / 2; tip.position.z = -0.025; g.add(tip);
+    const liquid = new THREE.Mesh(new THREE.ConeGeometry(0.0028, 0.03, 10), drugMats[0]); liquid.rotation.x = -Math.PI / 2; liquid.position.z = -0.035; g.add(liquid);
+    channels.push({ g, tip, liquid, body });
+  }
+  const yBar = box(0.05, 0.095, 0.05, mats.dark, 0, 0, 0, head); // Y head: slides along the beam
+  let builtFor = null, deckObjs = null;
+  function buildDeck() {
+    const deck = deckOf(); const key = JSON.stringify(deck) + (RP ? RP.meta.scenario : "");
+    if (builtFor === key) return; builtFor = key;
+    while (deckGroup.children.length) deckGroup.remove(deckGroup.children[0]);
+    const o = { racks: [], src: [], assay: null };
+    for (const [rail, kind] of [[deck.tip_rail, "tip"], [deck.source_rail, "src"], [deck.dest_rail, "dst"]]) {
+      const cx = carrierX(rail);
+      box(DK.CAR_W - 0.004, DK.CAR_D, 0.083, mats.carrier, cx, DK.CAR_Y0 + DK.CAR_D / 2, 0.1 + 0.0415, deckGroup);
+      for (let i = 0; i < 5; i++) box(DK.PLATE[0] + 0.004, DK.PLATE[1] + 0.004, 0.002, mats.black, cx, siteY(i), DK.CAR_TOP + 0.001, deckGroup);
+    }
+    // tip racks: split by type
+    const split = { "300uL": deck.racks_on_deck || 5 };
+    let site = 0;
+    const tipTypes = RP && RP.protocols ? (() => { const tot = {}; for (const p of Object.values(RP.protocols)) for (const t of p.passes) { const tt = t[10] || (t[0] === 0 ? deck.cell_tip : deck.drug_tip); tot[tt] = (tot[tt] || 0) + 1; } return rackSplit(tot, deck.racks_on_deck || 5); })() : split;
+    for (const [t, n] of Object.entries(tipTypes)) for (let r = 0; r < n && site < 5; r++, site++) {
+      const cx = carrierX(deck.tip_rail), cy = siteY(site);
+      box(DK.PLATE[0], DK.PLATE[1], 0.022, mats.rack, cx, cy, DK.CAR_TOP + 0.011, deckGroup);
+      const len = t === "50uL" ? 0.030 : t === "1000uL" ? 0.055 : 0.042;
+      const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0028, 0.0022, len, 8).rotateX(Math.PI / 2), mats["tip" + t.replace("uL", "")] || mats.tip300, 96);
+      const mtx = new THREE.Matrix4();
+      for (let i = 0; i < 96; i++) { const rr = i % 8, cc = Math.floor(i / 8); const [x, y] = wellXY(deck.tip_rail, site, rr, cc, 96); mtx.makeTranslation(x, y, DK.CAR_TOP + 0.022 + len / 2 - 0.012); inst.setMatrixAt(i, mtx); }
+      deckGroup.add(inst); o.racks.push({ type: t, inst, len, site, idx: o.racks.filter((q) => q.type === t).length });
+    }
+    // sources: cell trough / reservoir + one dilution plate per drug, liquid per column
+    const nd = (RP && RP.drugs) ? RP.drugs.length : 3;
+    for (let s = 0; s <= nd && s < 5; s++) {
+      const cx = carrierX(deck.source_rail), cy = siteY(s);
+      if (s === 0 && deck.cell_source === "trough") {
+        box(DK.PLATE[0], DK.PLATE[1], 0.04, mats.white, cx, cy, DK.CAR_TOP + 0.02, deckGroup);
+        const liq = box(DK.PLATE[0] - 0.01, DK.PLATE[1] - 0.01, 0.03, mats.cells, cx, cy, DK.CAR_TOP + 0.02, deckGroup);
+        o.src.push({ s, trough: liq });
+        continue;
+      }
+      box(DK.PLATE[0], DK.PLATE[1], 0.014, mats.plate, cx, cy, DK.CAR_TOP + 0.007, deckGroup);
+      const cols = [];
+      for (let c = 0; c < 12; c++) { const [x] = wellXY(deck.source_rail, s, 0, c, 96);
+        const m = box(0.0075, 0.065, 0.012, s === 0 ? mats.cells : drugMats[(s - 1) % 4], x, cy, DK.CAR_TOP + 0.012, deckGroup); m.visible = false; cols.push(m); }
+      o.src.push({ s, cols });
+    }
+    // assay plate on the destination carrier (site 0), wells instanced and colored by state
+    const pm = RP && Object.values(RP.plates)[0];
+    const rows = pm ? pm.rows : 16, cols = pm ? pm.cols : 24;
+    o.assayBase = box(DK.PLATE[0], DK.PLATE[1], 0.0142, mats.plate, carrierX(deck.dest_rail), siteY(0), DK.CAR_TOP + 0.0071, deckGroup);
+    const wellR = rows > 8 ? 0.0019 : 0.0034;
+    const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(wellR, wellR, 0.002, 10).rotateX(Math.PI / 2), M(0xffffff), rows * cols);
+    const mtx = new THREE.Matrix4();
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const [x, y] = wellXY(deck.dest_rail, 0, r, c, rows * cols); mtx.makeTranslation(x, y, DK.CAR_TOP + 0.0145); inst.setMatrixAt(r * cols + c, mtx); inst.setColorAt(r * cols + c, new THREE.Color(0xe6e9eb)); }
+    deckGroup.add(inst); o.assay = { inst, rows, cols };
+    deckObjs = o;
+  }
+  // ---- off-deck devices
+  const incub = box(0.30, 0.22, 0.50, M(0xe4e8eb), 0.25, -0.72, 0.25); box(0.22, 0.01, 0.34, mats.glass, 0.25, -0.608, 0.27); box(0.24, 0.012, 0.03, mats.dark, 0.25, -0.606, 0.46);
+  box(0.30, 0.22, 0.20, M(0x3a4148), 0.80, -0.90, 0.10); box(0.16, 0.12, 0.012, mats.dark, 0.80, -0.75, 0.192); // reader + drawer
+  box(0.18, 0.12, 0.012, mats.dark, 1.05, -0.45, 0.24); // plate hotel nest
+  const hotelFrame = new THREE.Group(); scene.add(hotelFrame);
+  for (const [x, y] of [[0.97, -0.64], [1.13, -0.64], [0.97, -0.52], [1.13, -0.52]]) box(0.012, 0.012, 0.42, mats.steel, x, y, 0.21, hotelFrame);
+  for (let k = 0; k < 7; k++) box(0.16, 0.12, 0.004, mats.steel, 1.05, -0.58, 0.06 + k * 0.05, hotelFrame);
+  const rackHotel = new THREE.Group(); scene.add(rackHotel);
+  box(0.16, 0.12, 0.30, mats.glass, ST3.rackhotel[0], ST3.rackhotel[1], 0.15, rackHotel);
+  const stock = []; for (let k = 0; k < 8; k++) stock.push(box(DK.PLATE[0], DK.PLATE[1], 0.02, mats.rack, ST3.rackhotel[0], ST3.rackhotel[1], 0.02 + k * 0.026, rackHotel));
+  // used tip boxes go into an open bin next to the instrument
+  const [rwx, rwy] = ST3.rackwaste, rackBinMat = M(0x59626a);
+  for (const [w, d, x, y] of [[0.20, 0.006, rwx, rwy - 0.08], [0.20, 0.006, rwx, rwy + 0.08], [0.006, 0.16, rwx - 0.10, rwy], [0.006, 0.16, rwx + 0.10, rwy]])
+    box(w, d, 0.22, rackBinMat, x, y, 0.11);
+  box(0.20, 0.16, 0.004, rackBinMat, rwx, rwy, 0.002);
+  const binnedRacks = []; for (let k = 0; k < 8; k++) binnedRacks.push(box(DK.PLATE[0], DK.PLATE[1], 0.02, mats.rack, rwx + (k % 2 ? 0.01 : -0.01), rwy, 0.014 + k * 0.022));
+  // ---- SCARA arm
+  const arm = new THREE.Group(); arm.position.set(ARM.base[0], ARM.base[1], 0); scene.add(arm);
+  const col = cyl(0.07, 0.80, mats.dark, arm); col.position.z = 0.40;
+  const carriage = new THREE.Group(); arm.add(carriage); box(0.16, 0.16, 0.06, M(0x4a535b), 0, 0, 0, carriage);
+  const l1 = new THREE.Group(); carriage.add(l1); const l1m = box(ARM.L1, 0.07, 0.05, mats.white, ARM.L1 / 2, 0, 0, l1);
+  const l2 = new THREE.Group(); l2.position.x = ARM.L1; l1.add(l2); box(ARM.L2, 0.06, 0.045, mats.white, ARM.L2 / 2, 0, 0, l2);
+  const wrist = new THREE.Group(); wrist.position.x = ARM.L2; l2.add(wrist);
+  const wcyl = cyl(0.02, 0.14, M(0x6b747b), wrist); wcyl.position.z = -0.07;
+  const gripper = new THREE.Group(); gripper.position.z = -ARM.drop; wrist.add(gripper);
+  box(0.16, 0.03, 0.01, mats.dark, 0, 0, 0.016, gripper);
+  const fingerA = box(0.008, 0.05, 0.03, mats.black, 0.07, 0, 0, gripper), fingerB = box(0.008, 0.05, 0.03, mats.black, -0.07, 0, 0, gripper);
+  const eeCamMount = new THREE.Object3D(); eeCamMount.position.set(0.0, 0.03, 0.01); gripper.add(eeCamMount);
+  const carried = box(DK.PLATE[0], DK.PLATE[1], 0.0142, mats.plate, 0, 0, -0.0, gripper); carried.visible = false;
+  const carriedRack = box(DK.PLATE[0], DK.PLATE[1], 0.02, mats.rack, 0, 0, 0, gripper); carriedRack.visible = false;
+  function setArm(q) { carriage.position.z = q[0]; l1.rotation.z = q[1]; l2.rotation.z = q[2]; wrist.rotation.z = q[3]; }
+  let lastQ = (() => { const q = scaraIK(ST3.hotel[0], ST3.hotel[1], 0.45), e = MOTION.fold; return [ARM.safeZ, q[1], e, -q[1] - e]; })();
+  // plates (station occupancy)
+  const platePool = {}, plateMat = { normal: mats.plate, sel: M(0x0aa0aa, { emissive: 0x053c3f }), invalid: M(0xd65050) };
+  const plateMesh = (job) => { if (!platePool[job]) { const m = box(DK.PLATE[0], DK.PLATE[1], 0.0142, mats.plate, 0, 0, 0); m.userData.job = job; platePool[job] = m; } return platePool[job]; };
+  // ---- cameras
+  const cam = new THREE.PerspectiveCamera(38, 1.5, 0.02, 20); cam.up.set(0, 0, 1);
+  const target = new THREE.Vector3(0.58, -0.12, 0.25); let theta = -0.95, phi = 0.95, radius = 2.2;
+  const placeCam = () => { cam.position.set(target.x + radius * Math.sin(phi) * Math.cos(theta), target.y + radius * Math.sin(phi) * Math.sin(theta), target.z + radius * Math.cos(phi)); cam.lookAt(target); };
+  placeCam();
+  const deckCam = new THREE.OrthographicCamera(-0.54, 0.54, 0.36, -0.36, 0.1, 3); deckCam.up.set(0, 1, 0); deckCam.position.set(0.50, 0.33, 0.89); deckCam.lookAt(0.50, 0.33, 0);
+  const eeCam = new THREE.PerspectiveCamera(75, 4 / 3, 0.005, 3);
+  const lhCam = new THREE.PerspectiveCamera(70, 4 / 3, 0.005, 3); lhCam.up.set(0, 1, 0);
+  // interaction on the main view
+  const canvas = V.main.c; let drag = null;
+  canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, moved: false, pan: e.button === 2 || e.shiftKey }; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener("pointermove", (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    if (drag.pan) { pan(dx, dy); drag.x = e.clientX; drag.y = e.clientY; return; } theta -= dx * .008; phi = Math.min(1.45, Math.max(.12, phi - dy * .008)); drag.x = e.clientX; drag.y = e.clientY; placeCam(); });
+  canvas.addEventListener("pointerup", (e) => {
+    if (drag && !drag.moved) { const r = canvas.getBoundingClientRect(), ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
+      const hit = ray.intersectObjects(Object.values(platePool).filter((m) => m.visible))[0]; if (hit) { selPlate = hit.object.userData.job; pinned = true; showSub("plate"); } }
+    drag = null; });
+  const pan = (dx, dy) => { // move the camera and its target together in the view plane
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1), k = radius * .0012;
+    target.addScaledVector(right, -dx * k).addScaledVector(up, dy * k); placeCam(); };
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("wheel", (e) => { // translate along the ray under the cursor (fly in/out); sideways scroll strafes
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect(), ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
+    const step = -Math.sign(e.deltaY) * 0.07 * Math.max(.5, radius / 2.2);
+    if (e.deltaY) { target.addScaledVector(ray.ray.direction, step); target.z = Math.max(0, target.z); }
+    if (e.deltaX) pan(Math.sign(e.deltaX) * 30, 0); else placeCam(); }, { passive: false });
+  canvas.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") theta += .08; else if (e.key === "ArrowRight") theta -= .08; else if (e.key === "ArrowUp") phi = Math.max(.12, phi - .06); else if (e.key === "ArrowDown") phi = Math.min(1.45, phi + .06); else return; e.preventDefault(); placeCam(); });
+  // ---- per-frame pose from the replay
+  const stationXYZ = (name) => {
+    const deck = deckOf();
+    if (name === "lh") return [carrierX(deck.dest_rail), siteY(0), DK.CAR_TOP];
+    if (name === "tiprack") return [carrierX(deck.tip_rail), siteY(0), DK.CAR_TOP];
+    return ST3[name];
+  };
+  const ROUTE_ENDS = { "hotel>lh": ["hotel", "lh"], "lh>incubator": ["lh", "incubator"], "incubator>reader": ["incubator", "reader"], "reader>hotel": ["reader", "hotel"],
+    "rackhotel>lh": ["rackhotel", "tiprack"], "lh>rackwaste": ["tiprack", "rackwaste"] };
+  const wrapA = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  function transferKeys(a, b) { // joint keyframes [q, dwell s, tag], mirroring transfer_plan in sim3d/motion.py
+    const A = stationXYZ(a), B = stationXYZ(b), h = 0.0071, keys = [];
+    const high = (x, y) => [ARM.safeZ, ...scaraIK(x, y, 0).slice(1)];
+    const folded = (q) => { const e = Math.sign(q[2] || 1) * MOTION.fold; return [ARM.safeZ, q[1], e, wrapA(-q[1] - e)]; };
+    const line = (x, y0, y1) => { const n = Math.max(1, Math.ceil(Math.abs(y1 - y0) / MOTION.step)), out = [];
+      for (let k = 1; k <= n; k++) out.push(high(x, y0 + (y1 - y0) * k / n)); return out; };
+    const inA = MOTION.inside.includes(a), inB = MOTION.inside.includes(b);
+    const entryA = inA ? high(A[0], MOTION.stageY) : high(A[0], A[1]), entryB = inB ? high(B[0], MOTION.stageY) : high(B[0], B[1]);
+    const push = (q, tag = "", dwell = 0) => keys.push([q, dwell, tag]);
+    push(folded(entryA)); push(entryA); if (inA) line(A[0], MOTION.stageY, A[1]).forEach((q) => push(q));
+    push(scaraIK(A[0], A[1], A[2] + h + 0.05)); push(scaraIK(A[0], A[1], A[2] + h)); push(scaraIK(A[0], A[1], A[2] + h), "grip", 0.6);
+    push(high(A[0], A[1])); if (inA) line(A[0], A[1], MOTION.stageY).forEach((q) => push(q));
+    push(folded(entryA)); push(folded(entryB)); push(entryB); if (inB) line(B[0], MOTION.stageY, B[1]).forEach((q) => push(q));
+    push(scaraIK(B[0], B[1], B[2] + h + 0.05)); push(scaraIK(B[0], B[1], B[2] + h + 0.001)); push(scaraIK(B[0], B[1], B[2] + h + 0.001), "release", 0.4);
+    push(high(B[0], B[1])); if (inB) line(B[0], B[1], MOTION.stageY).forEach((q) => push(q)); push(folded(entryB));
+    let w = keys[0][0][3]; for (const k of keys) { k[0] = [...k[0]]; k[0][3] = w + wrapA(k[0][3] - w); w = k[0][3]; }
+    return keys;
+  }
+  function armPose(route, u) { // keyframes timed by joint travel (PF400-class speeds), eased per segment
+    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"], keys = [[lastQ, 0, ""], ...transferKeys(a, b)];
+    const dt = keys.map((k, i) => i === 0 ? 0 : Math.max(Math.abs(k[0][0] - keys[i - 1][0][0]) / 0.5, Math.abs(k[0][1] - keys[i - 1][0][1]) / 3.5,
+      Math.abs(k[0][2] - keys[i - 1][0][2]) / 3.5, Math.abs(k[0][3] - keys[i - 1][0][3]) / 6.3) + 0.15 + k[1]);
+    const total = dt.reduce((x, y) => x + y, 0), at = u * total;
+    let t = 0, i = 1; while (i < keys.length - 1 && t + dt[i] < at) t += dt[i++];
+    const s = ease(Math.min(1, Math.max(0, (at - t) / Math.max(1e-6, dt[i] - keys[i][1]))));
+    const grip = keys.findIndex((k) => k[2] === "grip"), rel = keys.findIndex((k) => k[2] === "release");
+    return { q: keys[i - 1][0].map((v, k) => lerp(v, keys[i][0][k], s)), holding: i > grip && i <= rel };
+  }
+  function headPose(st, pm) { // head x, y (row A channel), z, from protocol stage
+    const deck = deckOf(), park = [0.06, 0.40, 0.33]; // home at the left origin, clear of the arm sites; ejects travel to the far (right) end
+    if (!st || !st.cur) return { p: park, tips: 0 };
+    const cur = st.cur, n384 = pm.rows * pm.cols > 96;
+    const tipIdx = cur.tipStart, rack = (deckObjs ? deckObjs.racks.filter((r) => r.type === cur.tipType) : [])[Math.floor(tipIdx / 96) % Math.max(1, (deckObjs ? deckObjs.racks.filter((r) => r.type === cur.tipType).length : 1))];
+    const tipXY = rack ? wellXY(deck.tip_rail, rack.site, 0, Math.floor((tipIdx % 96) / 8), 96) : [carrierX(deck.tip_rail), siteY(0)];
+    const srcXY = wellXY(deck.source_rail, cur.what === 0 ? 0 : cur.what, 0, cur.col - 1, 96);
+    const colNow = cur.cols[Math.max(0, Math.min(cur.cols.length - 1, st.colIdx - 1))] || cur.cols[0];
+    const dstXY = wellXY(deck.dest_rail, 0, cur.parity, colNow, pm.rows * pm.cols);
+    const up = 0.33, down = DK.CAR_TOP + 0.06;
+    const seg = (a, b, g) => { const m = Math.min(1, g / .55); return [lerp(a[0], b[0], ease(m)), lerp(a[1], b[1], ease(m)), g < .55 ? up : lerp(up, down, Math.min(1, (g - .55) / .25))]; };
+    if (st.stage === "pick") return { p: seg(park, tipXY, st.g), tips: st.g > .85 ? 1 : 0 };
+    if (st.stage === "aspirate") return { p: seg(tipXY, srcXY, st.g), tips: 1, asp: st.g };
+    if (st.stage === "dispense") { const nc = cur.cols.length, k = Math.min(nc - 1, Math.floor(st.g * nc)), gg = st.g * nc - k;
+      const from = k === 0 ? srcXY : wellXY(deck.dest_rail, 0, cur.parity, cur.cols[k - 1], pm.rows * pm.cols), to = wellXY(deck.dest_rail, 0, cur.parity, cur.cols[k], pm.rows * pm.cols);
+      return { p: [lerp(from[0], to[0], ease(Math.min(1, gg / .6))), lerp(from[1], to[1], ease(Math.min(1, gg / .6))), k === 0 && gg < .6 ? up : down + 0.01], tips: 1 }; }
+    if (st.stage === "eject") { // nearest point of the front-to-back waste slot
+      const W = DK.WASTE; return { p: seg(dstXY, [W.x, Math.min(Math.max(dstXY[1], W.y0), W.y1 - DK.HEAD_SPAN)], st.g), tips: st.g < .8 ? 1 : 0 }; }
+    return { p: park, tips: 0 };
+  }
+  SIM.pose = function (snap) {
+    buildDeck();
+    for (const m of Object.values(platePool)) m.visible = false;
+    const put = (job, x, y, z) => { const m = plateMesh(job); m.visible = true; m.position.set(x, y, z);
+      m.material = job === selPlate ? plateMat.sel : (RP.plates[job] && RP.plates[job].status === "invalid" && RP.jobs[job] && RP.jobs[job].read && RP.jobs[job].read[4] <= T ? plateMat.invalid : plateMat.normal); };
+    const h = 0.0071, lhXYZ = stationXYZ("lh");
+    snap.hotel.slice(0, 7).forEach((s, k) => put(s.job, 1.05, -0.58, 0.06 + k * 0.05 + h + 0.003));
+    snap.incubator.forEach((s, k) => put(s.job, 0.25, -0.74, 0.04 + h + (k % 9) * 0.05));
+    snap.reader.forEach((s, k) => put(s.job, 0.80, -0.75, 0.198 + h + k * 0.016));
+    const onDeck = snap.lh.filter((s) => s.kind !== "dispense"); // a dispensing plate is drawn as the assay plate itself
+    onDeck.forEach((s, k) => put(s.job, lhXYZ[0], lhXYZ[1], lhXYZ[2] + h + k * 0.016));
+    // arm: plate transfers and tip-rack resupply
+    const tr = snap.arm.find((s) => s.op && s.op.route);
+    const rackJob = RP.ops.find((o) => o[0].startsWith("TIPS") && RP.kinds[o[1]] === "transfer" && o[3] <= T && o[4] > T);
+    carried.visible = carriedRack.visible = false;
+    if (tr || rackJob) {
+      const route = tr ? tr.op.route : rackJob.route;
+      const o = tr ? tr.op : rackJob, u = (T - o[3]) / Math.max(1, o[4] - o[3]);
+      const { q, holding } = armPose(route, u); setArm(q);
+      if (holding) { if (tr) carried.visible = true; else carriedRack.visible = true; }
+      if (u > .95) lastQ = q;
+    } else setArm(lastQ);
+    fingerA.position.x = carried.visible || carriedRack.visible ? 0.066 : 0.072; fingerB.position.x = -fingerA.position.x;
+    // liquid handler: assay plate, tips, sources, head
+    const A = activeDispense(), pmA = A.op ? RP.plates[A.op[0]] : null, st = A.st && pmA ? A.st : null;
+    const dispensing = snap.lh.find((s) => s.kind === "dispense");
+    if (deckObjs) {
+      deckObjs.assayBase.visible = !!dispensing || onDeck.length === 0 && !!st;
+      deckObjs.assay.inst.visible = deckObjs.assayBase.visible;
+      if (st && deckObjs.assay.inst.visible) {
+        const { inst, rows, cols } = deckObjs.assay, col = new THREE.Color();
+        for (let i = 0; i < rows * cols; i++) { const w = st.wells.get(i);
+          if (!w) col.set(0xe6e9eb); else if (w.drugs.size) { col.set(["#2a78d6", "#eb6834", "#6250d6", "#e87ba4"][[...w.drugs][w.drugs.size - 1] % 4]); } else col.set(0xc9b9a6);
+          inst.setColorAt(i, col); }
+        inst.instanceColor.needsUpdate = true;
+      }
+      const mtx = new THREE.Matrix4(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
+      for (const r of deckObjs.racks) { const used = st ? (st.tipsUsed[r.type] || 0) - r.idx * 96 : 0;
+        for (let i = 0; i < 96; i++) { const rr = i % 8, cc = Math.floor(i / 8), [x, y] = wellXY(deckOf().tip_rail, r.site, rr, cc, 96);
+          r.inst.setMatrixAt(i, i < used ? zero : mtx.makeTranslation(x, y, DK.CAR_TOP + 0.022 + r.len / 2 - 0.012)); }
+        r.inst.instanceMatrix.needsUpdate = true; }
+      for (const s of deckObjs.src) {
+        if (s.trough) { const left = st ? (st.srcLeft[`0:${(st.cur || {}).col || 1}`] ?? 350) : 350; s.trough.scale.z = Math.max(.1, left / 350); continue; }
+        s.cols.forEach((m, c) => { const used = st && st.P.norm.some((p) => p.what === s.s && p.col === c + 1);
+          m.visible = !!used || s.s === 0; const left = st ? (st.srcLeft[`${s.s}:${c + 1}`] ?? 350) : 350; m.scale.z = Math.max(.08, left / 350); m.position.z = DK.CAR_TOP + 0.006 * m.scale.z + 0.002; });
+      }
+    }
+    stock.forEach((m, k) => { m.visible = k < 8; });
+    const nDisposed = RP.ops.filter((o) => o[5] === "lh>rackwaste" && o[4] <= T).length; // used tip boxes in the bin
+    binnedRacks.forEach((m, k) => { m.visible = k < Math.min(8, nDisposed); });
+    const hp = headPose(dispensing ? st : null, pmA || { rows: 16, cols: 24 });
+    head.position.set(hp.p[0], 0, 0);
+    const binned = st ? tipsDiscarded(st) : 0; // this plate's ejected tips, as bin fill
+    wasteFill.scale.z = Math.max(0.001, Math.min(0.12, 0.12 * binned / 1200)); wasteFill.position.z = 0.004 + wasteFill.scale.z / 2;
+    yBar.position.set(0, hp.p[1] - 0.0315, Z_TOP + 0.025);
+    const chans = st && st.cur && dispensing ? new Set(st.cur.chans.map(([k]) => k)) : new Set();
+    const n384 = pmA && pmA.rows > 8;
+    channels.forEach((c, k) => {
+      const zMount = hp.p[2] + (chans.has(k) || !dispensing ? 0 : 0.025); // idle channels stay raised
+      c.g.position.set(0, hp.p[1] - k * 0.009, zMount);
+      const len = Math.max(0.01, Z_TOP - zMount); c.body.scale.z = len; c.body.position.z = len / 2;
+      const showTip = chans.has(k) && hp.tips; c.tip.visible = !!showTip; c.tip.material = mats["tip" + ((st && st.cur && st.cur.tipType) || "300uL").replace("uL", "")] || mats.tip300;
+      c.liquid.visible = !!showTip && st && (st.stage === "dispense" || (st.stage === "aspirate" && st.g > .7));
+      if (c.liquid.visible) c.liquid.material = st.cur.what === 0 ? mats.cells : drugMats[(st.cur.what - 1) % 4];
+    });
+    const caps = [];
+    if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}</span>`);
+    else if (rackJob) caps.push(`<span class="pill">arm <b>${rackJob.route === "lh>rackwaste" ? "used tip box → waste bin" : "new tip box → deck"}</b></span>`);
+    if (dispensing && st && st.cur) caps.push(`<span class="pill">${LHSEL} <b>${st.stage}</b> pass ${st.idx + 1}/${st.n}</span>`);
+    caps.push(`<span class="pill">incubator <b>${snap.incubator.length}</b></span>`, `<span class="pill">queued <b>${snap.hotel.length}</b></span>`, `<span class="pill">done <b>${snap.done.length}</b></span>`);
+    $("#scene-cap").innerHTML = caps.join("");
+    // end-effector camera follows the gripper, looking down
+    scene.updateMatrixWorld();
+    const wp = new THREE.Vector3(); eeCamMount.getWorldPosition(wp); eeCam.position.copy(wp);
+    const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(gripper.getWorldQuaternion(new THREE.Quaternion())); eeCam.up.copy(fwd);
+    eeCam.lookAt(wp.x, wp.y, wp.z - 1);
+    // pipetting-head camera: on the head, beside channel 1, looking down at the labware
+    const hp3 = new THREE.Vector3(); channels[0].g.getWorldPosition(hp3);
+    lhCam.position.set(hp3.x + 0.03, hp3.y + 0.02, hp3.z + 0.02); lhCam.lookAt(hp3.x + 0.03, hp3.y - 0.02, hp3.z - 1);
+  };
+  const fit = (v, c) => { const w = v.c.clientWidth, h = v.c.clientHeight; if (!w || !h) return false;
+    if (v.c.width !== Math.round(w * devicePixelRatio) || v.c.height !== Math.round(h * devicePixelRatio)) { v.r.setPixelRatio(devicePixelRatio); v.r.setSize(w, h, false); }
+    if (c.isPerspectiveCamera) { c.aspect = w / h; c.updateProjectionMatrix(); } return true; };
+  SIM.render = () => {
+    if (fit(V.main, cam)) V.main.r.render(scene, cam);
+    if (fit(V.deck, deckCam)) { const a = V.deck.c.clientWidth / V.deck.c.clientHeight; deckCam.left = -0.36 * a; deckCam.right = 0.36 * a; deckCam.updateProjectionMatrix(); V.deck.r.render(scene, deckCam); }
+    if (fit(V.ee, eeCam)) V.ee.r.render(scene, eeCam);
+    if (fit(V.lh, lhCam)) V.lh.r.render(scene, lhCam);
+  };
+  SIM.ready = true;
+}
+
+/* ================================================================ loop rail */
+const OPEN = new Set(["execute"]);
+function drawRail(snap) {
+  const recent = (ts, win) => ts.filter((t) => t <= T && t > T - win);
+  const submits = [...new Set(Object.values(RP.submits || {}))].sort((a, b) => a - b);
+  const batches = submits.filter((t) => t <= T), lastSub = batches[batches.length - 1];
+  const platesIn = Object.entries(RP.submits || {}).filter(([, t]) => t <= T).map(([p]) => p);
+  const wells = platesIn.reduce((a, p) => a + Object.values(RP.plates[p].wells).filter((w) => w && w !== "NEG" && w !== "POS" && w !== "EMPTY").length, 0);
+  const replans = RP.replans.filter((r) => r.t <= T), lastRp = replans[replans.length - 1];
+  const fails = RP.failures.filter((f) => f.t <= T), lastF = fails[fails.length - 1];
+  const reads = RP.reads.filter((r) => r.t <= T), deck = deckOf();
+  const run = (k) => RP.ops.filter((o) => RP.kinds[o[1]] === k && o[3] <= T && o[4] > T);
+  const disp = run("dispense"), mov = run("transfer").filter((o) => !o[0].startsWith("TIPS")), tipsMov = RP.ops.filter((o) => o[0].startsWith("TIPS") && o[3] <= T && o[4] > T);
+  const prog = Object.values(RP.progress), camp = prog[0] || {};
+  const best = prog.map((p) => p.points.filter((x) => x.t <= T).pop()).filter(Boolean);
+  const A = activeDispense(), st = A.st;
+  const designer = [...new Set(prog.map((p) => p.designer))].join(", ") || "–", mode = camp.mode || "sync";
+  const stages = [
+    { id: "design", name: "Design", on: lastSub != null && T - lastSub < 30, live: `${batches.length} batch${batches.length === 1 ? "" : "es"} · ${platesIn.length} plates`,
+      subs: [["fit model to reads", reads.length > 0 && lastSub != null && T - lastSub < 30], [`propose (${designer})`, lastSub != null && T - lastSub < 30], [`${wells} conditions so far`, false]] },
+    { id: "layout", name: "Layout & deck", on: lastSub != null && T - lastSub < 30, live: deck.tip_reuse ? "tip reuse · optimized deck" : "fresh tips · fixed deck",
+      subs: [["place wells (edge-aware)", lastSub != null && T - lastSub < 30], [`deck: tips r${deck.tip_rail} · src r${deck.source_rail} · plate r${deck.dest_rail}`, false], [`plan protocol per plate`, disp.length > 0 && st && st.idx === 0]] },
+    { id: "schedule", name: "Schedule", on: lastRp != null && T - lastRp.t < 10, live: `${replans.length} replans${lastRp ? ` · ${lastRp.ms} ms` : ""}`,
+      subs: [[lastRp ? `last: ${lastRp.reasons.join(", ").replaceAll("failure:", "")}` : "no replans yet", lastRp && T - lastRp.t < 10], [lastRp ? `${lastRp.solver} · ${lastRp.free}/${lastRp.ops} ops free` : "", false], [lastRp ? `${lastRp.moved} ops moved` : "", false]].filter((x) => x[0]) },
+    { id: "execute", name: "Execute", on: disp.length + mov.length + tipsMov.length + run("read").length > 0,
+      live: `${disp.length} dispensing · ${run("incubate").length} incubating`,
+      subs: [[disp.length && st && st.cur ? `dispense: ${st.stage} · pass ${st.idx + 1}/${st.n}` : "dispense", disp.length > 0], [mov.length ? `arm: ${mov[0].route.replace(">", " → ")}` : "arm move", mov.length > 0],
+             [`incubate: ${run("incubate").length} plates`, run("incubate").length > 0], [`read: ${reads.length} done`, run("read").length > 0], [tipsMov.length ? "tip-rack resupply" : `tip resupply: ${(RP.tips || []).filter((e) => e.kind === "tip_refill" && e.t <= T).length}`, tipsMov.length > 0]] },
+    { id: "recover", name: "Recover", on: lastF != null && T - lastF.t < 15, live: `${fails.length} failure${fails.length === 1 ? "" : "s"}`,
+      subs: lastF ? [[`detect: ${lastF.type.replace("_", " ")}`, T - lastF.t < 15], [`decide: ${lastF.actions.join(", ")}`, T - lastF.t < 15], [`by: ${lastF.policy}`, false]] : [["no failures yet", false]] },
+    { id: "analyze", name: "Analyze", on: reads.length && T - reads[reads.length - 1].t < 15, live: `${reads.length}/${RP.reads.length} plates read`,
+      subs: [["normalize to controls", reads.length && T - reads[reads.length - 1].t < 15], ["Bliss excess per combination", reads.length && T - reads[reads.length - 1].t < 15],
+             [best.length && best[0].best ? `best est. ${best.map((b) => b.best_est.toFixed(2)).join(" / ")}` : "no recommendation yet", false]] },
+  ];
+  $("#rail").innerHTML = stages.map((g, i) => `${i ? '<div class="arrow" aria-hidden="true">↓</div>' : ""}<button class="stage ${g.on ? "active" : ""}" type="button" data-stage="${g.id}" aria-expanded="${OPEN.has(g.id)}">
+    <div class="top"><span class="dot"></span><span class="name">${g.name}</span><span class="chev">${OPEN.has(g.id) ? "▾" : "▸"}</span></div>
+    <div class="live">${g.live}</div>${OPEN.has(g.id) ? `<div class="subs">${g.subs.map(([t, on]) => `<div class="sub ${on ? "on" : ""}"><i></i><span>${t}</span></div>`).join("")}</div>` : ""}</button>`).join("") +
+    `<div class="loopback">↺ next ${mode === "async" ? "plate when a slot frees" : "round"}</div>`;
+  $("#rail").querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { const id = b.dataset.stage; OPEN.has(id) ? OPEN.delete(id) : OPEN.add(id); drawRail(snapshot(T)); }));
+}
+
+/* ================================================================ clock */
+const clampT = (t) => Math.max(0, Math.min(TMAX, t));
+let wall = 0, lastDraw = 0;
+function update() {
+  if (!RP || $("#view-console").hidden) return;
+  $("#scrub").value = Math.round(T / TMAX * 10000); $("#clock").textContent = fmtHM(T);
+  const snap = snapshot(T), w = +$("#window").value, t0 = Math.max(0, Math.min(TMAX - w, T - w / 2)), t1 = Math.min(TMAX, t0 + w);
+  drawGantt($("#gantt-overview"), 0, TMAX, { compact: true, window: [t0, t1] });
+  drawGantt($("#gantt-detail"), t0, t1, {});
+  drawRail(snap); drawLH(snap); drawDevices(snap); drawPlate(snap); drawProgress(); drawTicker();
+  if (SIM.ready) { SIM.pose(snap, wall); SIM.render(); }
+}
+let last = 0;
+function frame(ts) {
+  const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts; wall += dt;
+  if (!$("#view-console").hidden && RP) {
+    if (playing) { T = clampT(T + dt * +$("#speed").value); if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; }
+      if (ts - lastDraw > 60) { lastDraw = ts; update(); } else if (SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); } }
+    else if (SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); }
+  }
+  requestAnimationFrame(frame);
+}
+$("#play").addEventListener("click", () => { playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) T = 0; });
+$("#scrub").addEventListener("input", (e) => { T = +e.target.value / 10000 * TMAX; update(); });
+$("#window").addEventListener("change", update);
+$("#scenario").addEventListener("change", (e) => loadReplay(e.target.value));
+function jump(times, speed) { const n = times.filter((t) => t > T + 0.5).sort((a, b) => a - b)[0]; if (n != null) { T = clampT(n); if (speed) $("#speed").value = speed; update(); } }
+$("#next-disp").addEventListener("click", () => { const ops = RP.ops.filter((o) => RP.kinds[o[1]] === "dispense"); jump(ops.map((o) => o[3] + 0.2), "0.2");
+  const o = ops.find((x) => Math.abs(x[3] + 0.2 - T) < 0.01); if (o) { LHSEL = o[2]; update(); } });
+$("#next-eject").addEventListener("click", () => { // freeze on the head over the waste slot (70% into the eject stage)
+  const ts = []; for (const o of RP.ops) { if (RP.kinds[o[1]] !== "dispense") continue; const P = passesOf(o[0]); if (!P) continue;
+    const n = P.norm.length; for (let k = 0; k < n; k++) { const t = o[3] + (o[4] - o[3]) * (k + 0.97) / n; if (t > T + 1e-3) { ts.push([t, o[2]]); break; } } }
+  ts.sort((x, y) => x[0] - y[0]); if (!ts.length) return; playing = false; $("#play").textContent = "Play";
+  T = clampT(ts[0][0]); LHSEL = ts[0][1]; $("#speed").value = "0.2"; update(); });
+$("#next-move").addEventListener("click", () => jump(RP.ops.filter((o) => RP.kinds[o[1]] === "transfer").map((o) => o[3]), "1"));
+$("#next-fail").addEventListener("click", () => jump(RP.failures.map((f) => f.t - 2)));
+$("#next-read").addEventListener("click", () => jump(RP.reads.map((r) => r.t)));
+addEventListener("resize", () => update());
+
+async function loadReplay(name) {
+  RP = await (await fetch(`data/replay_${name}.json`)).json();
+  buildJobs(); RP.rows = lanes(RP.ops); TMAX = Math.max(...RP.ops.map((o) => o[4]));
+  const firstDisp = RP.ops.filter((o) => RP.kinds[o[1]] === "dispense").map((o) => o[3]).sort((a, b) => a - b)[0] || 0;
+  T = clampT(firstDisp + 20); selPlate = null; pinned = false; LHSEL = null;
+  $("#gantt-legend").innerHTML = RP.kinds.map((k) => `<span><i class="box" style="background:${KIND_COLOR[k]}"></i>${k}</span>`).join("") + `<span><span style="color:var(--critical)">▲</span> failure</span><span><span style="color:var(--accent)">|</span> replan</span>`;
+  update();
+}
+
+/* ================================================================ results */
+let RESULTS = null, CUR_EXP = null, CELL = null;
+const EXP_ORDER = ["m4", "m2", "m2_layout", "m3", "m3_async", "level4", "level4_sim3d"];
+const EXP_SHORT = { m4: "Loop timing", m2: "Experiment selection", m2_layout: "Plate layout", m3: "Scheduling (sync)", m3_async: "Scheduling (async)", level4: "Level 4", level4_sim3d: "Calibrated Level 4" };
+function renderExperiment(key) {
+  CUR_EXP = key; const e = RESULTS.experiments[key];
+  document.querySelectorAll("#exp-chips button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.key === key));
+  try { localStorage.setItem("labloop.exp", key); } catch (_) {}
+  $("#exp-title").textContent = e.title; $("#exp-note").textContent = e.note;
+  $("#exp-legend").innerHTML = e.variants.map((v, i) => `<span><i style="background:${SERIES[i % 7]}"></i>${v.label}</span>`).join("");
+  const [W, H] = boxSize($("#exp-chart")), L = 46, R = 14, Tt = 8, B = 30;
+  const s = svgRoot($("#exp-chart"), W, H), xs = e.grid, xmax = xs[xs.length - 1] || 1;
+  const X = (x) => L + (x / xmax) * (W - L - R), Y = (y) => Tt + (1 - y) * (H - Tt - B);
+  for (const y of [0, .25, .5, .75, 1]) { el("line", { x1: L, x2: W - R, y1: Y(y), y2: Y(y), stroke: "var(--grid)" }, s); el("text", { x: L - 8, y: Y(y) + 4, "text-anchor": "end" }, s).textContent = Math.round(y * 100) + "%"; }
+  for (const x of niceTicks(xmax, 7)) el("text", { x: X(x), y: H - B + 16, "text-anchor": "middle" }, s).textContent = x;
+  el("text", { x: W - R, y: H - 2, "text-anchor": "end" }, s).textContent = e.x === "t" ? "simulated hours" : "plates read";
+  e.variants.forEach((v, i) => el("polygon", { points: xs.map((x, k) => `${X(x)},${Y(v.curve.hi[k])}`).concat(xs.map((x, k) => `${X(x)},${Y(v.curve.lo[k])}`).reverse()).join(" "), fill: SERIES[i % 7], "fill-opacity": .12 }, s));
+  e.variants.forEach((v, i) => el("path", { d: xs.map((x, k) => `${k ? "L" : "M"}${X(x)},${Y(v.curve.median[k])}`).join(""), fill: "none", stroke: SERIES[i % 7], "stroke-width": 2, "stroke-linejoin": "round" }, s));
+  const hit = el("rect", { x: L, y: Tt, width: W - L - R, height: H - Tt - B, fill: "transparent" }, s), cross = el("line", { y1: Tt, y2: H - B, stroke: "var(--axis)", visibility: "hidden" }, s);
+  hit.addEventListener("pointermove", (evt) => { const r = s.getBoundingClientRect(), xv = ((evt.clientX - r.left) / r.width * W - L) / (W - L - R) * xmax, k = Math.max(0, Math.min(xs.length - 1, Math.round(xv / xmax * (xs.length - 1))));
+    cross.setAttribute("x1", X(xs[k])); cross.setAttribute("x2", X(xs[k])); cross.setAttribute("visibility", "visible");
+    showTip(evt, `<b>${e.x === "t" ? xs[k].toFixed(0) + " h" : xs[k].toFixed(1) + " plates"}</b><br>` + e.variants.map((v, i) => `<span style="color:${SERIES[i % 7]}">■</span> ${v.label}: ${(100 * v.curve.median[k]).toFixed(0)}%`).join("<br>")); });
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+  const sched = key.startsWith("m3") || key.startsWith("level4");
+  const cols = (sched ? [["makespan_h", "Makespan h", 1, "min"], ["idle_h", "Idle h", 0, "min"], ["resolve_ms", "Replan ms", 1, "min"], ["resolve_p95_ms", "p95 ms", 0, "min"], ["moved_ops", "Ops moved", 1, "min"], ["regret", "Regret", 3, "min"], ["corrupt_accepted", "Wrong values kept", 0, "min"], ["invalid_plates", "Invalid plates", 1, "min"]]
+    : [["regret", "Final regret", 3, "min"], ["ttt_h", "Hours to 90%", 0, "min"], ["ttt_plates", "Plates to 90%", 1, "min"], ["hit", "Reached 90%", 2, "max"], ["makespan_h", "Makespan h", 0, "min"], ["rmse", "Landscape RMSE", 3, "min"]]).filter((c) => e.variants.some((v) => v.metrics[c[0]] != null));
+  const best = {}; for (const [k, , , dir] of cols) { const vals = e.variants.map((v) => v.metrics[k]).filter((x) => x != null); best[k] = dir === "min" ? Math.min(...vals) : Math.max(...vals); }
+  $("#exp-table").innerHTML = `<thead><tr><th>Variant</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` + e.variants.map((v, i) => `<tr><td><span style="color:${SERIES[i % 7]}">■</span> ${v.label}</td>` + cols.map(([k, , dp]) => { const x = v.metrics[k]; return `<td class="${x === best[k] && e.variants.length > 1 ? "best" : ""}">${x == null ? "–" : (k === "hit" ? Math.round(100 * x) + "%" : x.toFixed(dp))}</td>`; }).join("") + "</tr>").join("") + "</tbody>";
+  const sh = e.shadow; $("#exp-callout").innerHTML = sh ? `<div class="callout">Against a 10 s from-scratch CP-SAT solve at ${sh.n} replans, repair's objective was within <b>${sh.gap_pct_median.toFixed(2)}%</b> at the median (p95 ${sh.gap_pct_p95.toFixed(2)}%).</div>` : "";
+}
+
+/* ================================================================ calibration */
+function smallLine(host, xs, series, opts) {
+  const [W, H] = boxSize(host), L = 40, R = 10, Tt = 8, B = 30, s = svgRoot(host, W, H);
+  const X = (x) => L + x / opts.xmax * (W - L - R), Y = (y) => Tt + (1 - y / opts.ymax) * (H - Tt - B);
+  for (const y of opts.yticks) { el("line", { x1: L, x2: W - R, y1: Y(y), y2: Y(y), stroke: "var(--grid)" }, s); el("text", { x: L - 6, y: Y(y) + 4, "text-anchor": "end" }, s).textContent = Math.round(y * 100) + "%"; }
+  for (const x of opts.xticks) el("text", { x: X(x), y: H - 14, "text-anchor": "middle" }, s).textContent = x;
+  el("text", { x: W - R, y: H - 1, "text-anchor": "end" }, s).textContent = opts.xlabel;
+  for (const ser of series) { el("path", { d: xs.map((x, k) => `${k ? "L" : "M"}${X(x)},${Y(ser.y[k])}`).join(""), fill: "none", stroke: ser.color, "stroke-width": 2, "stroke-dasharray": ser.dash || "" }, s);
+    xs.forEach((x, k) => { const c = el("circle", { cx: X(x), cy: Y(ser.y[k]), r: 4, fill: ser.color, stroke: "var(--surface)", "stroke-width": 2 }, s); c.addEventListener("pointermove", (evt) => showTip(evt, `${ser.name}: ${(100 * ser.y[k]).toFixed(1)}% at ${x} ${opts.unit}`)); c.addEventListener("pointerleave", hideTip); }); }
+}
+function calibration(C) {
+  $("#motion-table").innerHTML = `<thead><tr><th>Move</th><th>Arm s</th><th>Device s</th><th>Err mm</th><th>Collisions</th></tr></thead><tbody>` + Object.entries(C.motion.checks).map(([k, v]) => `<tr><td>${k.replace(">", " → ")}</td><td>${v.simulated_s.toFixed(1)}</td><td>${v.overhead_s.toFixed(0)}</td><td>${v.placement_err_mm.toFixed(1)}</td><td>${v.collisions.length}</td></tr>`).join("") +
+    `<tr><td>8-channel pass</td><td>${C.motion.lh_pass_s.toFixed(1)}</td><td colspan="3" style="text-align:left">tips → source → assay → eject</td></tr></tbody>`;
+  if ($("#view-calibration").hidden) return;
+  const tp = C.tips.p_fail;
+  smallLine($("#tips"), tp.map((r) => r.sigma_mm), [{ name: "simulated", y: tp.map((r) => r.p_fail_sim), color: "var(--s1)" }, { name: "analytic", y: tp.map((r) => r.p_fail_analytic), color: "var(--muted)", dash: "4 3" }], { xmax: .55, ymax: .3, yticks: [0, .1, .2, .3], xticks: [0, .1, .2, .3, .4, .5], xlabel: "σ (mm)", unit: "mm σ" });
+  const pc = C.perception.filter((r) => r.yaw_deg === 0);
+  smallLine($("#perception"), pc.map((r) => r.offset_mm), [{ name: "detected", y: pc.map((r) => r.detect_rate), color: "var(--s3)" }], { xmax: 5.3, ymax: 1, yticks: [0, .5, 1], xticks: [0, 1, 2, 3, 4, 5], xlabel: "plate offset (mm)", unit: "mm" });
+}
+
+/* ================================================================ boot */
+(async function boot() {
+  RESULTS = await (await fetch("data/results.json")).json();
+  try { CELL = await (await fetch("data/cell.json")).json(); initThree(CELL); calibration(CELL); } catch (err) { console.error(err); }
+  $("#scenario").innerHTML = (RESULTS.replays || []).map((r) => `<option value="${r.name}">${r.title}</option>`).join("");
+  const keys = EXP_ORDER.filter((k) => RESULTS.experiments[k]);
+  $("#exp-chips").innerHTML = keys.map((k) => `<button class="chip" type="button" data-key="${k}" aria-pressed="false">${EXP_SHORT[k]}</button>`).join("");
+  document.querySelectorAll("#exp-chips button").forEach((b) => b.addEventListener("click", () => renderExperiment(b.dataset.key)));
+  CUR_EXP = keys[0]; try { const saved = localStorage.getItem("labloop.exp"); if (saved && keys.includes(saved)) CUR_EXP = saved; } catch (_) {}
+  if (RESULTS.m6) {
+    const m = RESULTS.m6, names = Object.keys(m.summary), cols = [["recovery_min", "Recovery min", 1], ["wells_invalid", "Wells discarded", 1], ["corrupt_accepted", "Wrong values kept", 0], ["makespan_h", "Makespan h", 0], ["n_failures", "Failures", 0], ["llm_fallbacks", "Fallbacks", 0]];
+    $("#m6-table").innerHTML = `<thead><tr><th>Policy</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` + names.map((n) => `<tr><td>${n.startsWith("llm") ? "Claude (Opus 5.5)" : "Rule table"}</td>` + cols.map(([k, , dp]) => `<td>${m.summary[n][k] == null ? "–" : (+m.summary[n][k]).toFixed(dp)}</td>`).join("") + "</tr>").join("") + "</tbody>";
+    $("#m6-note").textContent = "Means per run. Repair downtime is the same for both.";
+    $("#m6-examples").innerHTML = Object.entries(m.examples).map(([t, e]) => `<div class="ev"><div class="t">${t.replace("_", " ")}</div><div><span class="what">${e.actions}</span><div class="why">${e.rationale}</div></div></div>`).join("");
+  }
+  showTab((location.hash || "#console").slice(1));
+  if (RESULTS.replays && RESULTS.replays.length) await loadReplay(RESULTS.replays[0].name);
+  requestAnimationFrame(frame);
+})();
+</script>
