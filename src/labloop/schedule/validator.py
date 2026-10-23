@@ -48,7 +48,7 @@ def violations(problem: Problem, sched: Schedule, check_lags: bool = True) -> li
                 errs.append(f"{lag.before}->{lag.after}: gap {gap} > max {lag.max_lag}")
 
     # A span (deck zone held from loading to unloading) replaces its link op's interval.
-    covered = {sp.link for sp in problem.spans}
+    covered = problem.covered()
     spans = []
     for sp in problem.spans:
         s = sched.start[sp.first] if sp.first in problem.ops else problem.span_start[sp.link]

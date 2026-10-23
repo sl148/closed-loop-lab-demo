@@ -110,105 +110,90 @@ button.play { font: 600 12.5px var(--body); background: var(--accent); color: va
 button.ghost { font: 500 12px var(--body); background: transparent; color: var(--ink-2); border: 1px solid var(--axis); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
 button.ghost:hover { border-color: var(--accent); color: var(--ink); }
 select { font: 12.5px var(--body); background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 3px 6px; max-width: 100%; }
-.console-body { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 8px; min-height: 0; }
-.rail { display: flex; flex-direction: column; gap: 3px; overflow: auto; min-height: 0; padding-right: 2px; }
-.rail .arrow { text-align: center; color: var(--muted); font: 11px var(--mono); line-height: 1; }
-.stage { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
-  padding: 7px 9px; cursor: pointer; color: var(--ink); font: inherit; }
-.stage:hover { border-color: var(--axis); }
-.stage.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-.stage .top { display: flex; align-items: center; gap: 6px; }
-.stage .name { font: 600 13.5px var(--display); flex: 1; }
-.stage .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grid); flex: 0 0 auto; }
-.stage.active .dot { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .stage.active .dot { animation: none; } }
-.stage .chev { color: var(--muted); font-size: 11px; }
-.stage .live { font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
-.stage .subs { display: grid; gap: 3px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--grid); }
-.sub { display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 5px; font-size: 12px; color: var(--ink-2); align-items: baseline; }
-.sub i { width: 6px; height: 6px; border-radius: 50%; background: var(--grid); display: inline-block; }
-.sub.on i { background: var(--accent); } .sub.on { color: var(--ink); }
-.sub span { min-width: 0; overflow-wrap: anywhere; }
-.loopback { text-align: center; font: 11px var(--mono); color: var(--muted); padding: 2px 0; }
-.quads { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(0, 1.7fr) minmax(0, 1fr); gap: 8px; min-height: 0; --insw: clamp(150px, 27%, 300px); }
-#cell3d { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% - var(--insw) - 6px); height: 100%; display: block; cursor: grab; touch-action: none; border-radius: 6px; background: var(--scene); }
+.console-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-height: 0; }
+.quads { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(0, 1.7fr) minmax(0, 1fr); gap: 8px; min-height: 0; }
+#cell3d { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; border-radius: 6px; background: var(--scene); }
 #cell3d:active { cursor: grabbing; }
-.scene-cap { position: absolute; left: 8px; right: calc(var(--insw) + 14px); top: 24px; display: flex; flex-wrap: wrap; gap: 5px; pointer-events: none; }
-.insets { position: absolute; top: 0; right: 0; bottom: 0; width: var(--insw); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
-.insets figure { margin: 0; position: relative; flex: 1 1 0; min-height: 0; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; background: var(--scene); }
-.insets canvas { width: 100%; height: 100%; display: block; }
-.insets figcaption { position: absolute; left: 5px; top: 3px; font: 500 10px var(--mono); color: var(--ink-2); background: var(--surface); padding: 0 4px; border-radius: 3px; }
+.scene-cap { position: absolute; left: 8px; right: 8px; top: 24px; display: flex; flex-wrap: wrap; gap: 5px; pointer-events: none; }
 .scene-hint { position: absolute; left: 8px; top: 4px; font: 10.5px var(--mono); color: var(--ink-2); background: var(--surface); border-radius: 3px; padding: 0 5px; pointer-events: none; }
 .pill { font: 500 11px var(--mono); background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
 .pill b { color: var(--ink); font-weight: 600; }
 .lh-action { font: 12.5px var(--mono); color: var(--ink); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lh-action b { color: var(--accent); }
 .subtabs { display: flex; gap: 4px; }
-.devices { display: grid; gap: 5px; font-size: 12.5px; overflow: auto; min-height: 0; }
-.dev { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px; align-items: center; }
-.dev .name { font: 500 11.5px var(--mono); color: var(--muted); }
-.dev .what { min-width: 0; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.prog { flex: 0 0 64px; height: 5px; border-radius: 3px; background: var(--grid); overflow: hidden; }
-.prog > span { display: block; height: 100%; background: var(--accent); }
-.slot { font: 500 11px var(--mono); border: 1px solid var(--axis); border-radius: 4px; padding: 0 5px; cursor: pointer; background: var(--surface); color: var(--ink-2); }
-.slot.sel { border-color: var(--accent); color: var(--accent); }
 .disc-best { display: grid; gap: 4px; flex: 0 0 auto; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
 .disc-best .k { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .disc-best .recipe { font-size: 13px; color: var(--ink); line-height: 1.35; }
 .disc-best .recipe b { font-weight: 600; }
-.disc-meter { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
-.disc-meter .bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
-.disc-meter .bar span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
-.disc-meter .pct { font: 600 13px var(--display); font-variant-numeric: tabular-nums; color: var(--ink); }
 .disc-best .gap { font-size: 12px; color: var(--ink-2); }
+.disc-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 12px; }
+.replan-cap { font: 11.5px var(--mono); color: var(--ink-2); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.replan-cap b { color: var(--accent); font-weight: 600; }
+.cam { position: absolute; right: 8px; bottom: 8px; width: min(36%, 260px); aspect-ratio: 4 / 3; max-width: 100%; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--line); background: var(--scene); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.cam canvas, .cam svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cam-cap { position: absolute; left: 0; right: 0; bottom: 0; font: 10.5px/1.35 var(--mono); color: var(--ink-2); background: var(--surface); padding: 2px 6px; opacity: .92; }
+.cam-cap b { color: var(--ink); font-weight: 600; }
+.iters { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; font: 500 11px var(--mono); color: var(--ink-2); margin-right: auto; margin-left: 10px; }
+.iter-row { display: flex; align-items: center; gap: 4px; }
+.iter-row .n { color: var(--ink); font-weight: 600; min-width: 3.2em; }
+.iter-g { display: flex; gap: 2px; padding: 2px; border-radius: 4px; transition: box-shadow .35s; cursor: default; }
+.iter-g.cur { box-shadow: 0 0 0 1.5px var(--accent); }
+.iter-g.new { box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent); }
+.iter-p { width: 7px; height: 10px; border-radius: 2px; border: 1px dashed var(--axis); box-sizing: border-box; }
+.iter-p.q { border: 1px solid var(--accent); }
+.iter-p.run { border: 1px solid var(--accent); background: linear-gradient(to top, var(--accent) 50%, transparent 50%); }
+.iter-p.done { border: 1px solid var(--accent); background: var(--accent); }
+.iter-p.bad { border: 1px solid var(--critical); background: var(--critical); }
+.hood { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 6px; }
+.hood svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hnode { position: absolute; transform: translate(-50%, -50%); font: 600 11px/1.2 var(--mono); color: var(--ink); text-align: center; white-space: nowrap;
+  background: color-mix(in srgb, var(--surface) 60%, transparent); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 7px; padding: 3px 8px; transition: box-shadow .3s, border-color .3s; }
+.hnode small { display: block; font-weight: 400; font-size: 9.5px; color: var(--ink-2); }
+.hnode.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 16px color-mix(in srgb, var(--accent) 50%, transparent); }
+.hnode.bad { border-color: var(--critical); box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 18%, transparent), 0 0 16px color-mix(in srgb, var(--critical) 45%, transparent); }
+.hood .edge { fill: none; stroke: var(--ink-2); stroke-opacity: .3; stroke-width: 1.2; stroke-dasharray: 3 4; transition: stroke-opacity .3s; }
+.hood .edge.on { stroke: var(--accent); stroke-opacity: .85; stroke-dasharray: none; stroke-width: 1.6; }
+.hood .edge.bad { stroke: var(--critical); }
+.hood .edge.hide { stroke-opacity: 0; }
+.hood .dot { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+.hood .dot.bad { fill: var(--critical); filter: drop-shadow(0 0 4px var(--critical)); }
+.hood .sig { font: 600 9.5px var(--mono); fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.hood .dev { fill: color-mix(in srgb, var(--accent) 15%, transparent); stroke: var(--accent); stroke-width: 1.3; stroke-opacity: .75; }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 0 0 auto; }
 .kpi { background: var(--surface-2); border-radius: 6px; padding: 5px 8px; display: grid; }
 .kpi .k { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .kpi .v { font: 600 16px var(--display); font-variant-numeric: tabular-nums; }
-.ticker { display: grid; gap: 2px; font-size: 12px; flex: 0 0 auto; }
-.ticker div { display: flex; gap: 8px; min-width: 0; }
-.ticker .t { font: 11.5px var(--mono); color: var(--muted); flex: 0 0 52px; }
-.ticker .x { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tag { font: 500 10px var(--mono); border-radius: 3px; padding: 0 4px; margin-right: 4px; white-space: nowrap; }
-.tag.fail { color: var(--critical); border: 1px solid var(--critical); }
-.tag.replan { color: var(--accent); border: 1px solid var(--accent); }
 
 /* other tabs */
 .two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; height: 100%; }
-.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; height: 100%; }
 #view-results { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
 .log { overflow: auto; display: grid; gap: 7px; font-size: 12.5px; align-content: start; min-height: 0; }
 .ev { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; padding: 5px 7px; border-radius: 6px; background: var(--surface-2); }
 .ev .t { font: 11.5px var(--mono); color: var(--muted); }
 .ev .what { font-weight: 500; } .ev .why { color: var(--ink-2); }
-.about { overflow: auto; height: 100%; display: grid; gap: 14px; align-content: start; max-width: 980px; }
-.about ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-.flow { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font: 500 12px var(--mono); color: var(--ink-2); }
-.flow span.step { border: 1px solid var(--axis); border-radius: 4px; padding: 2px 7px; background: var(--surface); }
 .tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px;
   padding: 5px 8px; font: 11.5px/1.45 var(--mono); box-shadow: 0 4px 14px rgba(0,0,0,.15); z-index: 20; max-width: 320px; }
 
 @media (max-width: 1000px) {
   body { overflow: auto; display: block; }
   .console-body { grid-template-columns: minmax(0, 1fr); }
-  .rail { flex-direction: row; overflow-x: auto; } .rail .stage { min-width: 170px; } .rail .arrow, .loopback { display: none; }
   .view { height: auto; }
   .quads, .two, .three { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; }
   .quads > .panel { height: 440px; }
+  .disc-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .two > .panel, .three > .panel { min-height: 360px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
 
 <header class="topbar">
-  <div class="brand"><h1>labloop</h1><span>self-driving drug-combination lab · simulated</span></div>
+  <div class="brand"><h1>labloop</h1></div>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" id="tab-console" aria-controls="view-console" aria-selected="true">Console</button>
     <button role="tab" id="tab-results" aria-controls="view-results" aria-selected="false">Results</button>
     <button role="tab" id="tab-recovery" aria-controls="view-recovery" aria-selected="false">Recovery</button>
-    <button role="tab" id="tab-calibration" aria-controls="view-calibration" aria-selected="false">Workcell calibration</button>
-    <button role="tab" id="tab-about" aria-controls="view-about" aria-selected="false">About</button>
   </nav>
   <button class="help-btn" id="help-open" type="button">What am I looking at?</button>
 </header>
@@ -216,32 +201,22 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 <main style="min-height:0">
   <section class="view" id="view-console" role="tabpanel" aria-labelledby="tab-console">
     <div class="ctrl">
-      <label for="scenario">Run</label><select id="scenario"></select>
       <button class="play" id="play" type="button">Play</button>
       <label for="speed">Speed</label>
       <select id="speed"><option value="0.2">12 s / s</option><option value="1">1 min / s</option><option value="10">10 min / s</option>
         <option value="60" selected>1 h / s</option><option value="360">6 h / s</option></select>
       <div class="grow"><input type="range" id="scrub" min="0" max="10000" value="0" aria-label="Simulation time"><span class="clock" id="clock">0 h 00 m</span></div>
-      <button class="ghost" id="next-disp" type="button">Next dispense</button>
-      <button class="ghost" id="next-eject" type="button">Next tip eject</button>
-      <button class="ghost" id="next-move" type="button">Next arm move</button>
-      <button class="ghost" id="next-fail" type="button">Next failure</button>
-      <button class="ghost" id="next-read" type="button">Next read</button>
     </div>
     <div class="console-body">
-    <nav class="rail" id="rail" aria-label="Loop stages"></nav>
     <div class="quads">
       <div class="panel">
-        <div class="qhead"><h3>Workcell</h3><span class="eyebrow">MuJoCo motion · replayed schedule</span></div>
+        <div class="qhead"><h3>Workcell</h3><div class="iters" id="iters" aria-label="Design iterations per campaign"></div><button class="chip" type="button" id="hood-btn" aria-pressed="true">under the hood</button></div>
         <div class="fill">
           <canvas id="cell3d" tabindex="0" aria-label="3D workcell: drag to orbit, shift or right drag to pan, wheel to move in and out, click a plate"></canvas>
-          <div class="scene-hint">drag orbit · shift/right-drag pan · wheel fly · click a plate</div>
-          <div class="insets">
-            <figure><canvas id="cam-deck" aria-label="Deck camera above the liquid handler"></canvas><figcaption>deck camera</figcaption></figure>
-            <figure><canvas id="cam-lh" aria-label="Camera on the liquid handler's pipetting head"></canvas><figcaption>pipetting-head camera</figcaption></figure>
-            <figure><canvas id="cam-ee" aria-label="Camera on the arm's end effector"></canvas><figcaption>arm end-effector camera</figcaption></figure>
-          </div>
+          <div class="scene-hint">drag · shift-drag pan · wheel zoom</div>
           <div class="scene-cap" id="scene-cap"></div>
+          <div class="hood" id="hood"><svg id="hood-svg"></svg></div>
+          <div class="cam" id="cam"><canvas id="cam-deck" aria-label="Deck camera, top-down"></canvas><svg id="cam-ov" viewBox="0 0 400 300" preserveAspectRatio="none"></svg><div class="cam-cap" id="cam-cap"></div></div>
         </div>
       </div>
       <div class="panel">
@@ -251,9 +226,8 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
         <div class="legend" id="lh-legend"></div>
       </div>
       <div class="panel">
-        <div class="qhead"><h3>Schedule</h3><span class="legend" id="gantt-legend"></span>
-          <span><label class="muted mono" style="font-size:10.5px" for="window">window </label><select id="window">
-            <option value="60">1 h</option><option value="360">6 h</option><option value="1440" selected>24 h</option><option value="4320">72 h</option></select></span></div>
+        <div class="qhead"><h3>Schedule</h3><span class="legend" id="gantt-legend"></span></div>
+        <div class="replan-cap" id="replan-cap"></div>
         <div id="gantt-overview" style="flex:0 0 auto"></div>
         <div class="fill" id="gantt-detail"></div>
       </div>
@@ -261,19 +235,18 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
         <div class="qhead">
           <div class="subtabs" role="tablist" aria-label="Detail">
             <button class="chip" role="tab" id="st-opt" aria-selected="true">Discovery</button>
-            <button class="chip" role="tab" id="st-state" aria-selected="false">Lab state</button>
             <button class="chip" role="tab" id="st-plate" aria-selected="false">Plate reader</button>
           </div>
           <span class="legend" id="prog-legend"></span>
         </div>
         <div id="sub-opt" style="display:contents">
           <div class="disc-best" id="disc-best"></div>
-          <div class="fill" id="progress"></div>
-          <div class="legend" id="disc-legend"><span><i class="box" style="background:var(--surface-2);border:1px solid var(--axis)"></i>not tested yet</span>
-            <span><i class="box" style="background:color-mix(in srgb, var(--heat-1) 70%, var(--heat-0))"></i>tested (darker = stronger synergy)</span>
-            <span>★ lab's current pick</span><span>◯ true best</span><span class="muted" id="disc-axes"></span></div>
+          <div class="disc-body">
+            <div class="fill" id="disc-curve"></div>
+            <div class="fill" id="progress"></div>
+          </div>
+          <div class="legend" id="disc-legend"></div>
         </div>
-        <div id="sub-state" class="devices fill" hidden></div>
         <div id="sub-plate" class="fill" hidden style="display:none;flex-direction:column;gap:4px">
           <div class="mono" style="font-size:12px" id="plate-title"></div>
           <div class="muted" style="font-size:11.5px" id="plate-sub"></div>
@@ -317,30 +290,6 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     </div>
   </section>
 
-  <section class="view" id="view-calibration" role="tabpanel" aria-labelledby="tab-calibration" hidden>
-    <div class="three">
-      <div class="panel"><h3>Motion times (MuJoCo)</h3>
-        <div class="table-scroll"><table id="motion-table"></table></div></div>
-      <div class="panel"><h3>Tip pickup failure</h3>
-        <div class="legend"><span><i style="background:var(--s1)"></i>simulated contact</span><span><i style="background:var(--muted)"></i>analytic tail</span></div>
-        <div class="fill" id="tips"></div></div>
-      <div class="panel"><h3>Misplaced-plate detection</h3>
-        <div class="fill" id="perception"></div></div>
-    </div>
-  </section>
-
-  <section class="view" id="view-about" role="tabpanel" aria-labelledby="tab-about" hidden>
-    <div class="about">
-      <h2>labloop</h2>
-      <div class="flow"><span class="step">design</span>→<span class="step">layout</span>→<span class="step">schedule</span>→<span class="step">dispense · incubate · read</span>→<span class="step">recover</span>→<span class="step">update</span>→</div>
-      <ul class="ink2">
-        <li><b>Online repair scheduling</b>: replan only what a disruption touches.</li>
-        <li><b>Throughput-aware BO</b>: pick plates by expected gain per hour-to-result.</li>
-        <li><b>LLM recovery</b>: Claude chooses validated recovery actions; rules as fallback.</li>
-      </ul>
-      <p class="muted">Simulated lab · biology fitted to the O'Neil 2016 screen · protocols via PyLabRobot · motion via MuJoCo.</p>
-    </div>
-  </section>
 </main>
 
 <div class="explain" id="explain" hidden role="dialog" aria-modal="true" aria-labelledby="explain-title">
@@ -374,7 +323,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
           <b>Workcell</b><span>the robot arm moving plates between machines</span>
           <b>Liquid handler</b><span>the pipetting robot filling one plate, pass by pass</span>
           <b>Schedule</b><span>which machine does what, when: the incubator is small and every test takes days</span>
-          <b>Optimization</b><span>how close the lab's current best guess is to the true best pair</span>
+          <b>Discovery</b><span>how close the lab's current best guess is to the true best pair</span>
         </div>
       </div>
     </div>
@@ -423,24 +372,23 @@ function niceTicks(max, n = 5) { if (!(max > 0)) return [0]; const step = Math.p
 function boxSize(host) { const r = host.getBoundingClientRect(); return [Math.max(200, r.width), Math.max(120, r.height)]; }
 
 /* ================================================================ tabs */
-const TABS = ["console", "results", "recovery", "calibration", "about"];
+const TABS = ["console", "results", "recovery"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "console";
   for (const t of TABS) { $(`#tab-${t}`).setAttribute("aria-selected", t === name); $(`#view-${t}`).hidden = t !== name; }
   try { history.replaceState(null, "", "#" + name); } catch (_) {}
-  requestAnimationFrame(() => { if (name === "console") update(); if (name === "results" && CUR_EXP) renderExperiment(CUR_EXP); if (name === "calibration" && CELL) calibration(CELL); });
+  requestAnimationFrame(() => { if (name === "console") update(); if (name === "results" && CUR_EXP) renderExperiment(CUR_EXP); });
 }
 for (const t of TABS) $(`#tab-${t}`).addEventListener("click", () => showTab(t));
 let SUB = "opt";
 function showSub(name) {
   SUB = name;
-  for (const s of ["opt", "state", "plate"]) $(`#st-${s}`).setAttribute("aria-selected", s === name);
+  for (const s of ["opt", "plate"]) $(`#st-${s}`).setAttribute("aria-selected", s === name);
   $("#sub-opt").style.display = name === "opt" ? "contents" : "none";
-  $("#sub-state").hidden = name !== "state";
   $("#sub-plate").style.display = name === "plate" ? "flex" : "none";
   update();
 }
-for (const s of ["opt", "state", "plate"]) $(`#st-${s}`).addEventListener("click", () => showSub(s));
+for (const s of ["opt", "plate"]) $(`#st-${s}`).addEventListener("click", () => showSub(s));
 
 /* ================================================================ replay model */
 let RP = null, T = 0, TMAX = 1, playing = false, selPlate = null, pinned = false, LHSEL = null;
@@ -449,7 +397,7 @@ function buildJobs() {
   for (const o of RP.ops) (RP.jobs[o[0]] ||= { ops: [] }).ops.push(o);
   for (const [j, J] of Object.entries(RP.jobs)) {
     J.ops.sort((a, b) => a[3] - b[3]); let k = 0;
-    for (const o of J.ops) if (RP.kinds[o[1]] === "transfer") o.route = o[5] || ROUTES[Math.min(k++, ROUTES.length - 1)];
+    for (const o of J.ops) { if (RP.kinds[o[1]] === "transfer") o.route = o[5] || ROUTES[Math.min(k++, ROUTES.length - 1)]; o.site = o[6] || 0; }
     J.submit = (RP.submits && RP.submits[j] != null) ? RP.submits[j] : J.ops[0][3];
     J.read = J.ops.find((o) => RP.kinds[o[1]] === "read");
     J.disp = J.ops.find((o) => RP.kinds[o[1]] === "dispense");
@@ -551,13 +499,12 @@ function drawLH() {
   $("#lh-pick").querySelectorAll("[data-lh]").forEach((b) => b.addEventListener("click", () => { LHSEL = b.dataset.lh; update(); }));
   const deck = deckOf();
   $("#lh-legend").innerHTML = `<span><i class="box" style="background:var(--cells)"></i>cells</span>` + drugs.map((d, i) => `<span><i class="box" style="background:${DRUG_COLOR[i]}"></i>${d.toLowerCase()}</span>`).join("") +
-    `<span class="muted">deck: tips rail ${deck.tip_rail} · sources ${deck.source_rail} · plate ${deck.dest_rail} · ${deck.tip_reuse ? "tip reuse" : "fresh tips"}</span>`;
-  if (!A.op || !A.st) { host.innerHTML = `<div class="empty">No dispense yet on ${LHSEL}. Use “Next dispense”.</div>`; $("#lh-action").textContent = ""; return; }
+"";
+  if (!A.op || !A.st) { host.innerHTML = `<div class="empty">No dispense yet.</div>`; $("#lh-action").textContent = ""; return; }
   const plate = A.op[0], st = A.st, P = st.P, pm = RP.plates[plate], cur = st.cur;
-  if (st.done) $("#lh-action").innerHTML = `${A.running ? "" : "idle · "}last protocol <b>${plate}</b>: ${st.n} passes · ${P.tips} tips · ${P.swaps} rack swaps · volume check ${P.bad.length ? `<span style="color:var(--critical)">${P.bad.length} wells off</span>` : "all wells correct"}`;
+  if (st.done) $("#lh-action").innerHTML = `<b>${plate}</b>${P.bad.length ? ` · <span style="color:var(--critical)">${P.bad.length} wells off</span>` : ""}`;
   else {
-    const nw = cur.chans.reduce((a, [, ws]) => a + ws.length, 0);
-    $("#lh-action").innerHTML = `pass <b>${st.idx + 1}</b>/${st.n} · <b>${cur.what === 0 ? "cells" : drugLabel(cur.what - 1) + " " + (+cur.dose).toPrecision(3) + " µM"}</b> · ${cur.chans.length} ch × ${cur.tipType} tips · ${nw} wells × ${cur.vol} µL · <b>${st.stage}</b>${st.stage === "dispense" ? ` col ${cur.cols[Math.max(0, st.colIdx - 1)] + 1}` : ""}`;
+    $("#lh-action").innerHTML = `<b>${plate}</b> · ${cur.what === 0 ? "cells" : drugLabel(cur.what - 1)} · ${st.stage}`;
   }
   const [bw, bh] = boxSize(host), W = 760, H = Math.max(360, Math.min(560, W * bh / bw)), s = svgRoot(host, W, H);
   // head strip: 8 channels, tip + liquid level
@@ -577,7 +524,6 @@ function drawLH() {
       el("text", { x: x + 11, y: 66, "text-anchor": "middle", style: "font-size:9px", class: "label-ink" }, s).textContent = remain(k).toFixed(0);
     } else el("text", { x: x + 11, y: 66, "text-anchor": "middle", style: "font-size:9px" }, s).textContent = `ch${k + 1}`;
   }
-  el("text", { x: 340, y: 30, class: "label-ink" }, s).textContent = cur ? `µL in each tip · ${cur.nasp} aspiration${cur.nasp > 1 ? "s" : ""}` : "head parked";
   // tip waste: highlighted while the head ejects, with this protocol's discarded-tip count
   const ejecting = cur && !st.done && st.stage === "eject", wx = W - 150;
   el("rect", { x: wx, y: 6, width: 144, height: 58, rx: 4, fill: "var(--surface-2)", stroke: ejecting ? "var(--accent)" : "var(--axis)", "stroke-width": ejecting ? 2 : 1 }, s);
@@ -585,10 +531,9 @@ function drawLH() {
   el("line", { x1: wx + 9, y1: 19, x2: wx + 37, y2: 19, stroke: "var(--ink-2)", "stroke-width": 1.6 }, s);
   el("text", { x: wx + 46, y: 26, class: "label-ink", style: "font-size:10px" }, s).textContent = "tip waste";
   el("text", { x: wx + 46, y: 46, style: "font-size:15px;font-weight:600", class: "label-ink" }, s).textContent = tipsDiscarded(st);
-  el("text", { x: wx + 46, y: 58, style: "font-size:9px" }, s).textContent = ejecting ? "ejecting now" : "tips discarded";
+  el("text", { x: wx + 46, y: 58, style: "font-size:9px" }, s).textContent = ejecting ? "ejecting" : "";
   // tip racks (split by type)
   el("text", { x: 8, y: 82, class: "label-ink" }, s).textContent = "tips";
-  el("text", { x: 8, y: 94, style: "font-size:9.5px" }, s).textContent = `${st.swaps} rack swap${st.swaps === 1 ? "" : "s"}`;
   const rackH = (H - 104) / 5; let rk = 0;
   for (const [t, nr] of Object.entries(P.split || { "300uL": 5 })) {
     const used = st.tipsUsed[t] || 0;
@@ -630,27 +575,7 @@ function drawLH() {
   for (let r = 0; r < rows; r += rows > 8 ? 4 : 2) el("text", { x: ax + 6, y: ay + 12 + r * cell + cell / 2 + 3, "text-anchor": "middle", style: "font-size:8.5px" }, s).textContent = String.fromCharCode(65 + r);
 }
 
-/* ================================================================ lab state + plate reader */
-function drawDevices(snap) {
-  if (SUB !== "state") return;
-  const res = Object.keys(RP.meta.resources), order = ["lh", "arm", "reader", "incubator"];
-  const rows = [];
-  for (const r of res.sort((a, b) => order.findIndex((k) => a.startsWith(k)) - order.findIndex((k) => b.startsWith(k)) || a.localeCompare(b))) {
-    if (r.startsWith("incubator")) {
-      const inside = RP.ops.filter((o) => o[2] === r && o[3] <= T && o[4] > T).sort((a, b) => a[4] - b[4]);
-      rows.push(`<div class="dev"><span class="name">${r}</span><span class="what">${inside.length}/${RP.meta.resources[r]} slots ${inside.map((o) => `<span class="slot ${o[0] === selPlate ? "sel" : ""}" data-plate="${o[0]}">${o[0].slice(-4)} · ${((o[4] - T) / 60).toFixed(0)}h</span>`).join("")}</span></div>`);
-      continue;
-    }
-    const o = RP.ops.find((x) => x[2] === r && x[3] <= T && x[4] > T);
-    if (o) { const u = (T - o[3]) / Math.max(1, o[4] - o[3]);
-      rows.push(`<div class="dev"><span class="name">${r}</span><span class="what"><span class="slot ${o[0] === selPlate ? "sel" : ""}" data-plate="${o[0]}">${o[0]}</span>${o.route ? o.route.replace(">", " → ") : RP.kinds[o[1]]}<span class="prog"><span style="width:${(100 * u).toFixed(0)}%"></span></span>${Math.max(0, o[4] - T).toFixed(0)} min left</span></div>`);
-    } else rows.push(`<div class="dev"><span class="name">${r}</span><span class="what muted">idle</span></div>`);
-  }
-  rows.push(`<div class="dev"><span class="name">hotel queue</span><span class="what">${snap.hotel.length ? snap.hotel.map((x) => `<span class="slot" data-plate="${x.job}">${x.job.slice(-4)}</span>`).join("") : '<span class="muted">empty</span>'}</span></div>`);
-  rows.push(`<div class="dev"><span class="name">finished</span><span class="what">${snap.done.length} plates</span></div>`);
-  $("#sub-state").innerHTML = rows.join("");
-  $("#sub-state").querySelectorAll("[data-plate]").forEach((e) => e.addEventListener("click", () => { selPlate = e.dataset.plate; pinned = true; showSub("plate"); }));
-}
+/* ================================================================ plate reader */
 function heat(v) { const a = css("--heat-0"), b = css("--heat-1"), k = Math.max(0, Math.min(1, 1 - v)); const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b); return `rgb(${Math.round(r1 + (r2 - r1) * k)},${Math.round(g1 + (g2 - g1) * k)},${Math.round(b1 + (b2 - b1) * k)})`; }
 function autoPlate(snap) { for (const w of ["reader", "lh", "arm"]) if (snap[w].length) return snap[w][0].job; const read = RP.reads.filter((r) => r.t <= T); if (read.length) return read[read.length - 1].plate; return snap.incubator.length ? snap.incubator[0].job : null; }
 function drawPlate(snap) {
@@ -690,6 +615,13 @@ function lanes(ops) {
     return { res: r, n: Math.max(1, ends.length), ops: list };
   });
 }
+const REASON = { new_batch: "new batch", overrun: "an op ran long", tip_resupply: "tip resupply", tip_wait: "waiting on tips" };
+const SOLVER = { "repair:lns": "LNS repair", "repair:full": "full CP-SAT solve" };
+function drawReplan() {
+  const rp = RP.replans.filter((r) => r.t <= T).pop();
+  $("#replan-cap").innerHTML = rp ? `replan ${fmtH(rp.t)} · ${rp.reasons.map((r) => REASON[r] || r.replace("failure:", "").replace(/_/g, " ")).join(", ")} → <b>${SOLVER[rp.solver] || rp.solver}</b> ${rp.ms} ms · ${rp.moved} of ${rp.ops} ops moved` : "";
+  return rp;
+}
 function drawGantt(host, t0, t1, opts) {
   const rows = RP.rows, [bw, bh] = opts.compact ? [900, 0] : boxSize(host);
   const W = opts.compact ? 900 : bw, L = 64, R = 6, nl = rows.reduce((a, r) => a + r.n, 0);
@@ -710,6 +642,7 @@ function drawGantt(host, t0, t1, opts) {
     }
   });
   for (const rp of RP.replans) if (rp.t >= t0 && rp.t <= t1) el("line", { x1: X(rp.t), x2: X(rp.t), y1: 1, y2: 7, stroke: "var(--accent)", "stroke-width": 1.3 }, s);
+  if (opts.lastReplan && opts.lastReplan.t >= t0) el("line", { x1: X(opts.lastReplan.t), x2: X(opts.lastReplan.t), y1: 1, y2: H - 14, stroke: "var(--accent)", "stroke-width": 1.3, "stroke-opacity": .55 }, s);
   for (const fl of RP.failures) { if (fl.t < t0 || fl.t > t1) continue; const ri = rows.findIndex((r) => r.res === fl.resource), yy = ri >= 0 ? ys[ri] - 1 : 8, x = X(fl.t);
     const tri = el("path", { d: `M${x - 4},${yy - 6} L${x + 4},${yy - 6} L${x},${yy + 1} Z`, fill: "var(--critical)", stroke: "var(--surface)", "stroke-width": 1 }, s);
     if (!opts.compact) { tri.addEventListener("pointermove", (evt) => showTip(evt, `<b>${fl.type.replace("_", " ")}</b> · ${fmtH(fl.t)}<br>${fl.plate || fl.resource || ""} → ${fl.actions.join(", ")}<br><i>${fl.rationale}</i>`)); tri.addEventListener("pointerleave", hideTip); } }
@@ -719,69 +652,112 @@ function drawGantt(host, t0, t1, opts) {
     el("text", { x: L - 6, y: H / 2 + 4, "text-anchor": "end" }, s).textContent = "whole run"; s.style.cursor = "pointer";
     s.addEventListener("click", (evt) => { const r = s.getBoundingClientRect(); T = clampT(t0 + ((evt.clientX - r.left) / r.width * W - L) / (W - L - R) * (t1 - t0)); update(); }); }
 }
-function drawTicker() {
-  if (!$("#ticker")) return;
-  const evs = RP.failures.map((f) => ({ t: f.t, html: `<span class="tag fail">▲ ${f.type.replace("_", " ")}</span>${f.plate || f.resource || ""} → ${f.actions.join(", ")}`, title: f.rationale }))
-    .concat(RP.replans.filter((r) => !(r.reasons.length === 1 && r.reasons[0] === "new_batch")).map((r) => ({ t: r.t, html: `<span class="tag replan">replan</span>${r.reasons.join(", ").replaceAll("failure:", "")} · ${r.solver} ${r.ms} ms · ${r.moved} moved`, title: "" })))
-    .filter((e) => e.t <= T).sort((a, b) => b.t - a.t).slice(0, 3);
-  $("#ticker").innerHTML = evs.length ? evs.map((e) => `<div title="${e.title.replaceAll('"', "'")}"><span class="t">${fmtH(e.t)}</span><span class="x">${e.html}</span></div>`).join("") : `<div class="muted">No failures or replans yet.</div>`;
-}
-
-/* ================================================================ optimization */
+/* ================================================================ discovery */
 let DISC = null; // campaign shown in the Discovery panel
+const fmtDose = (d) => (+d).toPrecision(2).replace(/\.?0+$/, "");
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
 function drawProgress() {
   const names = Object.keys(RP.progress);
   if (!names.includes(DISC)) DISC = names[0];
   $("#prog-legend").innerHTML = SUB === "opt" && names.length > 1 ? names.map((n) => `<button class="chip" type="button" data-camp="${n}" aria-pressed="${n === DISC}">campaign ${n}</button>`).join("") : "";
   $("#prog-legend").querySelectorAll("[data-camp]").forEach((b) => b.addEventListener("click", () => { DISC = b.dataset.camp; update(); }));
   if (SUB !== "opt") return;
-  const P = RP.progress[DISC], D = P.discovery, opt = P.optimum, optX = opt.excess, drugs = RP.drugs || [];
-  const nPlates = RP.reads.filter((r) => r.t <= T).length, cur = P.points.filter((x) => x.t <= T).pop();
-  const fmtDose = (d) => (+d).toPrecision(2).replace(/\.?0+$/, "");
+  const P = RP.progress[DISC], opt = P.optimum, optX = opt.excess;
+  const cur = P.points.filter((x) => x.t <= T).pop();
   const recipe = (c) => `<b>${c.cell_line}</b> cells · ` + c.doses.map((d, i) => d ? `${drugLabel(i)} <b>${fmtDose(d)} µM</b>` : null).filter(Boolean).join(" + ") + ` · read at <b>${c.timepoint_h} h</b>`;
-  if (!cur || !cur.best) {
-    const next = RP.reads.filter((r) => r.t > T)[0];
-    $("#disc-best").innerHTML = `<div class="k">Best recipe so far</div><div class="recipe">No result yet: the first plates are still incubating${next ? ` (first read at ${fmtH(next.t)})` : ""}.</div>`;
-  } else {
-    const frac = Math.max(0, Math.min(1, (cur.best_true != null ? cur.best_true : cur.best_est) / optX)), b = cur.best, gaps = [];
+  if (!cur || !cur.best) $("#disc-best").innerHTML = `<div class="k">Best recipe so far</div><div class="recipe">No plates read yet.</div>`;
+  else {
+    const b = cur.best, gaps = [];
     if (b.cell_line !== opt.condition.cell_line) gaps.push(`cell line ${b.cell_line} → ${opt.condition.cell_line}`);
     if (b.timepoint_h !== opt.condition.timepoint_h) gaps.push(`read time ${b.timepoint_h} h → ${opt.condition.timepoint_h} h`);
     b.doses.forEach((d, i) => { if (Math.abs(Math.log10((d || 1e-9) / (opt.condition.doses[i] || 1e-9))) > 0.05) gaps.push(`${drugLabel(i)} ${fmtDose(d)} → ${fmtDose(opt.condition.doses[i])} µM`); });
-    $("#disc-best").innerHTML = `<div class="k">Best recipe so far · after ${nPlates} of ${RP.reads.length} plates</div><div class="recipe">${recipe(b)}</div>
-      <div class="disc-meter"><div class="bar"><span style="width:${(100 * frac).toFixed(1)}%"></span></div><span class="pct">${Math.round(100 * frac)}% of the best possible</span><span id="disc-spark" title="% of best possible over the run" style="width:120px;height:22px;display:block"></span></div>
+    $("#disc-best").innerHTML = `<div class="k">Best recipe so far</div><div class="recipe">${recipe(b)}</div>
       <div class="gap">${gaps.length ? "still off: " + gaps.join(" · ") : "matches the best possible combination"}</div>`;
   }
-  // settings grid: one tile per (cell line, read time); each tile is a dose map that fills in once
-  // a plate for that setting has been read
-  const host = $("#progress"), [W, H] = boxSize(host), s = svgRoot(host, W, H), nd = D.levels.length;
+  drawCurve(P, optX);
+  const belief = drawMap(P, opt, optX, cur);
+  $("#disc-legend").innerHTML = `<span><i style="background:var(--accent)"></i>lab's pick</span><span><i class="box" style="background:var(--s2);border-radius:50%"></i>best new well per plate</span>` +
+    (belief ? `<span><i class="box" style="background:color-mix(in srgb, var(--heat-1) 70%, var(--heat-0))"></i>model's predicted synergy, faded = unsure</span>`
+      : `<span><i class="box" style="background:color-mix(in srgb, var(--heat-1) 70%, var(--heat-0))"></i>tested, darker = stronger synergy</span>`) +
+    `<span><i class="box" style="border:2px solid var(--accent)"></i>plate in the incubator</span><span>★ pick ◯ true best</span><span class="muted">${drugLabel(0)} → · ${drugLabel(1)} ↑</span>`;
+}
+// Step curve: the true synergy of the lab's current pick, as % of the best possible, after each
+// plate read; dots are the best new combination on that plate.
+function drawCurve(P, optX) {
+  const host = $("#disc-curve"), [W, H] = boxSize(host), s = svgRoot(host, W, H), D = P.discovery;
+  const L = 36, R = 34, Tp = 8, B = 32, xmax = Math.max(1, ...P.points.map((q) => q.plates));
+  const X = (x) => L + x / xmax * (W - L - R), Y = (f) => Tp + (1 - f) * (H - Tp - B);
+  for (const f of [0, .5, 1]) {
+    el("line", { x1: L, x2: W - R, y1: Y(f), y2: Y(f), stroke: "var(--grid)" }, s);
+    el("text", { x: L - 6, y: Y(f) + 4, "text-anchor": "end" }, s).textContent = Math.round(100 * f) + "%";
+  }
+  el("line", { x1: L, x2: W - R, y1: Y(.9), y2: Y(.9), stroke: "var(--axis)", "stroke-dasharray": "3 3" }, s);
+  el("text", { x: W - R + 4, y: Y(.9) + 4 }, s).textContent = "90%";
+  for (const x of niceTicks(xmax, 4)) el("text", { x: X(x), y: H - B + 14, "text-anchor": "middle" }, s).textContent = x;
+  el("text", { x: (L + W - R) / 2, y: H - 3, "text-anchor": "middle" }, s).textContent = "plates read";
+  const frac = (q) => clamp01((q.best_true != null ? q.best_true : q.best_est) / optX);
+  const seen = P.points.filter((q) => q.t <= T), batch = {};
+  for (const r of D.tested) batch[r[0]] = Math.max(batch[r[0]] ?? -Infinity, r[r.length - 1]);
+  if (seen.length) {
+    let d = ""; seen.forEach((q, i) => { d += i ? `H${X(q.plates)}V${Y(frac(q))}` : `M${X(q.plates)},${Y(frac(q))}`; });
+    el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" }, s);
+    const q = seen[seen.length - 1];
+    el("text", { x: X(q.plates) + 5, y: Y(frac(q)) + 4, class: "ink", style: "font-weight:600" }, s).textContent = Math.round(100 * frac(q)) + "%";
+  }
+  for (const q of seen) {
+    if (batch[q.t] == null) continue;
+    const f = clamp01(batch[q.t] / optX), rd = RP.reads.find((r) => r.t === q.t);
+    const c = el("circle", { cx: X(q.plates), cy: Y(f), r: 3.5, fill: "var(--s2)", stroke: "var(--surface)", "stroke-width": 1.5 }, s);
+    const hit = el("circle", { cx: X(q.plates), cy: Y(f), r: 9, fill: "transparent" }, s);
+    hit.addEventListener("pointermove", (evt) => { c.setAttribute("r", 5); showTip(evt, `<b>${rd ? rd.plate : "plate"}</b> read at ${fmtH(q.t)}<br>best new well: ${Math.round(100 * f)}% of the best possible<br>lab's pick after it: ${Math.round(100 * frac(q))}%`); });
+    hit.addEventListener("pointerleave", () => { c.setAttribute("r", 3.5); hideTip(); });
+  }
+  if (!seen.length) el("text", { x: (L + W - R) / 2, y: Y(.5), "text-anchor": "middle" }, s).textContent = "no reads yet";
+}
+// Dose map per (cell line, read time): the designer's GP belief when the run logged it (color =
+// predicted synergy, fade = uncertainty), else the measured wells. Returns whether belief was drawn.
+function drawMap(P, opt, optX, cur) {
+  const D = P.discovery, host = $("#progress"), [W, H] = boxSize(host), s = svgRoot(host, W, H), nd = D.levels.length;
   const A = 0, B = nd > 1 ? 1 : 0, la = D.levels[A].length, lb = D.levels[B].length;
-  const lines = [...new Set(D.tested.map((r) => r[1]).concat(opt.condition.cell_line))].sort();
-  const tps = [...new Set(D.tested.map((r) => r[2]).concat(opt.condition.timepoint_h))].sort((x, y) => x - y);
-  // one row of tiles, grouped by cell line; read times under each tile
-  const G = lines.length, nT = tps.length, gx = 6, gg = 18, padT = 15, padB = 15, padX = 6;
-  const side = Math.max(14, Math.min((W - 2 * padX - gg * (G - 1) - gx * G * (nT - 1)) / (G * nT), H - padT - padB));
-  const groupW = nT * side + (nT - 1) * gx, ox = Math.max(padX, (W - (G * groupW + (G - 1) * gg)) / 2), cw = side / la, ch = side / lb;
-  const near = (i, d) => { const L = D.levels[i]; let k = 0; for (let j = 1; j < L.length; j++) if (Math.abs(L[j] - d) < Math.abs(L[k] - d)) k = j; return k; };
+  const bel = (P.belief || []).filter((b) => b.t <= T).pop();
+  const lines = [...new Set(D.tested.map((r) => r[1]).concat(opt.condition.cell_line, bel ? Object.keys(bel.groups).map((k) => k.split("|")[0]) : []))].sort();
+  const tps = [...new Set(D.tested.map((r) => r[2]).concat(opt.condition.timepoint_h, bel ? Object.keys(bel.groups).map((k) => +k.split("|")[1]) : []))].sort((x, y) => x - y);
+  // tiles grouped by cell line; wrap to two rows when they would get too small
+  const n = lines.length * tps.length, gx = 6, padT = 14, padB = 13;
+  const fitSide = (rows) => { const per = Math.ceil(lines.length / rows) * tps.length; return Math.min((W - 8 - gx * (per - 1) - 10 * (Math.ceil(lines.length / rows) - 1)) / per, (H - rows * (padT + padB)) / rows); };
+  const rowsN = n > 6 && fitSide(2) > fitSide(1) ? 2 : 1, perRow = Math.ceil(lines.length / rowsN), side = Math.max(12, fitSide(rowsN));
+  const groupW = tps.length * side + (tps.length - 1) * gx, rowW = perRow * groupW + (perRow - 1) * 10, ox = Math.max(4, (W - rowW) / 2), cw = side / la, ch = side / lb;
+  const near = (i, d) => { const Lv = D.levels[i]; let k = 0; for (let j = 1; j < Lv.length; j++) if (Math.abs(Lv[j] - d) < Math.abs(Lv[k] - d)) k = j; return k; };
   const seen = D.tested.filter((r) => r[0] <= T);
-  $("#disc-axes").textContent = `tile = one plate setting · ${drugLabel(A)} dose → × ${drugLabel(B)} dose ↑${nd > 2 ? " (best over the other drug)" : ""}`;
+  let sdRef = 1e-9; if (bel) for (const g of Object.values(bel.groups)) for (const row of g.sd) for (const v of row) sdRef = Math.max(sdRef, v);
+  // settings with a plate of this campaign in flight (submitted, not yet read): what the designer chose to test next
+  const pend = new Set();
+  for (const [pid, pl] of Object.entries(RP.plates)) {
+    if (pl.campaign !== DISC || RP.submits[pid] == null || RP.submits[pid] > T) continue;
+    const rd = RP.reads.find((r) => r.plate === pid); if (!rd || rd.t > T) pend.add(`${pl.cell_line}|${pl.timepoint_h}`);
+  }
   lines.forEach((line, gi) => {
-    const gx0 = ox + gi * (groupW + gg), ty = padT;
-    el("text", { x: gx0 + groupW / 2, y: padT - 4, "text-anchor": "middle", class: "label-ink", style: "font-size:10.5px" }, s).textContent = line;
+    const row = Math.floor(gi / perRow), col = gi % perRow, gx0 = ox + col * (groupW + 10), ty = padT + row * (side + padT + padB);
+    el("text", { x: gx0 + groupW / 2, y: ty - 4, "text-anchor": "middle", class: "label-ink", style: "font-size:10.5px" }, s).textContent = line;
     tps.forEach((tp, ci) => {
-      const tx = gx0 + ci * (side + gx), cells = {};
-      el("text", { x: tx + side / 2, y: ty + side + 11, "text-anchor": "middle", style: "font-size:9.5px" }, s).textContent = `${tp} h`;
+      const tx = gx0 + ci * (side + gx), cells = {}, g = bel && bel.groups[`${line}|${tp}`];
+      el("text", { x: tx + side / 2, y: ty + side + 10, "text-anchor": "middle", style: "font-size:9.5px" }, s).textContent = `${tp} h`;
       for (const r of seen) if (r[1] === line && r[2] === tp) { const k = r[3 + A] + "," + r[3 + B]; const c = cells[k] || (cells[k] = { v: -1, n: 0 }); c.v = Math.max(c.v, r[3 + nd]); c.n++; }
       const read = Object.keys(cells).length > 0;
-      el("rect", { x: tx - 1, y: ty - 1, width: side + 2, height: side + 2, rx: 3, fill: read ? "none" : "var(--surface-2)", stroke: "var(--grid)" }, s);
-      if (!read) { const q = el("text", { x: tx + side / 2, y: ty + side / 2 + 3, "text-anchor": "middle", style: "font-size:9px" }, s); q.textContent = "not read"; }
-      for (let i = 0; i < la && read; i++) for (let j = 0; j < lb; j++) {
+      const inFlight = pend.has(`${line}|${tp}`);
+      el("rect", { x: tx - 1, y: ty - 1, width: side + 2, height: side + 2, rx: 3, fill: "var(--surface-2)", stroke: "var(--grid)" }, s);
+      if (!read && !g) { el("text", { x: tx + side / 2, y: ty + side / 2 + 3, "text-anchor": "middle", style: "font-size:9px" }, s).textContent = "not read"; }
+      for (let i = 0; i < la && (read || g); i++) for (let j = 0; j < lb; j++) {
         const c = cells[i + "," + j], x = tx + i * cw, y = ty + (lb - 1 - j) * ch;
-        const fill = c ? `color-mix(in srgb, var(--heat-1) ${Math.round(6 + 94 * Math.max(0, Math.min(1, c.v / optX)))}%, var(--heat-0))` : "var(--surface-2)";
-        const r = el("rect", { x: x + 0.3, y: y + 0.3, width: Math.max(1, cw - 0.6), height: Math.max(1, ch - 0.6), style: `fill:${fill}` }, s);
-        r.addEventListener("pointermove", (evt) => showTip(evt, `<b>${line}</b> · read at ${tp} h<br>${drugLabel(A)} <b>${fmtDose(D.levels[A][i])} µM</b> × ${drugLabel(B)} <b>${fmtDose(D.levels[B][j])} µM</b><br>` +
-          (c ? `best synergy here: ${c.v.toFixed(2)} of a possible ${optX.toFixed(2)}` : "not tested")));
+        const v = g ? g.mu[i][j] : c ? c.v : null, sd = g ? g.sd[i][j] : 0;
+        const fill = v != null ? `color-mix(in srgb, var(--heat-1) ${Math.round(6 + 94 * clamp01(v / optX))}%, var(--heat-0))` : "var(--surface-2)";
+        const r = el("rect", { x: x + 0.3, y: y + 0.3, width: Math.max(1, cw - 0.6), height: Math.max(1, ch - 0.6), style: `fill:${fill}`, "fill-opacity": g ? (1 - .8 * clamp01(sd / sdRef)).toFixed(2) : 1 }, s);
+        r.addEventListener("pointermove", (evt) => showTip(evt, `<b>${line}</b> · read at ${tp} h<br>${drugLabel(A)} <b>${fmtDose(D.levels[A][i])} µM</b> × ${drugLabel(B)} <b>${fmtDose(D.levels[B][j])} µM</b>` +
+          (g ? `<br>model predicts ${g.mu[i][j].toFixed(2)} ± ${g.sd[i][j].toFixed(2)}` : "") + (c ? `<br>measured best here: ${c.v.toFixed(2)}` : g ? "" : "<br>not tested") +
+          (inFlight ? "<br>a plate for this setting is in the incubator" : "") + `<br><span class="muted">best possible ${optX.toFixed(2)}</span>`));
         r.addEventListener("pointerleave", hideTip);
       }
+      if (inFlight) el("rect", { x: tx - 2.5, y: ty - 2.5, width: side + 5, height: side + 5, rx: 4, fill: "none", stroke: "var(--accent)", "stroke-width": 2.2 }, s);
       const mark = (cond, kind) => { if (!cond || cond.cell_line !== line || cond.timepoint_h !== tp) return;
         const x = tx + (near(A, cond.doses[A]) + .5) * cw, y = ty + (lb - 1 - near(B, cond.doses[B]) + .5) * ch;
         if (kind === "ring") el("circle", { cx: x, cy: y, r: Math.max(4, Math.min(cw, ch) * .7), fill: "none", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
@@ -789,14 +765,7 @@ function drawProgress() {
       mark(opt.condition, "ring"); mark(cur && cur.best, "star");
     });
   });
-  // progress sparkline inside the best-recipe card: % of the best possible after each read
-  const sp = $("#disc-spark"); if (sp) {
-    const sw = 120, sh = 22, sv = svgRoot(sp, sw, sh), X = (t) => 2 + t / TMAX * (sw - 4), Y = (f) => 2 + (1 - f) * (sh - 4);
-    const frac = (q) => Math.max(0, Math.min(1, (q.best_true != null ? q.best_true : q.best_est) / optX));
-    el("line", { x1: 2, x2: sw - 2, y1: Y(1), y2: Y(1), stroke: "var(--grid)", "stroke-dasharray": "2 2" }, sv);
-    let d = `M${X(0)},${Y(0)}`, pv = 0; for (const q of P.points) { if (q.t > T) break; d += `L${X(q.t)},${Y(pv)}L${X(q.t)},${Y(frac(q))}`; pv = frac(q); } d += `L${X(T)},${Y(pv)}`;
-    el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 1.6 }, sv);
-  }
+  return !!bel;
 }
 
 /* ================================================================ 3D workcell */
@@ -807,7 +776,7 @@ const ARM = { base: [0.62, -0.30], L1: 0.302, L2: 0.289, drop: 0.16, safeZ: 0.72
 const ST3 = { hotel: [1.05, -0.45, 0.25], incubator: [0.25, -0.55, 0.30], reader: [0.80, -0.735, 0.20], rackhotel: [0.50, -0.62, 0.31], rackwaste: [0.99, -0.25, 0.30] };
 // Same motion structure as sim3d/motion.py: rotate only while folded; enter and leave stations inside
 // the housing on a straight line through the open front via a staging point.
-const MOTION = { stageY: -0.13, fold: 2.2, step: 0.08, inside: ["lh", "tiprack"] };
+const MOTION = { stageY: -0.13, fold: 2.2, step: 0.08, inside: ["lh", "tiprack", "handoff"] };
 function scaraIK(x, y, zTip, yaw = 0) {
   const dx = x - ARM.base[0], dy = y - ARM.base[1], r2 = dx * dx + dy * dy;
   const c2 = Math.max(-1, Math.min(1, (r2 - ARM.L1 ** 2 - ARM.L2 ** 2) / (2 * ARM.L1 * ARM.L2)));
@@ -823,7 +792,7 @@ const ease = (t) => t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
 function initThree() {
   if (!window.THREE) { $("#scene-cap").innerHTML = `<span class="pill">3D viewer unavailable: three.js did not load</span>`; return; }
   const mk = (id) => { const c = $(id); const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true }); return { c, r }; };
-  const V = { main: mk("#cell3d"), deck: mk("#cam-deck"), ee: mk("#cam-ee"), lh: mk("#cam-lh") };
+  const V = { main: mk("#cell3d"), cam: mk("#cam-deck") };
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4450, 0.85));
   const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(0.8, -1.2, 2.5); scene.add(sun);
@@ -872,6 +841,8 @@ function initThree() {
     channels.push({ g, tip, liquid, body });
   }
   const yBar = box(0.05, 0.095, 0.05, mats.dark, 0, 0, 0, head); // Y head: slides along the beam
+  const coreBox = box(DK.PLATE[0], DK.PLATE[1], 0.022, mats.rack, 0, 0, 0, head); coreBox.visible = false;
+  const handoffBox = box(DK.PLATE[0], DK.PLATE[1], 0.022, mats.rack, 0, 0, 0); handoffBox.visible = false;
   let builtFor = null, deckObjs = null;
   function buildDeck() {
     const deck = deckOf(); const key = JSON.stringify(deck) + (RP ? RP.meta.scenario : "");
@@ -889,12 +860,12 @@ function initThree() {
     const tipTypes = RP && RP.protocols ? (() => { const tot = {}; for (const p of Object.values(RP.protocols)) for (const t of p.passes) { const tt = t[10] || (t[0] === 0 ? deck.cell_tip : deck.drug_tip); tot[tt] = (tot[tt] || 0) + 1; } return rackSplit(tot, deck.racks_on_deck || 5); })() : split;
     for (const [t, n] of Object.entries(tipTypes)) for (let r = 0; r < n && site < 5; r++, site++) {
       const cx = carrierX(deck.tip_rail), cy = siteY(site);
-      box(DK.PLATE[0], DK.PLATE[1], 0.022, mats.rack, cx, cy, DK.CAR_TOP + 0.011, deckGroup);
+      const base = box(DK.PLATE[0], DK.PLATE[1], 0.022, mats.rack, cx, cy, DK.CAR_TOP + 0.011, deckGroup);
       const len = t === "50uL" ? 0.030 : t === "1000uL" ? 0.055 : 0.042;
       const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0028, 0.0022, len, 8).rotateX(Math.PI / 2), mats["tip" + t.replace("uL", "")] || mats.tip300, 96);
       const mtx = new THREE.Matrix4();
       for (let i = 0; i < 96; i++) { const rr = i % 8, cc = Math.floor(i / 8); const [x, y] = wellXY(deck.tip_rail, site, rr, cc, 96); mtx.makeTranslation(x, y, DK.CAR_TOP + 0.022 + len / 2 - 0.012); inst.setMatrixAt(i, mtx); }
-      deckGroup.add(inst); o.racks.push({ type: t, inst, len, site, idx: o.racks.filter((q) => q.type === t).length });
+      deckGroup.add(inst); o.racks.push({ type: t, inst, base, len, site, idx: o.racks.filter((q) => q.type === t).length });
     }
     // sources: cell trough / reservoir + one dilution plate per drug, liquid per column
     const nd = (RP && RP.drugs) ? RP.drugs.length : 3;
@@ -950,9 +921,21 @@ function initThree() {
   const gripper = new THREE.Group(); gripper.position.z = -ARM.drop; wrist.add(gripper);
   box(0.16, 0.03, 0.01, mats.dark, 0, 0, 0.016, gripper);
   const fingerA = box(0.008, 0.05, 0.03, mats.black, 0.07, 0, 0, gripper), fingerB = box(0.008, 0.05, 0.03, mats.black, -0.07, 0, 0, gripper);
-  const eeCamMount = new THREE.Object3D(); eeCamMount.position.set(0.0, 0.03, 0.01); gripper.add(eeCamMount);
   const carried = box(DK.PLATE[0], DK.PLATE[1], 0.0142, mats.plate, 0, 0, -0.0, gripper); carried.visible = false;
   const carriedRack = box(DK.PLATE[0], DK.PLATE[1], 0.02, mats.rack, 0, 0, 0, gripper); carriedRack.visible = false;
+  // planned gripper path of the current arm move: forward kinematics through the motion keyframes
+  const trail = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x0b6e78, transparent: true, opacity: .7 }));
+  trail.visible = false; scene.add(trail); let trailKey = null;
+  const fk = (q) => { const a = q[1], b = q[1] + q[2]; return new THREE.Vector3(ARM.base[0] + ARM.L1 * Math.cos(a) + ARM.L2 * Math.cos(b), ARM.base[1] + ARM.L1 * Math.sin(a) + ARM.L2 * Math.sin(b), q[0] - ARM.drop); };
+  function showTrail(route, site) {
+    trail.visible = true; const key = `${route}|${site}`; if (key === trailKey) return; trailKey = key;
+    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"], keys = transferKeys(a, b, site), pts = [];
+    for (let i = 1; i < keys.length; i++) for (let k = 0; k < 8; k++) pts.push(fk(keys[i - 1][0].map((v, j) => lerp(v, keys[i][0][j], k / 8))));
+    pts.push(fk(keys[keys.length - 1][0]));
+    const path = new THREE.CurvePath(); for (let i = 1; i < pts.length; i++) if (pts[i].distanceTo(pts[i - 1]) > 1e-5) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    trail.geometry.dispose(); trail.geometry = new THREE.TubeGeometry(path, Math.max(16, path.curves.length * 2), 0.005, 6, false);
+    trail.material.color.set(css("--accent") || "#0b6e78");
+  }
   function setArm(q) { carriage.position.z = q[0]; l1.rotation.z = q[1]; l2.rotation.z = q[2]; wrist.rotation.z = q[3]; }
   let lastQ = (() => { const q = scaraIK(ST3.hotel[0], ST3.hotel[1], 0.45), e = MOTION.fold; return [ARM.safeZ, q[1], e, -q[1] - e]; })();
   // plates (station occupancy)
@@ -963,9 +946,6 @@ function initThree() {
   const target = new THREE.Vector3(0.58, -0.12, 0.25); let theta = -0.95, phi = 0.95, radius = 2.2;
   const placeCam = () => { cam.position.set(target.x + radius * Math.sin(phi) * Math.cos(theta), target.y + radius * Math.sin(phi) * Math.sin(theta), target.z + radius * Math.cos(phi)); cam.lookAt(target); };
   placeCam();
-  const deckCam = new THREE.OrthographicCamera(-0.54, 0.54, 0.36, -0.36, 0.1, 3); deckCam.up.set(0, 1, 0); deckCam.position.set(0.50, 0.33, 0.89); deckCam.lookAt(0.50, 0.33, 0);
-  const eeCam = new THREE.PerspectiveCamera(75, 4 / 3, 0.005, 3);
-  const lhCam = new THREE.PerspectiveCamera(70, 4 / 3, 0.005, 3); lhCam.up.set(0, 1, 0);
   // interaction on the main view
   const canvas = V.main.c; let drag = null;
   canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, moved: false, pan: e.button === 2 || e.shiftKey }; canvas.setPointerCapture(e.pointerId); });
@@ -987,18 +967,50 @@ function initThree() {
     if (e.deltaY) { target.addScaledVector(ray.ray.direction, step); target.z = Math.max(0, target.z); }
     if (e.deltaX) pan(Math.sign(e.deltaX) * 30, 0); else placeCam(); }, { passive: false });
   canvas.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") theta += .08; else if (e.key === "ArrowRight") theta -= .08; else if (e.key === "ArrowUp") phi = Math.max(.12, phi - .06); else if (e.key === "ArrowDown") phi = Math.min(1.45, phi + .06); else return; e.preventDefault(); placeCam(); });
+  // deck camera: orthographic, looking straight down; clipped just above the plate it watches
+  const camTop = new THREE.OrthographicCamera(-0.1, 0.1, 0.075, -0.075, 0.002, 2); camTop.up.set(0, 1, 0);
+  const CAM = { hw: 0.10, at: null, shift: null };
+  const CAM_SCALE = 10; // misplacement drawn x10 so millimetres are visible
+  function poseCamera() {
+    const lastTr = (() => { for (let i = RP.ops.length - 1; i >= 0; i--) { const o = RP.ops[i]; if (o[3] <= T && o.route && !o[0].startsWith("TIPS")) return o; } return null; })();
+    const ov = $("#cam-ov"); ov.innerHTML = ""; CAM.shift = null;
+    const watch = lastTr && T >= lastTr[3] + 0.6 * (lastTr[4] - lastTr[3]) && T <= lastTr[4] + 3;
+    if (!watch) { // overview of the liquid-handler deck
+      CAM.hw = 0.40; CAM.at = [0.50, 0.33, DK.CAR_TOP]; camTop.near = 0.002; camTop.position.set(0.50, 0.33, 0.89); camTop.lookAt(0.50, 0.33, 0);
+      $("#cam-cap").innerHTML = "deck camera"; return;
+    }
+    const job = lastTr[0], m = platePool[job], v = new THREE.Vector3();
+    const NEST = { lh: [stationXYZ("lh")[0], stationXYZ("lh")[1], DK.CAR_TOP + 0.0071], incubator: [0.25, -0.74, 0.0471], reader: [0.80, -0.75, 0.2051], hotel: [1.05, -0.58, 0.0671] };
+    if (m && m.visible) v.copy(m.position); else if (carried.visible) carried.getWorldPosition(v); else v.set(...(NEST[lastTr.route.split(">")[1]] || NEST.lh));
+    CAM.hw = 0.10; CAM.at = [v.x, v.y, v.z];
+    camTop.position.set(v.x, v.y, v.z + 0.045); camTop.near = 0.002; camTop.lookAt(v.x, v.y, v.z - 1);
+    const where = lastTr.route.split(">")[1], ev = (RP.camera || []).find((e) => e.plate === job && e.t >= lastTr[3] && e.t <= lastTr[4] + 1);
+    const settled = T >= lastTr[4] - 0.05 * (lastTr[4] - lastTr[3]);
+    if (!settled) { $("#cam-cap").innerHTML = `<b>${job}</b> → ${where}`; return; }
+    // overlay in the 400 x 300 viewBox: 2 px per mm at hw = 0.10 m
+    const px = 2, pw = DK.PLATE[0] * 1000 * px, ph = DK.PLATE[1] * 1000 * px, rect = (dx, dy, attrs) => el("rect", { x: 200 - pw / 2 + dx, y: 150 - ph / 2 - dy, width: pw, height: ph, rx: 6, fill: "none", ...attrs }, ov);
+    rect(0, 0, { stroke: "var(--accent)", "stroke-width": 2, "stroke-dasharray": "6 4" });
+    if (ev) {
+      rect(ev.dx_mm * px * CAM_SCALE, ev.dy_mm * px * CAM_SCALE, { stroke: ev.detected ? "var(--critical)" : "var(--warning)", "stroke-width": 2.5 });
+      // the camera sees the plate where it really is: move it (and the deck's assay plate) for this view only
+      CAM.shift = { d: [ev.dx_mm * CAM_SCALE / 1000, ev.dy_mm * CAM_SCALE / 1000], objs: [m, where === "lh" && deckObjs ? deckObjs.assayBase : null, where === "lh" && deckObjs ? deckObjs.assay.inst : null].filter(Boolean) };
+      $("#cam-cap").innerHTML = `<b>${job}</b> at ${where} · off by ${ev.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE}) → ` + (ev.detected ? `<b style="color:var(--critical)">flagged, re-place</b>` : `<b>missed</b>`);
+    } else $("#cam-cap").innerHTML = `<b>${job}</b> at ${where} · on target`;
+  }
   // ---- per-frame pose from the replay
-  const stationXYZ = (name) => {
+  const stationXYZ = (name, site = 0) => {
     const deck = deckOf();
     if (name === "lh") return [carrierX(deck.dest_rail), siteY(0), DK.CAR_TOP];
-    if (name === "tiprack") return [carrierX(deck.tip_rail), siteY(0), DK.CAR_TOP];
+    if (name === "tiprack") return [carrierX(deck.tip_rail), siteY(site), DK.CAR_TOP]; // each box at its own site
+    if (name === "handoff") return [carrierX(deck.dest_rail), siteY(1), DK.CAR_TOP]; // free plate-carrier site for CO-RE handoffs
     return ST3[name];
   };
   const ROUTE_ENDS = { "hotel>lh": ["hotel", "lh"], "lh>incubator": ["lh", "incubator"], "incubator>reader": ["incubator", "reader"], "reader>hotel": ["reader", "hotel"],
-    "rackhotel>lh": ["rackhotel", "tiprack"], "lh>rackwaste": ["tiprack", "rackwaste"] };
+    "rackhotel>lh": ["rackhotel", "tiprack"], "lh>rackwaste": ["tiprack", "rackwaste"],
+    "handoff>rackwaste": ["handoff", "rackwaste"], "rackhotel>handoff": ["rackhotel", "handoff"] };
   const wrapA = (a) => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
-  function transferKeys(a, b) { // joint keyframes [q, dwell s, tag], mirroring transfer_plan in sim3d/motion.py
-    const A = stationXYZ(a), B = stationXYZ(b), h = 0.0071, keys = [];
+  function transferKeys(a, b, site = 0) { // joint keyframes [q, dwell s, tag], mirroring transfer_plan in sim3d/motion.py
+    const A = stationXYZ(a, site), B = stationXYZ(b, site), h = 0.0071, keys = [];
     const high = (x, y) => [ARM.safeZ, ...scaraIK(x, y, 0).slice(1)];
     const folded = (q) => { const e = Math.sign(q[2] || 1) * MOTION.fold; return [ARM.safeZ, q[1], e, wrapA(-q[1] - e)]; };
     const line = (x, y0, y1) => { const n = Math.max(1, Math.ceil(Math.abs(y1 - y0) / MOTION.step)), out = [];
@@ -1015,8 +1027,8 @@ function initThree() {
     let w = keys[0][0][3]; for (const k of keys) { k[0] = [...k[0]]; k[0][3] = w + wrapA(k[0][3] - w); w = k[0][3]; }
     return keys;
   }
-  function armPose(route, u) { // keyframes timed by joint travel (PF400-class speeds), eased per segment
-    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"], keys = [[lastQ, 0, ""], ...transferKeys(a, b)];
+  function armPose(route, u, site = 0) { // keyframes timed by joint travel (PF400-class speeds), eased per segment
+    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"], keys = [[lastQ, 0, ""], ...transferKeys(a, b, site)];
     const dt = keys.map((k, i) => i === 0 ? 0 : Math.max(Math.abs(k[0][0] - keys[i - 1][0][0]) / 0.5, Math.abs(k[0][1] - keys[i - 1][0][1]) / 3.5,
       Math.abs(k[0][2] - keys[i - 1][0][2]) / 3.5, Math.abs(k[0][3] - keys[i - 1][0][3]) / 6.3) + 0.15 + k[1]);
     const total = dt.reduce((x, y) => x + y, 0), at = u * total;
@@ -1063,10 +1075,10 @@ function initThree() {
     if (tr || rackJob) {
       const route = tr ? tr.op.route : rackJob.route;
       const o = tr ? tr.op : rackJob, u = (T - o[3]) / Math.max(1, o[4] - o[3]);
-      const { q, holding } = armPose(route, u); setArm(q);
+      const { q, holding } = armPose(route, u, tr ? 0 : rackJob.site); setArm(q); showTrail(route, tr ? 0 : rackJob.site);
       if (holding) { if (tr) carried.visible = true; else carriedRack.visible = true; }
       if (u > .95) lastQ = q;
-    } else setArm(lastQ);
+    } else { setArm(lastQ); trail.visible = false; }
     fingerA.position.x = carried.visible || carriedRack.visible ? 0.066 : 0.072; fingerB.position.x = -fingerA.position.x;
     // liquid handler: assay plate, tips, sources, head
     const A = activeDispense(), pmA = A.op ? RP.plates[A.op[0]] : null, st = A.st && pmA ? A.st : null;
@@ -1095,7 +1107,30 @@ function initThree() {
     stock.forEach((m, k) => { m.visible = k < 8; });
     const nDisposed = RP.ops.filter((o) => o[5] === "lh>rackwaste" && o[4] <= T).length; // used tip boxes in the bin
     binnedRacks.forEach((m, k) => { m.visible = k < Math.min(8, nDisposed); });
-    const hp = headPose(dispensing ? st : null, pmA || { rows: 16, cols: 24 });
+    let hp = headPose(dispensing ? st : null, pmA || { rows: 16, cols: 24 });
+    // LH CO-RE gripper moving a tip box between a deep site and the handoff site
+    const coreOp = RP.ops.find((o) => o[5] && String(o[5]).startsWith("core_") && o[3] <= T && o[4] > T);
+    let carryCore = false;
+    if (!dispensing && coreOp) {
+      const dk = deckOf(), u = (T - coreOp[3]) / Math.max(1e-6, coreOp[4] - coreOp[3]);
+      const site = [carrierX(dk.tip_rail), siteY(coreOp[6] || 0)], ho = [carrierX(dk.dest_rail), siteY(1)];
+      const [a, b] = coreOp[5] === "core_out" ? [site, ho] : [ho, site], up = 0.33, down = DK.CAR_TOP + 0.075;
+      const m = Math.min(1, Math.max(0, (u - .4) / .4)), xy = [lerp(a[0], b[0], ease(m)), lerp(a[1], b[1], ease(m))];
+      const z = u < .2 ? lerp(up, down, ease(u / .2)) : u < .3 ? down : u < .4 ? lerp(down, up, ease((u - .3) / .1))
+        : u < .8 ? up : u < .9 ? lerp(up, down, ease((u - .8) / .1)) : lerp(down, up, ease((u - .9) / .1));
+      hp = { p: [xy[0], xy[1] + 0.0315, z], tips: 0 }; carryCore = u > .3 && u < .9;
+    }
+    coreBox.visible = carryCore; coreBox.position.set(0, hp.p[1] - 0.0315, hp.p[2] - 0.045);
+    // tip boxes: a site is empty from the start of its box's removal to the end of the new box's placement
+    const lastAt = (pred, key) => RP.ops.filter((o) => pred(o) && o[key] <= T).reduce((m, o) => Math.max(m, o[key]), -1);
+    if (deckObjs) for (const r of deckObjs.racks) {
+      const out = lastAt((o) => o[6] === r.site && (o[5] === "lh>rackwaste" || o[5] === "core_out"), 3);
+      const back = lastAt((o) => o[6] === r.site && (o[5] === "rackhotel>lh" || o[5] === "core_in"), 4);
+      r.base.visible = r.inst.visible = !(out >= 0 && back < out);
+    }
+    const parked = (a, b) => RP.ops.some((o) => o[5] === a && o[4] <= T && RP.ops.some((q) => q[0] === o[0] && q[5] === b && q[6] === o[6] && q[3] > T));
+    handoffBox.visible = parked("core_out", "handoff>rackwaste") || parked("rackhotel>handoff", "core_in");
+    const hoP = stationXYZ("handoff"); handoffBox.position.set(hoP[0], hoP[1], DK.CAR_TOP + 0.011);
     head.position.set(hp.p[0], 0, 0);
     const binned = st ? tipsDiscarded(st) : 0; // this plate's ejected tips, as bin fill
     wasteFill.scale.z = Math.max(0.001, Math.min(0.12, 0.12 * binned / 1200)); wasteFill.position.z = 0.004 + wasteFill.scale.z / 2;
@@ -1111,72 +1146,176 @@ function initThree() {
       if (c.liquid.visible) c.liquid.material = st.cur.what === 0 ? mats.cells : drugMats[(st.cur.what - 1) % 4];
     });
     const caps = [];
-    if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}</span>`);
-    else if (rackJob) caps.push(`<span class="pill">arm <b>${rackJob.route === "lh>rackwaste" ? "used tip box → waste bin" : "new tip box → deck"}</b></span>`);
+    const motion = (r) => { const c = CELL && CELL.motion && CELL.motion.checks && CELL.motion.checks[r]; return c ? ` · ${c.simulated_s.toFixed(1)} s, ${c.collisions.length ? "collides" : "collision-free"}` : ""; };
+    if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}${motion(tr.op.route)}</span>`);
+    else if (rackJob) caps.push(`<span class="pill">arm <b>${{ "lh>rackwaste": `used tip box, site ${rackJob.site + 1} → waste bin`,
+      "rackhotel>lh": `new tip box → site ${rackJob.site + 1}`, "handoff>rackwaste": `used tip box (site ${rackJob.site + 1}) handoff → waste bin`,
+      "rackhotel>handoff": `new tip box → handoff (for site ${rackJob.site + 1})` }[rackJob.route] || rackJob.route}</b></span>`);
+    if (coreOp && !dispensing) caps.push(`<span class="pill">${coreOp[2]} CO-RE gripper <b>${coreOp[5] === "core_out" ? `site ${coreOp[6] + 1} → handoff` : `handoff → site ${coreOp[6] + 1}`}</b></span>`);
     if (dispensing && st && st.cur) caps.push(`<span class="pill">${LHSEL} <b>${st.stage}</b> pass ${st.idx + 1}/${st.n}</span>`);
     caps.push(`<span class="pill">incubator <b>${snap.incubator.length}</b></span>`, `<span class="pill">queued <b>${snap.hotel.length}</b></span>`, `<span class="pill">done <b>${snap.done.length}</b></span>`);
     $("#scene-cap").innerHTML = caps.join("");
-    // end-effector camera follows the gripper, looking down
-    scene.updateMatrixWorld();
-    const wp = new THREE.Vector3(); eeCamMount.getWorldPosition(wp); eeCam.position.copy(wp);
-    const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(gripper.getWorldQuaternion(new THREE.Quaternion())); eeCam.up.copy(fwd);
-    eeCam.lookAt(wp.x, wp.y, wp.z - 1);
-    // pipetting-head camera: on the head, beside channel 1, looking down at the labware
-    const hp3 = new THREE.Vector3(); channels[0].g.getWorldPosition(hp3);
-    lhCam.position.set(hp3.x + 0.03, hp3.y + 0.02, hp3.z + 0.02); lhCam.lookAt(hp3.x + 0.03, hp3.y - 0.02, hp3.z - 1);
+    poseCamera();
   };
   const fit = (v, c) => { const w = v.c.clientWidth, h = v.c.clientHeight; if (!w || !h) return false;
     if (v.c.width !== Math.round(w * devicePixelRatio) || v.c.height !== Math.round(h * devicePixelRatio)) { v.r.setPixelRatio(devicePixelRatio); v.r.setSize(w, h, false); }
     if (c.isPerspectiveCamera) { c.aspect = w / h; c.updateProjectionMatrix(); } return true; };
   SIM.render = () => {
     if (fit(V.main, cam)) V.main.r.render(scene, cam);
-    if (fit(V.deck, deckCam)) { const a = V.deck.c.clientWidth / V.deck.c.clientHeight; deckCam.left = -0.36 * a; deckCam.right = 0.36 * a; deckCam.updateProjectionMatrix(); V.deck.r.render(scene, deckCam); }
-    if (fit(V.ee, eeCam)) V.ee.r.render(scene, eeCam);
-    if (fit(V.lh, lhCam)) V.lh.r.render(scene, lhCam);
+    if (fit(V.cam, camTop)) { const a = V.cam.c.clientWidth / V.cam.c.clientHeight; camTop.left = -CAM.hw; camTop.right = CAM.hw; camTop.top = CAM.hw / a; camTop.bottom = -CAM.hw / a; camTop.updateProjectionMatrix();
+      const tv = trail.visible, sh = CAM.shift; trail.visible = false;
+      if (sh) for (const o of sh.objs) { o.position.x += sh.d[0]; o.position.y += sh.d[1]; }
+      V.cam.r.render(scene, camTop);
+      if (sh) for (const o of sh.objs) { o.position.x -= sh.d[0]; o.position.y -= sh.d[1]; }
+      trail.visible = tv; }
+  };
+  // screen position (canvas px) of a device, for the under-the-hood layer; null when behind the camera
+  const pv = new THREE.Vector3();
+  SIM.project = (k) => {
+    if (k === "arm") gripper.getWorldPosition(pv); else if (k === "lh") pv.set(...stationXYZ("lh")).setZ(DK.CAR_TOP + 0.12); else pv.set(...ST3[k]);
+    pv.project(cam); if (pv.z > 1) return null;
+    return [(pv.x + 1) / 2 * V.main.c.clientWidth, (1 - pv.y) / 2 * V.main.c.clientHeight];
   };
   SIM.ready = true;
 }
 
-/* ================================================================ loop rail */
-const OPEN = new Set(["execute"]);
-function drawRail(snap) {
-  const recent = (ts, win) => ts.filter((t) => t <= T && t > T - win);
-  const submits = [...new Set(Object.values(RP.submits || {}))].sort((a, b) => a - b);
-  const batches = submits.filter((t) => t <= T), lastSub = batches[batches.length - 1];
-  const platesIn = Object.entries(RP.submits || {}).filter(([, t]) => t <= T).map(([p]) => p);
-  const wells = platesIn.reduce((a, p) => a + Object.values(RP.plates[p].wells).filter((w) => w && w !== "NEG" && w !== "POS" && w !== "EMPTY").length, 0);
-  const replans = RP.replans.filter((r) => r.t <= T), lastRp = replans[replans.length - 1];
-  const fails = RP.failures.filter((f) => f.t <= T), lastF = fails[fails.length - 1];
-  const reads = RP.reads.filter((r) => r.t <= T), deck = deckOf();
-  const run = (k) => RP.ops.filter((o) => RP.kinds[o[1]] === k && o[3] <= T && o[4] > T);
-  const disp = run("dispense"), mov = run("transfer").filter((o) => !o[0].startsWith("TIPS")), tipsMov = RP.ops.filter((o) => o[0].startsWith("TIPS") && o[3] <= T && o[4] > T);
-  const prog = Object.values(RP.progress), camp = prog[0] || {};
-  const best = prog.map((p) => p.points.filter((x) => x.t <= T).pop()).filter(Boolean);
-  const A = activeDispense(), st = A.st;
-  const designer = [...new Set(prog.map((p) => p.designer))].join(", ") || "–", mode = camp.mode || "sync";
-  const stages = [
-    { id: "design", name: "Design", on: lastSub != null && T - lastSub < 30, live: `${batches.length} batch${batches.length === 1 ? "" : "es"} · ${platesIn.length} plates`,
-      subs: [["fit model to reads", reads.length > 0 && lastSub != null && T - lastSub < 30], [`propose (${designer})`, lastSub != null && T - lastSub < 30], [`${wells} conditions so far`, false]] },
-    { id: "layout", name: "Layout & deck", on: lastSub != null && T - lastSub < 30, live: deck.tip_reuse ? "tip reuse · optimized deck" : "fresh tips · fixed deck",
-      subs: [["place wells (edge-aware)", lastSub != null && T - lastSub < 30], [`deck: tips r${deck.tip_rail} · src r${deck.source_rail} · plate r${deck.dest_rail}`, false], [`plan protocol per plate`, disp.length > 0 && st && st.idx === 0]] },
-    { id: "schedule", name: "Schedule", on: lastRp != null && T - lastRp.t < 10, live: `${replans.length} replans${lastRp ? ` · ${lastRp.ms} ms` : ""}`,
-      subs: [[lastRp ? `last: ${lastRp.reasons.join(", ").replaceAll("failure:", "")}` : "no replans yet", lastRp && T - lastRp.t < 10], [lastRp ? `${lastRp.solver} · ${lastRp.free}/${lastRp.ops} ops free` : "", false], [lastRp ? `${lastRp.moved} ops moved` : "", false]].filter((x) => x[0]) },
-    { id: "execute", name: "Execute", on: disp.length + mov.length + tipsMov.length + run("read").length > 0,
-      live: `${disp.length} dispensing · ${run("incubate").length} incubating`,
-      subs: [[disp.length && st && st.cur ? `dispense: ${st.stage} · pass ${st.idx + 1}/${st.n}` : "dispense", disp.length > 0], [mov.length ? `arm: ${mov[0].route.replace(">", " → ")}` : "arm move", mov.length > 0],
-             [`incubate: ${run("incubate").length} plates`, run("incubate").length > 0], [`read: ${reads.length} done`, run("read").length > 0], [tipsMov.length ? "tip-rack resupply" : `tip resupply: ${(RP.tips || []).filter((e) => e.kind === "tip_refill" && e.t <= T).length}`, tipsMov.length > 0]] },
-    { id: "recover", name: "Recover", on: lastF != null && T - lastF.t < 15, live: `${fails.length} failure${fails.length === 1 ? "" : "s"}`,
-      subs: lastF ? [[`detect: ${lastF.type.replace("_", " ")}`, T - lastF.t < 15], [`decide: ${lastF.actions.join(", ")}`, T - lastF.t < 15], [`by: ${lastF.policy}`, false]] : [["no failures yet", false]] },
-    { id: "analyze", name: "Analyze", on: reads.length && T - reads[reads.length - 1].t < 15, live: `${reads.length}/${RP.reads.length} plates read`,
-      subs: [["normalize to controls", reads.length && T - reads[reads.length - 1].t < 15], ["Bliss excess per combination", reads.length && T - reads[reads.length - 1].t < 15],
-             [best.length && best[0].best ? `best est. ${best.map((b) => b.best_est.toFixed(2)).join(" / ")}` : "no recommendation yet", false]] },
-  ];
-  $("#rail").innerHTML = stages.map((g, i) => `${i ? '<div class="arrow" aria-hidden="true">↓</div>' : ""}<button class="stage ${g.on ? "active" : ""}" type="button" data-stage="${g.id}" aria-expanded="${OPEN.has(g.id)}">
-    <div class="top"><span class="dot"></span><span class="name">${g.name}</span><span class="chev">${OPEN.has(g.id) ? "▾" : "▸"}</span></div>
-    <div class="live">${g.live}</div>${OPEN.has(g.id) ? `<div class="subs">${g.subs.map(([t, on]) => `<div class="sub ${on ? "on" : ""}"><i></i><span>${t}</span></div>`).join("")}</div>` : ""}</button>`).join("") +
-    `<div class="loopback">↺ next ${mode === "async" ? "plate when a slot frees" : "round"}</div>`;
-  $("#rail").querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { const id = b.dataset.stage; OPEN.has(id) ? OPEN.delete(id) : OPEN.add(id); drawRail(snapshot(T)); }));
+/* ================================================================ under the hood */
+// A see-through layer over the workcell: the software modules, the wires between them, and a pulse
+// along a wire each time the replay logs one module signalling another (pulses of one cause chain in order).
+const HOOD = { on: true, ev: [], next: 0, lastT: null, pulses: [], els: null };
+const HNODES = { model: ["Model", "GP"], opt: ["Optimizer", "throughput BO"], sched: ["Scheduler", "CP-SAT repair"], exec: ["Executor", "dispatch"],
+  motion: ["Motion", "arm routes"], camera: ["Camera", "plate check"], recovery: ["Recovery", "rules"] };
+// wire: [from, to]; "@x" is a device in the 3D scene
+const HEDGES = { belief: ["model", "opt"], batch: ["opt", "sched"], plan: ["sched", "exec"], event: ["exec", "sched"], move: ["exec", "motion"], path: ["motion", "@arm"],
+  dispense: ["exec", "@lh"], read: ["exec", "@reader"], data: ["@reader", "model"], image: ["@arm", "camera"], flag: ["camera", "recovery"], replan: ["recovery", "sched"],
+  fault_arm: ["@arm", "recovery"], fault_lh: ["@lh", "recovery"], fault_reader: ["@reader", "recovery"] };
+const HBAD = new Set(["flag", "fault_arm", "fault_lh", "fault_reader", "replan"]);
+const HSTEP = 0.32, HDUR = 0.8; // wall seconds between chained pulses, and per pulse
+function hoodBuild() {
+  const ev = [], add = (t, chain) => ev.push({ t, chain });
+  HNODES.recovery[1] = RP.meta.policy === "rules" ? "rules" : "Claude";
+  const camps = {};
+  for (const [pid, t] of Object.entries(RP.submits)) { const c = RP.plates[pid] && RP.plates[pid].campaign; camps[`${c}|${t}`] = { c, t }; }
+  for (const { c, t } of Object.values(camps)) {
+    const bel = (RP.progress[c] && RP.progress[c].belief || []).some((b) => b.t === t);
+    add(t, bel ? [["belief", "belief", 0], ["batch", "batch", 1]] : [["batch", "batch", 1]]);
+  }
+  for (const rp of RP.replans) {
+    const fail = rp.reasons.some((r) => r.startsWith("failure:")), batch = rp.reasons.includes("new_batch"), ev0 = rp.reasons.find((r) => r === "overrun" || r.startsWith("tip_"));
+    const chain = [["plan", "plan", fail ? 3 : batch ? 2 : 1]];
+    if (ev0 && !fail && !batch) chain.unshift(["event", ev0 === "overrun" ? "late" : "tips", 0]);
+    add(rp.t, chain);
+  }
+  for (const f of RP.failures) {
+    const dev = /^arm/.test(f.resource) ? "arm" : /^lh/.test(f.resource) ? "lh" : /^reader/.test(f.resource) ? "reader" : null;
+    if (f.type === "plate_misplaced") add(f.t, [["image", "image", 0], ["flag", "off", 1], ["replan", "replan", 2]]);
+    else add(f.t, [...(dev ? [[`fault_${dev}`, f.type === "device_down" ? "down" : "fault", 0]] : []), ["replan", "replan", 1]]);
+  }
+  for (const c of RP.camera || []) if (!c.detected) add(c.t, [["image", "image", 0]]);
+  for (const o of RP.ops) {
+    const k = RP.kinds[o[1]];
+    if (k === "transfer") add(o[3], [["move", "move", 0], ["path", "path", 1]]);
+    else if (k === "dispense") add(o[3], [["dispense", "dispense", 0]]);
+    else if (k === "read") add(o[3], [["read", "read", 0]]);
+  }
+  for (const r of RP.reads) add(r.t, [["data", "data", 0]]);
+  ev.sort((a, b) => a.t - b.t); HOOD.ev = ev; HOOD.lastT = null; HOOD.pulses = []; HOOD.els = null;
 }
+function hoodInit() {
+  const host = $("#hood"), s = $("#hood-svg"); host.querySelectorAll(".hnode").forEach((n) => n.remove()); s.innerHTML = "";
+  const els = { nodes: {}, edges: {}, devs: {}, pool: [] };
+  for (const k of Object.keys(HEDGES)) els.edges[k] = el("path", { class: "edge" + (k.startsWith("fault_") ? " hide" : "") }, s);
+  for (const d of ["arm", "lh", "reader"]) els.devs[d] = el("circle", { class: "dev", r: 5 }, s);
+  for (const [k, [name, sub]] of Object.entries(HNODES)) { const n = document.createElement("div"); n.className = "hnode"; n.innerHTML = `${name}<small>${sub}</small>`; host.appendChild(n); els.nodes[k] = n; }
+  for (let i = 0; i < 40; i++) { const g = el("g", { visibility: "hidden" }, s); el("circle", { class: "dot", r: 3.6 }, g); el("text", { class: "sig", x: 7, y: -6 }, g); els.pool.push(g); }
+  HOOD.els = els;
+}
+function hoodTick() {
+  if (!HOOD.on || !RP || !SIM.project) return;
+  if (!HOOD.els) hoodInit();
+  // spawn pulses for events crossed since the last frame (not on a scrub jump)
+  const spd = +$("#speed").value, lo = HOOD.lastT;
+  if (lo == null || T < lo || T - lo > 0.12 * spd + 1) { let i = 0; while (i < HOOD.ev.length && HOOD.ev[i].t <= T) i++; HOOD.next = i; }
+  else while (HOOD.next < HOOD.ev.length && HOOD.ev[HOOD.next].t <= T) {
+    for (const [edge, label, d] of HOOD.ev[HOOD.next].chain) { // merge bursts on one wire into one pulse
+      const start = wall + d * HSTEP, prev = HOOD.pulses.findLast((p) => p.edge === edge);
+      if (!prev || start - prev.start > 0.35) HOOD.pulses.push({ edge, label, start });
+    }
+    HOOD.next++;
+  }
+  HOOD.lastT = T;
+  HOOD.pulses = HOOD.pulses.filter((p) => wall < p.start + HDUR + 0.5).slice(-40);
+  // layout: module nodes around the scene, devices projected from 3D
+  const host = $("#hood"), W = host.clientWidth, H = host.clientHeight, cb = $("#cam"), camTop = cb.offsetTop, top = Math.max(0.17 * H, 76);
+  const P = { opt: [0.15 * W, top], sched: [0.47 * W, top], exec: [0.80 * W, top], model: [0.13 * W, 0.62 * H], recovery: [0.40 * W, H - 24],
+    motion: [0.90 * W, Math.min(0.46 * H, camTop - 40)], camera: [cb.offsetLeft + cb.offsetWidth / 2, camTop - 16] };
+  for (const d of ["arm", "lh", "reader"]) { P["@" + d] = SIM.project(d); const c = HOOD.els.devs[d];
+    if (P["@" + d]) { c.setAttribute("cx", P["@" + d][0]); c.setAttribute("cy", P["@" + d][1]); c.setAttribute("visibility", "visible"); } else c.setAttribute("visibility", "hidden"); }
+  for (const [k, n] of Object.entries(HOOD.els.nodes)) { n.style.left = P[k][0] + "px"; n.style.top = P[k][1] + "px"; }
+  const geo = {};
+  for (const [k, [a, b]] of Object.entries(HEDGES)) {
+    const p0 = P[a], p2 = P[b], path = HOOD.els.edges[k];
+    if (!p0 || !p2) { path.setAttribute("d", ""); continue; }
+    const dx = p2[0] - p0[0], dy = p2[1] - p0[1], c = [(p0[0] + p2[0]) / 2 - dy * 0.14, (p0[1] + p2[1]) / 2 + dx * 0.14];
+    geo[k] = [p0, c, p2]; path.setAttribute("d", `M${p0[0]},${p0[1]} Q${c[0]},${c[1]} ${p2[0]},${p2[1]}`);
+  }
+  // pulses
+  const live = {}, hot = {};
+  let used = 0;
+  for (const p of HOOD.pulses) {
+    const u = (wall - p.start) / HDUR, [a, b] = HEDGES[p.edge];
+    if (u > -0.05 && u < 1.6) live[p.edge] = true;
+    if (u >= -0.05 && u < 0.3) hot[a] = hot[a] || (HBAD.has(p.edge) ? "bad" : "on");
+    if (u > 0.85 && u < 1.6) hot[b] = hot[b] || (HBAD.has(p.edge) ? "bad" : "on");
+    if (u < 0 || u > 1 || !geo[p.edge] || used >= HOOD.els.pool.length) continue;
+    const [p0, c, p2] = geo[p.edge], e = u < .5 ? 2 * u * u : 1 - 2 * (1 - u) * (1 - u), m = 1 - e;
+    const x = m * m * p0[0] + 2 * m * e * c[0] + e * e * p2[0], y = m * m * p0[1] + 2 * m * e * c[1] + e * e * p2[1];
+    const g = HOOD.els.pool[used++]; g.setAttribute("visibility", "visible"); g.setAttribute("transform", `translate(${x},${y})`);
+    g.firstChild.setAttribute("class", "dot" + (HBAD.has(p.edge) ? " bad" : "")); g.lastChild.textContent = p.label;
+  }
+  for (let i = used; i < HOOD.els.pool.length; i++) HOOD.els.pool[i].setAttribute("visibility", "hidden");
+  for (const [k, path] of Object.entries(HOOD.els.edges)) path.setAttribute("class", "edge" + (live[k] ? " on" : k.startsWith("fault_") ? " hide" : "") + (live[k] && HBAD.has(k) ? " bad" : ""));
+  for (const [k, n] of Object.entries(HOOD.els.nodes)) n.className = "hnode" + (hot[k] ? " " + hot[k] : "");
+}
+// Design iterations: each batch the optimizer sends is a group of plate cells, filled as its plates
+// are dispensed (half) and read (full). Batches overlap because the design is asynchronous.
+let ITERS = [];
+function buildIters() {
+  const by = {}, readAt = {};
+  for (const r of RP.reads) readAt[r.plate] = r.t;
+  for (const [pid, t] of Object.entries(RP.submits || {})) { const c = RP.plates[pid] && RP.plates[pid].campaign; if (c != null) ((by[c] ||= {})[t] ||= []).push(pid); }
+  const host = $("#iters"); host.innerHTML = ""; ITERS = [];
+  for (const c of Object.keys(by).sort()) {
+    const row = document.createElement("div"); row.className = "iter-row"; row.innerHTML = `<span>${c}</span>`; host.appendChild(row);
+    const groups = Object.entries(by[c]).map(([t, ps]) => ({ t: +t, ps: ps.sort((a, b) => RP.plates[a].timepoint_h - RP.plates[b].timepoint_h) })).sort((a, b) => a.t - b.t);
+    groups.forEach((g, i) => {
+      g.el = document.createElement("span"); g.el.className = "iter-g"; row.appendChild(g.el);
+      g.cells = g.ps.map((p) => { const s = document.createElement("i"); s.className = "iter-p"; g.el.appendChild(s); return { p, s, disp: RP.jobs[p] && RP.jobs[p].disp ? RP.jobs[p].disp[3] : null, read: readAt[p] }; });
+      g.el.addEventListener("pointermove", (evt) => showTip(evt, `<b>campaign ${c} · iteration ${i + 1}</b><br>designed ${fmtH(g.t)}<br>` +
+        g.ps.map((p) => `${RP.plates[p].cell_line} ${RP.plates[p].timepoint_h} h` + (readAt[p] != null ? ` · read ${fmtH(readAt[p])}` : "")).join("<br>")));
+      g.el.addEventListener("pointerleave", hideTip);
+    });
+    const n = document.createElement("span"); n.className = "n"; row.appendChild(n);
+    ITERS.push({ groups, n });
+  }
+}
+function drawIters() {
+  const glow = Math.max(3, 1.5 * +$("#speed").value);
+  for (const { groups, n } of ITERS) {
+    let cur = -1; groups.forEach((g, i) => { if (g.t <= T) cur = i; });
+    groups.forEach((g, i) => {
+      g.el.className = "iter-g" + (i === cur ? (T - g.t < glow ? " new" : " cur") : "");
+      for (const c of g.cells) c.s.className = "iter-p" + (g.t > T ? "" : c.read != null && c.read <= T ? (RP.plates[c.p].status === "invalid" ? " bad" : " done") : c.disp != null && c.disp <= T ? " run" : " q");
+    });
+    n.textContent = `${cur + 1}/${groups.length}`;
+  }
+}
+function setHood(on) {
+  HOOD.on = on; $("#hood").hidden = !on; $("#hood-btn").setAttribute("aria-pressed", on); HOOD.lastT = null; HOOD.pulses = [];
+  try { localStorage.setItem("labloop.hood", on ? "1" : "0"); } catch (_) {}
+}
+$("#hood-btn").addEventListener("click", () => setHood(!HOOD.on));
+try { if (localStorage.getItem("labloop.hood") === "0") setHood(false); } catch (_) {}
 
 /* ================================================================ clock */
 const clampT = (t) => Math.max(0, Math.min(TMAX, t));
@@ -1184,10 +1323,10 @@ let wall = 0, lastDraw = 0;
 function update() {
   if (!RP || $("#view-console").hidden) return;
   $("#scrub").value = Math.round(T / TMAX * 10000); $("#clock").textContent = fmtHM(T);
-  const snap = snapshot(T), w = +$("#window").value, t0 = Math.max(0, Math.min(TMAX - w, T - w / 2)), t1 = Math.min(TMAX, t0 + w);
+  const snap = snapshot(T), w = 1440, t0 = Math.max(0, Math.min(TMAX - w, T - w / 2)), t1 = Math.min(TMAX, t0 + w);
   drawGantt($("#gantt-overview"), 0, TMAX, { compact: true, window: [t0, t1] });
-  drawGantt($("#gantt-detail"), t0, t1, {});
-  drawRail(snap); drawLH(snap); drawDevices(snap); drawPlate(snap); drawProgress(); drawTicker();
+  drawGantt($("#gantt-detail"), t0, t1, { lastReplan: drawReplan() });
+  drawLH(snap); drawPlate(snap); drawProgress(); drawIters();
   if (SIM.ready) { SIM.pose(snap, wall); SIM.render(); }
 }
 let last = 0;
@@ -1197,29 +1336,17 @@ function frame(ts) {
     if (playing) { T = clampT(T + dt * +$("#speed").value); if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; }
       if (ts - lastDraw > 60) { lastDraw = ts; update(); } else if (SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); } }
     else if (SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); }
+    hoodTick();
   }
   requestAnimationFrame(frame);
 }
 $("#play").addEventListener("click", () => { playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) T = 0; });
 $("#scrub").addEventListener("input", (e) => { T = +e.target.value / 10000 * TMAX; update(); });
-$("#window").addEventListener("change", update);
-$("#scenario").addEventListener("change", (e) => loadReplay(e.target.value));
-function jump(times, speed) { const n = times.filter((t) => t > T + 0.5).sort((a, b) => a - b)[0]; if (n != null) { T = clampT(n); if (speed) $("#speed").value = speed; update(); } }
-$("#next-disp").addEventListener("click", () => { const ops = RP.ops.filter((o) => RP.kinds[o[1]] === "dispense"); jump(ops.map((o) => o[3] + 0.2), "0.2");
-  const o = ops.find((x) => Math.abs(x[3] + 0.2 - T) < 0.01); if (o) { LHSEL = o[2]; update(); } });
-$("#next-eject").addEventListener("click", () => { // freeze on the head over the waste slot (70% into the eject stage)
-  const ts = []; for (const o of RP.ops) { if (RP.kinds[o[1]] !== "dispense") continue; const P = passesOf(o[0]); if (!P) continue;
-    const n = P.norm.length; for (let k = 0; k < n; k++) { const t = o[3] + (o[4] - o[3]) * (k + 0.97) / n; if (t > T + 1e-3) { ts.push([t, o[2]]); break; } } }
-  ts.sort((x, y) => x[0] - y[0]); if (!ts.length) return; playing = false; $("#play").textContent = "Play";
-  T = clampT(ts[0][0]); LHSEL = ts[0][1]; $("#speed").value = "0.2"; update(); });
-$("#next-move").addEventListener("click", () => jump(RP.ops.filter((o) => RP.kinds[o[1]] === "transfer").map((o) => o[3]), "1"));
-$("#next-fail").addEventListener("click", () => jump(RP.failures.map((f) => f.t - 2)));
-$("#next-read").addEventListener("click", () => jump(RP.reads.map((r) => r.t)));
 addEventListener("resize", () => update());
 
 async function loadReplay(name) {
   RP = await (await fetch(`data/replay_${name}.json`)).json();
-  buildJobs(); RP.rows = lanes(RP.ops); TMAX = Math.max(...RP.ops.map((o) => o[4]));
+  buildJobs(); hoodBuild(); buildIters(); RP.rows = lanes(RP.ops); TMAX = Math.max(...RP.ops.map((o) => o[4]));
   const firstDisp = RP.ops.filter((o) => RP.kinds[o[1]] === "dispense").map((o) => o[3]).sort((a, b) => a - b)[0] || 0;
   T = clampT(firstDisp + 20); selPlate = null; pinned = false; LHSEL = null;
   $("#gantt-legend").innerHTML = RP.kinds.map((k) => `<span><i class="box" style="background:${KIND_COLOR[k]}"></i>${k}</span>`).join("") + `<span><span style="color:var(--critical)">▲</span> failure</span><span><span style="color:var(--accent)">|</span> replan</span>`;
@@ -1228,8 +1355,8 @@ async function loadReplay(name) {
 
 /* ================================================================ results */
 let RESULTS = null, CUR_EXP = null, CELL = null;
-const EXP_ORDER = ["m4", "m2", "m2_layout", "m3", "m3_async", "level4", "level4_sim3d"];
-const EXP_SHORT = { m4: "Loop timing", m2: "Experiment selection", m2_layout: "Plate layout", m3: "Scheduling (sync)", m3_async: "Scheduling (async)", level4: "Level 4", level4_sim3d: "Calibrated Level 4" };
+const EXP_ORDER = ["m4", "m2", "m3_async"];
+const EXP_SHORT = { m4: "Loop timing", m2: "Experiment selection", m2_layout: "Plate layout", m3: "Scheduling (sync)", m3_async: "Scheduling", level4: "Level 4", level4_sim3d: "Calibrated Level 4" };
 function renderExperiment(key) {
   CUR_EXP = key; const e = RESULTS.experiments[key];
   document.querySelectorAll("#exp-chips button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.key === key));
@@ -1257,31 +1384,10 @@ function renderExperiment(key) {
   const sh = e.shadow; $("#exp-callout").innerHTML = sh ? `<div class="callout">Against a 10 s from-scratch CP-SAT solve at ${sh.n} replans, repair's objective was within <b>${sh.gap_pct_median.toFixed(2)}%</b> at the median (p95 ${sh.gap_pct_p95.toFixed(2)}%).</div>` : "";
 }
 
-/* ================================================================ calibration */
-function smallLine(host, xs, series, opts) {
-  const [W, H] = boxSize(host), L = 40, R = 10, Tt = 8, B = 30, s = svgRoot(host, W, H);
-  const X = (x) => L + x / opts.xmax * (W - L - R), Y = (y) => Tt + (1 - y / opts.ymax) * (H - Tt - B);
-  for (const y of opts.yticks) { el("line", { x1: L, x2: W - R, y1: Y(y), y2: Y(y), stroke: "var(--grid)" }, s); el("text", { x: L - 6, y: Y(y) + 4, "text-anchor": "end" }, s).textContent = Math.round(y * 100) + "%"; }
-  for (const x of opts.xticks) el("text", { x: X(x), y: H - 14, "text-anchor": "middle" }, s).textContent = x;
-  el("text", { x: W - R, y: H - 1, "text-anchor": "end" }, s).textContent = opts.xlabel;
-  for (const ser of series) { el("path", { d: xs.map((x, k) => `${k ? "L" : "M"}${X(x)},${Y(ser.y[k])}`).join(""), fill: "none", stroke: ser.color, "stroke-width": 2, "stroke-dasharray": ser.dash || "" }, s);
-    xs.forEach((x, k) => { const c = el("circle", { cx: X(x), cy: Y(ser.y[k]), r: 4, fill: ser.color, stroke: "var(--surface)", "stroke-width": 2 }, s); c.addEventListener("pointermove", (evt) => showTip(evt, `${ser.name}: ${(100 * ser.y[k]).toFixed(1)}% at ${x} ${opts.unit}`)); c.addEventListener("pointerleave", hideTip); }); }
-}
-function calibration(C) {
-  $("#motion-table").innerHTML = `<thead><tr><th>Move</th><th>Arm s</th><th>Device s</th><th>Err mm</th><th>Collisions</th></tr></thead><tbody>` + Object.entries(C.motion.checks).map(([k, v]) => `<tr><td>${k.replace(">", " → ")}</td><td>${v.simulated_s.toFixed(1)}</td><td>${v.overhead_s.toFixed(0)}</td><td>${v.placement_err_mm.toFixed(1)}</td><td>${v.collisions.length}</td></tr>`).join("") +
-    `<tr><td>8-channel pass</td><td>${C.motion.lh_pass_s.toFixed(1)}</td><td colspan="3" style="text-align:left">tips → source → assay → eject</td></tr></tbody>`;
-  if ($("#view-calibration").hidden) return;
-  const tp = C.tips.p_fail;
-  smallLine($("#tips"), tp.map((r) => r.sigma_mm), [{ name: "simulated", y: tp.map((r) => r.p_fail_sim), color: "var(--s1)" }, { name: "analytic", y: tp.map((r) => r.p_fail_analytic), color: "var(--muted)", dash: "4 3" }], { xmax: .55, ymax: .3, yticks: [0, .1, .2, .3], xticks: [0, .1, .2, .3, .4, .5], xlabel: "σ (mm)", unit: "mm σ" });
-  const pc = C.perception.filter((r) => r.yaw_deg === 0);
-  smallLine($("#perception"), pc.map((r) => r.offset_mm), [{ name: "detected", y: pc.map((r) => r.detect_rate), color: "var(--s3)" }], { xmax: 5.3, ymax: 1, yticks: [0, .5, 1], xticks: [0, 1, 2, 3, 4, 5], xlabel: "plate offset (mm)", unit: "mm" });
-}
-
 /* ================================================================ boot */
 (async function boot() {
   RESULTS = await (await fetch("data/results.json")).json();
-  try { CELL = await (await fetch("data/cell.json")).json(); initThree(CELL); calibration(CELL); } catch (err) { console.error(err); }
-  $("#scenario").innerHTML = (RESULTS.replays || []).map((r) => `<option value="${r.name}">${r.title}</option>`).join("");
+  try { CELL = await (await fetch("data/cell.json")).json(); initThree(CELL); } catch (err) { console.error(err); }
   const keys = EXP_ORDER.filter((k) => RESULTS.experiments[k]);
   $("#exp-chips").innerHTML = keys.map((k) => `<button class="chip" type="button" data-key="${k}" aria-pressed="false">${EXP_SHORT[k]}</button>`).join("");
   document.querySelectorAll("#exp-chips button").forEach((b) => b.addEventListener("click", () => renderExperiment(b.dataset.key)));

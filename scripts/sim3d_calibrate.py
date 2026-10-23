@@ -32,11 +32,12 @@ from labloop.sim3d.tips import offset_sweep, p_fail
 OUT = Path("results/sim3d")
 # Device handling around a transfer (s): incubator door + shelf shuttle, reader drawer, hotel.
 OVERHEAD_S = {"hotel": 3.0, "lh": 0.0, "incubator": 40.0, "reader": 12.0, "rackhotel": 3.0, "tiprack": 0.0,
-              "rackwaste": 0.0}
+              "rackwaste": 0.0, "handoff": 0.0}
 # Scheduler route name -> (MuJoCo source station, target station). Tip boxes move like plates.
 ROUTES = {"hotel>lh": ("hotel", "lh"), "lh>incubator": ("lh", "incubator"), "incubator>reader": ("incubator", "reader"),
           "reader>hotel": ("reader", "hotel"), "lh>rackwaste": ("tiprack", "rackwaste"),
-          "rackhotel>lh": ("rackhotel", "tiprack")}
+          "rackhotel>lh": ("rackhotel", "tiprack"), "handoff>rackwaste": ("handoff", "rackwaste"),
+          "rackhotel>handoff": ("rackhotel", "handoff")}
 MOVING = ("plate0", "lh_gantry", "arm_carriage", "arm_link1", "arm_link2", "arm_wrist")
 
 

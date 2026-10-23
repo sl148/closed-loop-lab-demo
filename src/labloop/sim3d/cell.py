@@ -16,7 +16,7 @@ import mujoco
 import numpy as np
 
 from labloop.execution.plr_bridge import deck_geometry
-from labloop.protocol.deck import CARRIER_RAILS, RAIL_PITCH, SITE_Y0, DeckDesign
+from labloop.protocol.deck import CARRIER_RAILS, RAIL_PITCH, SITE_PITCH, SITE_Y0, DeckDesign
 
 PLATE = (0.12776, 0.08548, 0.0142)  # SBS footprint
 L1, L2 = 0.302, 0.289  # SCARA link lengths (PF400 class reach ~0.59 m)
@@ -32,7 +32,7 @@ FRAME = {"left": ((-0.02, 0.31, 0.50), (0.04, 0.72, 0.80)), "right": ((1.02, 0.3
          "header": ((0.50, -0.04, 0.87), (1.04, 0.03, 0.10)),
          "wasteblock": ((0.790, 0.3376, 0.15), (0.030, 0.4452, 0.10))}  # PLR waste block, rail 31
 RACK_HOTEL, RACK_WASTE, TIP_BIN = (0.50, -0.62), (0.99, -0.25), (0.80, -0.17)
-INSIDE = ("lh", "tiprack")  # stations inside the housing: reached straight through the open front
+INSIDE = ("lh", "tiprack", "tiprack1", "handoff")  # inside the housing: reached straight through the open front
 
 
 @dataclass(frozen=True)
@@ -67,6 +67,12 @@ def cell_spec(design: DeckDesign | None = None) -> CellSpec:
         "tiprack": Station("tiprack", (design.x_of(design.tip_rail) / 1000 + CARRIER_RAILS * RAIL_PITCH / 2000,
                                        SITE_Y0 / 1000), CARRIER_TOP),
         "rackwaste": Station("rackwaste", RACK_WASTE, 0.30),  # released above the open bin
+        # site 1 of the tip carrier (the arm reaches sites 0-1), and the handoff site: site 1 of the
+        # assay-plate carrier, where the LH CO-RE gripper leaves and takes boxes from deep sites
+        "tiprack1": Station("tiprack1", (design.x_of(design.tip_rail) / 1000 + CARRIER_RAILS * RAIL_PITCH / 2000,
+                                         (SITE_Y0 + SITE_PITCH) / 1000), CARRIER_TOP),
+        "handoff": Station("handoff", (design.x_of(design.dest_rail) / 1000 + CARRIER_RAILS * RAIL_PITCH / 2000,
+                                       (SITE_Y0 + SITE_PITCH) / 1000), CARRIER_TOP),
     }
     def top(name):
         r = res[name]
@@ -127,10 +133,13 @@ def build_mjcf(spec: CellSpec, plates: dict[str, str] | None = None, obstacles: 
     tr = spec.stations["tiprack"]  # the design's tip carrier (the bridge deck keeps its own at rail 1)
     parts.append(_box("plr_tipcarrier_design", (tr.center[0], 0.3115, (0.10 + CARRIER_TOP) / 2),
                       (CARRIER_RAILS * RAIL_PITCH / 1000, 0.497, CARRIER_TOP - 0.10), ".35 .45 .7 1", contype=2, conaffinity=3))
+    ho = spec.stations["handoff"]  # the design's assay-plate carrier (holds the handoff site)
+    parts.append(_box("plr_destcarrier_design", (ho.center[0], 0.3115, (0.10 + CARRIER_TOP) / 2),
+                      (CARRIER_RAILS * RAIL_PITCH / 1000, 0.497, CARRIER_TOP - 0.10), ".45 .5 .55 1", contype=2, conaffinity=3))
     for name, (c, s) in FRAME.items():  # housing: hits the arm and carried plates, not the gantry
         parts.append(_box(f"frame_{name}", c, s, ".82 .85 .87 1", contype=32, conaffinity=9))
     for name, st in spec.stations.items():
-        if name in ("lh", "tiprack", "rackwaste", "rackhotel"):
+        if name in ("lh", "tiprack", "tiprack1", "handoff", "rackwaste", "rackhotel"):
             continue
         parts.append(_box(f"nest_{name}", (st.center[0], st.center[1], st.plate_z - 0.01), (0.14, 0.10, 0.02),
                           ".2 .2 .2 1"))

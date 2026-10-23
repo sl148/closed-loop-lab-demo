@@ -109,18 +109,9 @@ EXPERIMENTS = {
 
 
 REPLAYS = {
+    "console": ("console/level4/console.json", 0,
+                "Level 4 on the optimized, MuJoCo-calibrated deck: two campaigns, camera checks, repair"),
     "m8": ("m8/level2/optimized-deck.json", 0, "Level 2 on the optimized deck: tip reuse, tip resupply by the arm"),
-
-    "level4_sim3d": ("level4_sim3d/level4/camera.json", 0,
-
-                     "Level 4 on the MuJoCo-calibrated lab: camera-detected misplacements trigger replans"),
-
-    "level4":("level4/level4/tbo-repair.json", 0, "Level 4: two campaigns, breakdowns, throughput-aware BO + repair"),
-
-    "level3": ("m3/level3/scheduler=repair.json", 0, "Level 3: failures and online repair"),
-
-    "m4": ("m4/level2/tbo-async-repair.json", 0, "Level 2: throughput-aware asynchronous BO"),
-
 }
 
 
@@ -295,7 +286,22 @@ def drug_names(run: dict) -> list[str]:
     return cfg["oracle"].get("drugs") or [d["name"] for d in next(iter(cfg["oracle"]["cell_lines"].values()))["drugs"]]
 
 
-def discovery(run: dict, campaign: str, read_t: dict) -> dict:
+def op_route(o: dict) -> list:
+    """[route, tip-carrier site] for the animation: transfers ("mv_lh_rackwaste_s1" -> "lh>rackwaste", 1)
+    and LH CO-RE tip-box moves ("core_out_s3" -> "core_out", 3); [] for other ops."""
+    import re
+
+    name = o["op"].split(".")[1]
+    m = re.search(r"_s(\d+)$", name)
+    site = int(m.group(1)) if m else None
+    if o["kind"] == "transfer":
+        return [">".join(name[3:].split("_")[:2]), site]
+    if name.startswith("core_"):
+        return [name[:m.start()] if m else name, site]
+    return []
+
+
+def discovery(run: dict, campaign: str, read_t: dict, ladders: list | None = None) -> dict:
     """What the Discovery panel draws for one campaign: every tested dose combination with
     the plate read time and its true Bliss excess (simulator ground truth; the lab sees a
     noisy version), indexed onto per-drug dose levels."""
@@ -318,6 +324,8 @@ def discovery(run: dict, campaign: str, read_t: dict) -> dict:
     opt = run["campaigns"][campaign]["optimum"]["condition"]
     n = len(opt["doses"])
     levels = [sorted({k[2][i] for k in seen} | {opt["doses"][i], 0.0}) for i in range(n)]
+    for i, lad in enumerate(ladders or []):
+        levels[i] = list(lad)
     idx = lambda doses: [levels[i].index(d) if d in levels[i] else min(range(len(levels[i])), key=lambda j: abs(levels[i][j] - d))
                          for i, d in enumerate(doses)]
     tested = sorted([t, line, tp, *idx(d), round(oracle.true_excess(line, d, tp), 4)] for (line, tp, d), t in seen.items())
@@ -347,17 +355,18 @@ def replay(run: dict, title: str, seed: int) -> dict:
                                       "regret_frac": round(p["regret"] / opt, 4) if p["regret"] is not None else 1.0,
                                       "best": p["best"], "best_est": p["best_est"], "best_true": p.get("best_true")}
                                      for p in c["progress"]],
-                          "discovery": discovery(run, name, read_t),
+                          "discovery": discovery(run, name, read_t, c["belief"][0]["ladders"] if c.get("belief") else None),
+                          "belief": [{"t": b["t"], "groups": b["groups"]} for b in c.get("belief", [])],
                           "decisions": c.get("group_decisions", [])[:200]}
     return {
         "schema": SCHEMA, "title": title, "seed": seed,
         "meta": {"scenario": run["name"], "scheduler": run["scheduler"], "policy": run["policy"],
                  "makespan": run["makespan"], "resources": run["resources"], "metrics": run_metrics(run)},
         "kinds": KINDS,
-        # transfers carry their route ("mv_lh_rackwaste_0" -> "lh>rackwaste") for the arm animation
-        "ops": [[o["job"], KINDS.index(o["kind"]), o["resource"], o["start"], o["end"]] +
-                ([">".join(o["op"].split(".")[1][3:].split("_")[:2])] if o["kind"] == "transfer" else []) for o in ops],
+        "ops": [[o["job"], KINDS.index(o["kind"]), o["resource"], o["start"], o["end"], *op_route(o)] for o in ops],
         "failures": failures,
+        "camera": [{k: e[k] for k in ("t", "plate", "dx_mm", "dy_mm", "offset_mm", "detected")} | {"route": op_route({"op": e["op"], "kind": "transfer"})[0]}
+                   for e in run["events"] if e["kind"] == "camera_check"],
         "replans": [{"t": r["t"], "reasons": r["reasons"], "solver": r["solver"], "ms": round(1000 * r["time_s"], 1),
                      "moved": r["moved"], "free": r["n_free"], "ops": r["n_ops"]} for r in run["reschedules"]],
         "reads": [{"t": e["t"], "plate": e["plate"], "valid": e["n_valid"], "n": e["n"]}
@@ -437,6 +446,7 @@ def main() -> None:
         (OUT / f"replay_{name}.json").write_text(dump(replay(run, title, seed)))
         index.append({"name": name, "title": title})
         print("replay", name)
+        break
     results["replays"] = index
     results["m6"] = recovery()
     (OUT / "results.json").write_text(dump(results))

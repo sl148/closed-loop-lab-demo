@@ -89,15 +89,15 @@ Share of best synergy missed at fixed times (median [IQR] over seeds):
 
 | variant | makespan_h | util_lh | regret | ttt_h | hit | plates |
 |---|---|---|---|---|---|---|
-| baseline-deck | 161 ± 0.43 | 0.151 | 0.155 ± 0.13 | 74.8 ± 1 | 0.3 | 15 |
-| optimized-deck | 149 ± 0.34 | 0.027 | 0.084 ± 0.13 | 95.5 ± 41 | 0.7 | 15 |
+| baseline-deck | 161 ± 0.45 | 0.151 | 0.131 ± 0.13 | 112 ± 38 | 0.4 | 15 |
+| optimized-deck | 150 ± 0.46 | 0.034 | 0.174 ± 0.21 | 71.3 ± 36 | 0.6 | 15 |
 
 ## M8: deck design, Level 4 (throughput-aware BO, repair)
 
 | variant | makespan_h | util_lh | regret | ttt_h | hit | n_failures |
 |---|---|---|---|---|---|---|
-| baseline-deck | 197 ± 28 | 0.211 | 0.23 ± 0.065 | 129 ± 69 | 0.4 | 31.8 |
-| optimized-deck | 180 ± 27 | 0.039 | 0.125 ± 0.062 | 96.1 ± 38 | 0.6 | 27.4 |
+| baseline-deck | 210 ± 30 | 0.206 | 0.198 ± 0.18 | 88.3 ± 31 | 0.7 | 34.2 |
+| optimized-deck | 196 ± 9.3 | 0.042 | 0.3 ± 0.22 | 75.5 ± 24 | 0.3 | 21 |
 
 ## M3: repair vs a 10 s from-scratch CP-SAT solve (same problem, every replan)
 
@@ -138,12 +138,14 @@ Share of best synergy missed at fixed times (median [IQR] over seeds):
 
 | move | arm motion s | device overhead s | placement error mm | collisions |
 |---|---|---|---|---|
-| hotel>lh | 11.25 | 3.0 | 0.0 | 0 |
+| hotel>lh | 11.25 | 3.0 | 0.01 | 0 |
 | lh>incubator | 10.96 | 40.0 | 0.0 | 0 |
 | incubator>reader | 9.86 | 52.0 | 0.0 | 0 |
 | reader>hotel | 8.91 | 15.0 | 0.0 | 0 |
 | lh>rackwaste | 10.41 | 0.0 | 0.0 | 0 |
 | rackhotel>lh | 10.87 | 3.0 | 0.0 | 0 |
+| handoff>rackwaste | 11.79 | 0.0 | 0.0 | 0 |
+| rackhotel>handoff | 12.21 | 3.0 | 0.01 | 0 |
 
 8-channel pipetting pass: 12.25 s (was 30 s assumed).
 
@@ -156,14 +158,14 @@ Share of best synergy missed at fixed times (median [IQR] over seeds):
 
 | plate offset (mm) | yaw (deg) | camera detection rate | pose error (mm) |
 |---|---|---|---|
-| 0.0 | 0.0 | 0.00 | 0.642 |
-| 0.5 | 0.0 | 0.00 | 0.782 |
-| 1.0 | 0.0 | 0.38 | 0.787 |
-| 1.5 | 0.0 | 0.56 | 0.682 |
-| 2.0 | 0.0 | 0.94 | 0.621 |
-| 3.0 | 0.0 | 1.00 | 0.739 |
-| 5.0 | 0.0 | 1.00 | 0.706 |
-| 0.0 | 2.0 | 1.00 | 0.723 |
+| 0.0 | 0.0 | 0.00 | 0.651 |
+| 0.5 | 0.0 | 0.00 | 0.79 |
+| 1.0 | 0.0 | 0.38 | 0.794 |
+| 1.5 | 0.0 | 0.56 | 0.69 |
+| 2.0 | 0.0 | 0.94 | 0.629 |
+| 3.0 | 0.0 | 1.00 | 0.747 |
+| 5.0 | 0.0 | 1.00 | 0.713 |
+| 0.0 | 2.0 | 1.00 | 0.727 |
 
 ## M7: Level 4 with MuJoCo-calibrated durations, tip failures and camera perception
 

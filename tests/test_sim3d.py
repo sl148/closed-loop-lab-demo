@@ -66,7 +66,8 @@ def test_arm_collides_with_the_gantry_beam_over_the_site(beam_x, hits):
 
 
 ARM_ROUTES = [("hotel", "lh"), ("lh", "incubator"), ("incubator", "reader"), ("reader", "hotel"),
-              ("tiprack", "rackwaste"), ("rackhotel", "tiprack")]
+              ("tiprack", "rackwaste"), ("rackhotel", "tiprack"), ("tiprack1", "rackwaste"), ("rackhotel", "tiprack1"),
+              ("handoff", "rackwaste"), ("rackhotel", "handoff")]
 
 
 @pytest.mark.parametrize("src, dst", ARM_ROUTES)

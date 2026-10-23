@@ -15,7 +15,7 @@ takes days in an incubator with limited room, so *what* to test next and *when* 
 | Does online repair scale? (A) | At 64 plates in flight, repair re-plans within **5.4%** of the best schedule and moves **32 ops**; a 1 s full re-solve lands **35.8%** off and moves **244**. |
 | Does throughput-aware BO help? (B) | Choosing each plate's cell line and read time by expected gain per hour of lab time finishes the 15-plate campaign in **248 h vs 416 h** for BO-then-schedule, at similar final regret. |
 | Can an LLM run failure recovery? (C) | Claude (schema-validated, rule fallback) recovers in **8.3 vs 11.5 min** per failure, accepts **0** corrupt wells, needs **0** fallbacks, and replays bit-identically with no API calls. |
-| Does deck design matter? | Optimizing carrier placement, tip types and tip reuse cuts liquid-handler time from **94 to 14 min** per 384-well plate, and the async campaign from **161 to 149 h**. |
+| Does deck design matter? | Optimizing carrier placement, tip types and tip reuse cuts liquid-handler time from **94 to 14 min** per 384-well plate, and the async campaign from **161 to 150 h**. |
 | Is the solver sound? | CP-SAT reaches the known optimum on ft06, ft10, la01, ta01, ta02 and Brandimarte mk01-03. |
 | Is the motion physical? | Every arm route clears the STARlet housing in MuJoCo (0 collisions, 0.0 mm placement error); arm and gantry never share the deck. |
 
@@ -56,12 +56,13 @@ choose experiments -> lay out plate -> plan deck + pipetting -> schedule instrum
 
 ```
 uv sync
-uv run pytest                                                   # 49 tests
+uv run pytest                                                   # 54 tests
 uv run python scripts/run_level.py --config configs/level0.yaml --seeds 3
 uv run python scripts/bench_solvers.py                          # solver check on JSSP / FJSP
 uv run python scripts/optimize_deck.py --config configs/level2.yaml
 uv run python scripts/sim3d_calibrate.py                        # MuJoCo motion / tip / camera calibration
 bash scripts/run_all.sh                                         # all experiments (hours; use a server)
+bash scripts/run_console.sh                                     # the web Console's run (GP belief + camera logs)
 uv run python scripts/export_web.py && uv run python scripts/make_results.py
 cd web && python -m http.server 8765                            # replay at http://127.0.0.1:8765
 uv run python scripts/eval_recovery.py --provider replay        # recovery policy, no API calls
@@ -79,3 +80,6 @@ is extracted by `scripts/extract_oneil.py` from the DrugComb v1.4 dump on Zenodo
 - Batch MC acquisitions (qEI, qUCB) are impractical at ~300-point plates (about 1.4 h per seed vs minutes for
   Thompson sampling); qUCB was not run to completion.
 - CP-SAT runs use wall-clock limits, so they are not bit-reproducible; FIFO and priority runs are.
+- Arm motion is a fixed set of taught routes checked for collisions in MuJoCo, not an online motion planner.
+- In campaigns, whether the camera flags a misplaced plate is sampled from the detection rate measured in
+  MuJoCo; the web viewer redraws the logged offset (x10) rather than a rendered camera frame.

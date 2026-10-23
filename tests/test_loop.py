@@ -53,3 +53,13 @@ def test_executed_schedule_respects_capacity_and_lags():
         prob.add_op(Op(row["op"], row["job"], row["kind"], (row["resource"],), row["end"] - row["start"]))
         sched.start[row["op"]], sched.end[row["op"]], sched.assigned[row["op"]] = row["start"], row["end"], row["resource"]
     assert violations(prob, sched) == []
+
+
+def test_belief_log_does_not_change_the_run():
+    """The viewer's GP belief snapshots reuse the fitted model and no RNG: same run with or without."""
+    cfg = dict(CFG["level1"], designer="bo-ts", rounds=3, noise={"rel_sigma": 0.05})
+    a, b = run_campaign(cfg, 1), run_campaign(dict(cfg, belief_log=True), 1)
+    bel = b["campaigns"]["C0"].pop("belief")
+    a["campaigns"]["C0"].pop("belief")
+    assert json.dumps(_strip_timing(a), sort_keys=True) == json.dumps(_strip_timing(b), sort_keys=True)
+    assert bel and all(len(g["mu"]) == 8 and len(g["mu"][0]) == 8 for s in bel for g in s["groups"].values())

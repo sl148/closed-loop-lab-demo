@@ -61,9 +61,11 @@ def test_arm_and_gantry_never_share_the_deck_zone():
     for oid, r in rows.items():
         if r["kind"] not in ("dispense", "tip_swap"):
             continue
+        if r["kind"] == "tip_swap" and not oid.endswith(".tip_swap"):
+            continue  # CO-RE box moves run inside their job's zone hold
         job = r["job"]
         first, last = (f"{job}.mv_hotel_lh", f"{job}.mv_lh_incubator") if r["kind"] == "dispense" else \
-            (f"{job}.mv_lh_rackwaste_0", oid)
+            (min((x for x in rows.values() if x["job"] == job), key=lambda x: x["start"])["op"], oid)
         zones.setdefault(r["resource"], []).append((rows[first]["start"], rows[last]["end"], job))
     assert zones
     for spans in zones.values():
@@ -72,15 +74,27 @@ def test_arm_and_gantry_never_share_the_deck_zone():
             assert s >= e, (a, b)
 
 
-def test_tip_box_swap_disposes_the_used_box_before_placing_a_new_one():
+def test_tip_boxes_are_swapped_at_their_own_sites():
+    """Each used box leaves from its own tip-carrier site and the new one goes back there: the arm
+    directly for the front sites, through the LH CO-RE gripper and the handoff site for deep ones."""
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "level1.yaml").read_text())
-    run = run_campaign(dict(cfg, rounds=2, deck=dict(DeckDesign().to_dict(), racks_on_deck=2)), 0)
+    run = run_campaign(dict(cfg, rounds=3, deck=DeckDesign().to_dict()), 0)
     rows = [r for r in run["schedule"] if r["job"].startswith("TIPS")]
     assert rows
+    expect = {True: ["mv_lh_rackwaste", "mv_rackhotel_lh"],
+              False: ["core_out", "mv_handoff_rackwaste", "mv_rackhotel_handoff", "core_in"]}
+    sites_seen = set()
     for job in {r["job"] for r in rows}:
         seq = [r["op"].split(".")[1] for r in sorted((r for r in rows if r["job"] == job), key=lambda r: r["start"])]
-        assert seq[-1] == "tip_swap" and len(seq) % 2 == 1
-        assert all(a.startswith("mv_lh_rackwaste") and b.startswith("mv_rackhotel_lh") for a, b in zip(seq[:-1:2], seq[1:-1:2]))
+        assert seq[-1] == "tip_swap"
+        by_site = {}
+        for name in seq[:-1]:
+            base, site = name.rsplit("_s", 1)
+            by_site.setdefault(int(site), []).append(base)
+        for site, moves in by_site.items():
+            assert moves == expect[site < 2], (site, moves)
+        sites_seen |= set(by_site)
+    assert len(sites_seen) > 1  # boxes are replaced where they are, not at one location
 
 
 def test_full_plate_draws_cells_from_the_trough_with_all_channels():

@@ -32,6 +32,8 @@ from labloop.schedule.workflow import plate_job
 from labloop.types import PlateMap, WellRead
 
 MID_SWAP_MIN = 2  # arm swaps all racks during a protocol: two moves plus re-teach check
+ARM_SITES = 2  # tip-carrier sites the plate arm reaches (front two; MuJoCo: 0.42 / 0.52 m of 0.59 m)
+CORE_MOVE_MIN = 1  # LH CO-RE gripper moves a tip box between a deep site and the handoff site
 OVERRUN_STEP = 0.25  # re-estimate an overrunning op as elapsed + this fraction of nominal
 
 
@@ -96,9 +98,10 @@ class Lab:
         # tip type; a rack-swap job (arm brings full racks from the rack hotel) is ordered at a
         # low-water mark or when a dispense would run short.
         self.tip_cap: dict[str, int] = {}
-        self.tips: dict[str, dict[str, int]] = {}
+        self.racks: dict[str, dict[str, list[int]]] = {}  # lh -> tip type -> tips left per rack
+        self.rack_sites: dict[str, list[int]] = {}  # tip type -> tip-carrier sites (PLR fill order)
         self.tip_order: dict[str, str | None] = {}
-        self.tip_racks: dict[str, dict[str, int]] = {}  # TIPS job -> racks it replaces, per tip type
+        self.tip_racks: dict[str, list[tuple[str, int]]] = {}  # TIPS job -> (tip type, rack index) it replaces
         self.n_tip_jobs = 0
         self.on_read: dict[str, Callable[[PlateMap, list[WellRead]], None]] = {}
         self.on_retest: dict[str, Callable[[PlateMap, tuple[str, ...]], None]] = {}
@@ -137,7 +140,7 @@ class Lab:
 
     def _add_spans(self, spans: list[Span]) -> None:
         for sp in spans:
-            for oid in (sp.first, sp.link, sp.last):
+            for oid in (sp.first, sp.link, sp.last, *sp.inner):
                 self.spans[oid] = sp
 
     def request(self, reason: str) -> None:
@@ -288,7 +291,7 @@ class Lab:
                 return False
             if self.ops[sp.link].kind == "dispense" and self.durations.deck and not self._tips_ok(lh, self.ops[oid].job):
                 return False
-        if sp and oid == sp.link:  # runs inside its own held zone
+        if sp and (oid == sp.link or oid in sp.inner):  # runs inside its own held zone
             return self.zone[res] is sp
         return len(self.occupancy[res]) < self.resources[res].capacity
 
@@ -319,7 +322,7 @@ class Lab:
         op = self.ops[oid]
         if op.kind == "dispense" and self.durations.deck:
             self._use_tips(r.resource, op.job)
-        if op.kind == "tip_swap":
+        if op.id.endswith(".tip_swap"):
             self._log("tip_swap", lh=r.resource, job=op.job)
         if op.kind == "dispense":
             self.plate_status[op.job] = "dispensing"
@@ -336,16 +339,24 @@ class Lab:
 
         if not self.tip_cap:
             racks = self.durations.deck.get("racks_on_deck", 5)
-            self.tip_cap = {t: 96 * n for t, n in rack_split(need, racks).items()}
-        if lh not in self.tips:
-            self.tips[lh] = dict(self.tip_cap)
+            split = rack_split(need, racks)
+            self.tip_cap = {t: 96 * n for t, n in split.items()}
+            site = 0
+            for t, n in split.items():  # same order the PLR bridge fills TIP_CAR_480_A00
+                self.rack_sites[t] = list(range(site, site + n))
+                site += n
+        if lh not in self.racks:
+            self.racks[lh] = {t: [96] * len(s) for t, s in self.rack_sites.items()}
             self.tip_order[lh] = None
+
+    def _have(self, lh: str, t: str) -> int:
+        return sum(self.racks[lh].get(t, []))
 
     def _tips_ok(self, lh: str, job: str) -> bool:
         need = self.durations.tips(self.plates[job])
         self._init_tips(lh, need)
         # A plate needing more tips than the deck holds starts on full racks and swaps mid-run.
-        if all(self.tips[lh].get(t, 0) >= min(n, self.tip_cap.get(t, n)) for t, n in need.items()):
+        if all(self._have(lh, t) >= min(n, self.tip_cap.get(t, n)) for t, n in need.items()):
             return True
         self._order_tips(lh, reason="short", before=f"{job}.mv_hotel_lh")
         return False
@@ -354,17 +365,22 @@ class Lab:
         need = self.durations.tips(self.plates[job])
         self._init_tips(lh, need)
         mid = 0
-        for t, n in need.items():
-            have, cap = self.tips[lh].get(t, 0), max(1, self.tip_cap.get(t, n))
-            short = max(0, n - have)
-            k = -(-short // cap)  # racks-full swaps the arm makes while the head waits
-            mid += k
-            self.tips[lh][t] = have + k * cap - n
+        for t, n in need.items():  # tips come from the first non-empty rack in site order
+            racks = self.racks[lh].setdefault(t, [96])
+            while n > 0:
+                j = next((j for j, c in enumerate(racks) if c > 0), None)
+                if j is None:  # every rack of this type is empty: the arm swaps them all mid-run
+                    racks[:] = [96] * len(racks)
+                    mid += 1
+                    continue
+                take = min(n, racks[j])
+                racks[j] -= take
+                n -= take
         if mid:
             self.run[f"{job}.dispense"].extra += mid * MID_SWAP_MIN
             self._log("tip_mid_swap", lh=lh, job=job, swaps=mid)
         # Low-water mark: not enough left for another plate like this one.
-        if any(self.tips[lh].get(t, 0) < n for t, n in need.items()):
+        if any(self._have(lh, t) < n for t, n in need.items()):
             self._order_tips(lh, reason="low")
 
     def _order_tips(self, lh: str, reason: str, before: str | None = None) -> None:
@@ -376,17 +392,28 @@ class Lab:
         self.n_tip_jobs += 1
         job = f"TIPS{self.n_tip_jobs:03d}_{lh}"
         arm = tuple(r for r in self.resources if r.startswith("arm"))
-        # Racks to replace: every rack that is empty or partly used.
-        have = self.tips.get(lh, {})
-        racks = {t: -(-(cap - have.get(t, 0)) // 96) for t, cap in self.tip_cap.items()}
-        racks = {t: k for t, k in racks.items() if k > 0} or {next(iter(self.tip_cap)): 1}
-        self.tip_racks[job] = racks
-        # Per rack: the arm takes the used box off the deck into the rack waste bin, then fetches
-        # a full box from the rack hotel and seats it; the LH then registers the new racks.
-        ops = []
-        for i in range(sum(racks.values())):
-            ops += [Op(f"{job}.mv_lh_rackwaste_{i}", job, "transfer", arm, self.durations.arm("lh>rackwaste")),
-                    Op(f"{job}.mv_rackhotel_lh_{i}", job, "transfer", arm, self.durations.arm("rackhotel>lh"))]
+        # Racks to replace: every rack that is empty or partly used, each at its own site.
+        left = {t: list(c) for t, c in self.racks[lh].items()}
+        swap = [(t, j) for t, c in left.items() for j in sorted(range(len(c)), key=lambda j: c[j]) if c[j] < 96]
+        swap = swap or [(next(iter(left)), 0)]
+        self.tip_racks[job] = swap
+        # Front sites: the arm takes the used box into the rack waste bin and seats a full box from the
+        # rack hotel in the same site. Deep sites are out of the arm's reach: the LH CO-RE gripper moves
+        # the box to a free handoff site on the plate carrier and back. The LH then registers the racks.
+        ops, inner = [], []
+        for t, j in swap:
+            s = self.rack_sites[t][j]
+            if s < ARM_SITES:
+                ops += [Op(f"{job}.mv_lh_rackwaste_s{s}", job, "transfer", arm, self.durations.arm("lh>rackwaste")),
+                        Op(f"{job}.mv_rackhotel_lh_s{s}", job, "transfer", arm, self.durations.arm("rackhotel>lh"))]
+            else:
+                core = [Op(f"{job}.core_out_s{s}", job, "tip_swap", (lh,), CORE_MOVE_MIN),
+                        Op(f"{job}.core_in_s{s}", job, "tip_swap", (lh,), CORE_MOVE_MIN)]
+                ops += [core[0],
+                        Op(f"{job}.mv_handoff_rackwaste_s{s}", job, "transfer", arm, self.durations.arm("handoff>rackwaste")),
+                        Op(f"{job}.mv_rackhotel_handoff_s{s}", job, "transfer", arm, self.durations.arm("rackhotel>handoff")),
+                        core[1]]
+                inner += [o.id for o in core]
         ops.append(Op(f"{job}.tip_swap", job, "tip_swap", (lh,), 1))
         now = int(self.env.now)
         for op in ops:
@@ -394,12 +421,13 @@ class Lab:
             self.run[op.id] = OpRun()
         for a, b in zip(ops, ops[1:]):
             self.lags.append(Lag(a.id, b.id, 0, self.durations.transfer_max_lag_min))
-        self._add_spans([Span(ops[0].id, ops[-1].id, ops[-1].id)])
+        self._add_spans([Span(ops[0].id, ops[-1].id, ops[-1].id, inner=tuple(inner))])
         if before:  # the plate that ran short waits for the fresh racks
             self.lags.append(Lag(f"{job}.tip_swap", before, 0, None))
         self.release[job] = now
         self.tip_order[lh] = job
-        self._log("tip_order", lh=lh, job=job, reason=reason, left=dict(have), racks=racks)
+        self._log("tip_order", lh=lh, job=job, reason=reason, left={t: sum(c) for t, c in left.items()},
+                  sites=[self.rack_sites[t][j] for t, j in swap])
         self.request("tip_resupply")
 
     def problem_has_lag(self, a: str, b: str) -> bool:
@@ -408,12 +436,9 @@ class Lab:
     def _refill_tips(self, job: str) -> None:
         lh = next(l for l, j in self.tip_order.items() if j == job)
         unused = 0
-        for t, k in self.tip_racks.pop(job).items():
-            cap, have = self.tip_cap[t], self.tips[lh].get(t, 0)
-            if k > (cap - have) // 96:  # a partly used rack goes to the waste with its tips
-                unused += have % 96
-                have -= have % 96
-            self.tips[lh][t] = min(cap, have + 96 * k)
+        for t, j in self.tip_racks.pop(job):
+            unused += self.racks[lh][t][j]  # a partly used rack goes to the waste with its tips
+            self.racks[lh][t][j] = 96
         self.tip_order[lh] = None
         self._log("tip_refill", lh=lh, job=job, tips_discarded_unused=unused)
 
@@ -467,7 +492,7 @@ class Lab:
                 self._read(op.job)
             self._finish(oid, int(self.env.now))
             r.ready_at = r.end
-            if op.kind == "tip_swap":
+            if op.id.endswith(".tip_swap"):
                 self._refill_tips(op.job)
         else:
             yield self.env.timeout(op.dur_min)
@@ -496,9 +521,13 @@ class Lab:
             while p > 0 and self.rng.random() < p:
                 wells = ()
                 if ftype is F.PLATE_MISPLACED and f.perception_curve:
-                    offset = float(np.hypot(*self.rng.normal(0, f.misplace_sigma_mm, 2)))
+                    dx, dy = self.rng.normal(0, f.misplace_sigma_mm, 2)
+                    offset = float(np.hypot(dx, dy))
                     xs, ys = zip(*f.perception_curve)
-                    if self.rng.random() >= float(np.interp(offset, xs, ys)):
+                    detected = self.rng.random() < float(np.interp(offset, xs, ys))
+                    self._log("camera_check", plate=op.job, op=oid, dx_mm=round(float(dx), 2), dy_mm=round(float(dy), 2),
+                              offset_mm=round(offset, 2), detected=bool(detected))
+                    if not detected:
                         names = sorted(self.plates[op.job].spec.well_name(*w) for w, c in self.plates[op.job].wells.items()
                                        if not isinstance(c, str))
                         # Only a plate about to be pipetted or read is harmed by sitting off-target.

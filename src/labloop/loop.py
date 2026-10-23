@@ -102,6 +102,7 @@ class Campaign:
     max_in_flight: int = 4
     async_plates: int = 1
     landscape_eval: bool = False
+    belief_log: bool = False
     history: History = field(default_factory=History)
     in_flight: dict[str, list[Condition]] = field(default_factory=dict)
     retest: list[Condition] = field(default_factory=list)
@@ -110,6 +111,7 @@ class Campaign:
     reagent_nmol: float = 0.0
     progress: list[dict] = field(default_factory=list)
     landscape: list[dict] = field(default_factory=list)
+    belief: list[dict] = field(default_factory=list)
     optimum: dict = field(default_factory=dict)
     done: simpy.Event | None = None
     changed: simpy.Event | None = None
@@ -163,6 +165,34 @@ class Campaign:
         true = np.array([self.oracle.true_excess(c.cell_line, c.doses, c.timepoint_h) for c in conds])
         return float(np.sqrt(np.mean((pred - true) ** 2)))
 
+    def log_belief(self, t: int) -> None:
+        """The designer's GP prediction on the web viewer's dose map: first two drugs, best over
+        the other drugs, per (cell line, timepoint). Uses the already-fitted GP and no RNG, so
+        logging does not change the run."""
+        gp = getattr(self.designer, "gp", None)
+        if gp is None or gp.model is None or gp.key != len(self.history.reads):
+            return
+        import itertools
+
+        import torch
+
+        lad = self.space.ladders
+        rest = list(itertools.product(*lad[2:]))
+        groups = {}
+        for cl, tp in self.groups():
+            X = torch.tensor(self.space.features([Condition(cl, (a, b, *r), tp) for a in lad[0] for b in lad[1] for r in rest]))
+            mu, var = [], []
+            with torch.no_grad():
+                for i in range(0, len(X), 1024):
+                    post = gp.model.posterior(X[i:i + 1024])
+                    mu.append(post.mean.squeeze(-1)), var.append(post.variance.squeeze(-1))
+            mu = torch.cat(mu).numpy().reshape(len(lad[0]), len(lad[1]), -1)
+            sd = np.sqrt(np.clip(torch.cat(var).numpy(), 0, None)).reshape(mu.shape)
+            k = mu.argmax(-1)[..., None]
+            groups[f"{cl}|{tp}"] = {"mu": np.round(np.take_along_axis(mu, k, -1)[..., 0], 3).tolist(),
+                                    "sd": np.round(np.take_along_axis(sd, k, -1)[..., 0], 3).tolist()}
+        self.belief.append({"t": t, "ladders": [list(l) for l in lad[:2]], "groups": groups})
+
     def groups(self) -> list[tuple[str, int]]:
         return [(cl, t) for cl in self.space.cell_lines for t in self.space.timepoints_h]
 
@@ -193,6 +223,8 @@ class Campaign:
         plates = plates[: max(0, self.plate_budget - self.plates_used)]
         if not plates:
             return 0
+        if self.belief_log:
+            self.log_belief(int(lab.env.now))
         for pm in plates:
             self.in_flight[pm.plate_id] = pm.conditions()
             self.wells_used += len(pm.conditions())
@@ -261,7 +293,8 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
     campaigns = []
     for i, ccfg in enumerate(cfg.get("campaigns", [{}])):
         ccfg = {**{k: cfg[k] for k in ("space", "designer", "rounds", "plates_per_round", "mode", "max_in_flight",
-                                       "async_plates", "layout", "designer_cfg", "landscape_eval") if k in cfg},
+                                       "async_plates", "layout", "designer_cfg", "landscape_eval", "belief_log")
+                     if k in cfg},
                 **ccfg}
         space = build_space(ccfg["space"])
         rng = np.random.default_rng(camp_seeds[i])
@@ -269,7 +302,7 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
         designer = DESIGNERS[ccfg["designer"]](space, **ccfg.get("designer_cfg", {}))
         c = Campaign(ccfg.get("name", f"C{i}"), space, designer, layout, oracle, rng, ccfg.get("plates_per_round", 1),
                      ccfg.get("rounds", 4), ccfg.get("mode", "sync"), ccfg.get("max_in_flight", 4),
-                     ccfg.get("async_plates", 1), ccfg.get("landscape_eval", False))
+                     ccfg.get("async_plates", 1), ccfg.get("landscape_eval", False), ccfg.get("belief_log", False))
         c.optimum = true_optimum(space, oracle)
         c.done = env.event()
         campaigns.append(c)
@@ -285,7 +318,7 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
         "idle": idle_time(prob, executed) if executed.start else {},
         "campaigns": {c.name: {"designer": getattr(c.designer, "name", ""), "mode": c.mode, "optimum": c.optimum,
                                "plates": c.plates_used, "wells": c.wells_used, "reagent_nmol": round(c.reagent_nmol, 3),
-                               "progress": c.progress, "landscape": c.landscape,
+                               "progress": c.progress, "landscape": c.landscape, "belief": c.belief,
                                "group_decisions": getattr(c.designer, "decisions", []),
                                "final_best": c.progress[-1] if c.progress else None} for c in campaigns},
         "reschedules": lab.reschedules,

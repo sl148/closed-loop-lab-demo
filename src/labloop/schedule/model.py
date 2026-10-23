@@ -62,12 +62,15 @@ class Span:
     """The resource `link` runs on is held from start(first) to end(last). Used for a liquid
     handler's deck site and gantry zone: held from loading a plate (arm) through the dispense
     to unloading it (arm), so the arm and the gantry never work in the zone at once and a
-    second plate cannot land on an occupied site. `res` fixes the resource (online repair)."""
+    second plate cannot land on an occupied site. `res` fixes the resource (online repair).
+    `inner` ops run on the same resource inside the span (e.g. CO-RE gripper moves of tip boxes)
+    and are covered by it rather than counted on their own."""
 
     first: str
     last: str
     link: str
     res: str | None = None
+    inner: tuple[str, ...] = ()
 
 
 @dataclass
@@ -107,7 +110,7 @@ class Problem:
 
     def covered(self) -> set[str]:
         """Ops whose resource time is represented by a span instead of their own interval."""
-        return {sp.link for sp in self.spans}
+        return {o for sp in self.spans for o in (sp.link, *sp.inner)}
 
     def span_interval(self, sp: Span, start: dict, end: dict) -> tuple[int, int]:
         s = start[sp.first] if sp.first in self.ops else self.span_start[sp.link]
