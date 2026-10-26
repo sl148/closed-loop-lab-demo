@@ -1138,7 +1138,9 @@ function limPlain(c) {
   return `${esc(c.kind)} ${m}`;
 }
 const limHow = (c) => (c.hard ? "<b>hard</b>" : "<b>soft</b>");
-const srcLine = (c) => { const q = c.source && c.source.quote; return `<div class="ag-quote">${q ? `${clipT(`"${q}"`, 64)} · ${esc(docShort(c.source.doc))} p.${c.source.page}` : "no source"}</div>`; };
+const srcLine = (c) => { const s = c.source || {}, q = s.quote;
+  if (s.doc === "lab_data") return `<div class="ag-quote">from the lab's own reads, no document states a value</div>`;
+  return `<div class="ag-quote">${q ? `${clipT(`"${q}"`, 64)} · ${esc(docShort(s.doc))} p.${s.page}` : "no source"}</div>`; };
 const agRow = (cls, tag, html) => `<div class="ag-row ${cls}"><span class="ag-tag">${tag}</span><div class="${cls === "q" ? "ag-q" : cls === "a" ? "ag-a" : "ag-i"}">${html}</div></div>`;
 let AGT = { key: "" };
 function drawAgentTab() {
@@ -1195,15 +1197,18 @@ function drawAgentTab() {
   let r = `<div class="ag-head"><b>Review agent</b><span>during the run · ${seen.length} call${seen.length === 1 ? "" : "s"}${live ? "" : ` · $${rusd.toFixed(3)}`}</span></div>`;
   for (const rv of seen) {
     const f = (rv.evidence || {}).flag || {}, mine = live && lr && lr.rv && lr.rv.t === rv.t, ans = mine ? (lr.done ? lr.answer : null) : live ? null : rv.answer, spec = ans && ans.spec;
-    r += `<div class="ag-card">` + agRow("q", "Q", `${clipT(f.hypothesis_concern || rv.kind, 90)}<div class="ag-quote">${fmtHM(rv.t)} · ${clipT(f.summary || rv.note, 80)}</div>`);
+    const ev = rv.evidence || {}, sq = ev.trigger === "infeasible" ? [`The scheduler could not keep every limit: is an assumed limit too tight?`, `${ev.fallbacks || (ev.recent || []).length} replans fell back to FIFO`]
+      : [`Is the assumed ${ev.spec_id || "limit"} worth its cost?`, `${ev.at_limit ?? "?"}/${ev.plates ?? "?"} plates wait the full ${fmtMin(ev.minutes)}`];  // schedule review
+    r += `<div class="ag-card">` + agRow("q", "Q", rv.kind === "data" ? `${clipT(f.hypothesis_concern || rv.kind, 90)}<div class="ag-quote">${fmtHM(rv.t)} · ${clipT(f.summary || rv.note, 80)}</div>`
+      : `${clipT(sq[0], 90)}<div class="ag-quote">${fmtHM(rv.t)} · ${clipT(sq[1], 80)}</div>`);
     if (mine && !lr.done) r += agRow("a", "A", "answering…");
     else if (!spec) r += agRow("a", "A", "no change");
     else r += agRow("a", "A", `${limPlain(spec)}${spec.value_assumed ? " · assumed" : ""}${srcLine(spec)}`) +
-      agRow("i", "→", `scheduler · ${limHow(spec)} · v${(upd || {}).version - 1 || 0}→v${(upd || {}).version || 1}${upd ? ` · ${upd.plates_rederived} plates re-planned` : ""} · ${cleans} cleans` +
+      agRow("i", "→", `scheduler · ${limHow(spec)} · v${(upd || {}).version - 1 || 0}→v${(upd || {}).version || 1}${upd ? ` · ${upd.plates_rederived} plates re-planned` : ""} · ${cleans} clean${cleans === 1 ? "" : "s"}` +
         (rv.quarantine && rv.quarantine.plates.length ? `<br>data · <b>${rv.quarantine.plates.length} plates quarantined</b>, ${rv.quarantine.reads_dropped} reads dropped, re-run` : ""));
     r += `</div>`;
   }
-  r += `<div class="ag-card wait">Checks the lab's data every 4 reads.</div>`;
+  r += `<div class="ag-card wait">Checks the lab's data every 2 reads, and the schedule when replans keep breaking a limit or an assumed limit is costly.</div>`;
   $("#ag-list").innerHTML = `<section class="ag-col" aria-label="Constraint agent">${c}</section><section class="ag-col" aria-label="Review agent">${r}</section>`;
 }
 
@@ -2547,6 +2552,8 @@ function reviewCard(r) {
   let trig;
   if (r.kind === "data") { const f = ev.flag || {}, [ne, nu] = f.arms || [0, 0], dots = (n, bad) => Array.from({ length: n }, (_, i) => `<i class="${i < bad ? "bad" : ""}"></i>`).join("");
     trig = `<div class="rv-box"><div class="rv-dots"><span>${dots(ne, f.exposed_anomalous || 0)}</span><small>after a cell-line switch</small><span>${dots(nu, f.unexposed_anomalous || 0)}</span><small>no switch</small></div></div>`; }
+  else if (ev.trigger === "infeasible") { const n = ev.fallbacks || (ev.recent || []).length;  // the solver could not keep every limit: replans fell back
+    trig = `<div class="rv-box"><div class="rv-dots"><span>${Array.from({ length: n }, () => `<i class="warn"></i>`).join("")}</span><small>${n} replans broke a limit (fell back to FIFO)</small></div></div>`; }
   else trig = `<div class="rv-box"><div class="rv-dots"><span>${Array.from({ length: ev.plates || 0 }, (_, i) => `<i class="${i < (ev.at_limit || 0) ? "warn" : ""}"></i>`).join("")}</span><small>${ev.at_limit}/${ev.plates} plates wait the full ${fmtMin(ev.minutes)}</small></div></div>`;
   const src = a.spec && a.spec.source, change = L && !L.done ? "…" : a.action === "replace" ? `${fmtMin(ev.minutes)} → ${fmtMin(a.spec.minutes)}` : a.action === "add" ? `+ ${limShort(a.spec)}` : "no change";
   return `<div class="rv-card"><div class="rv-title">${icon("search")}Agent review ${r.index} · ${r.kind === "data" ? "the lab's data" : "the schedule"}${L ? (L.done ? " · live" : " · live, thinking…") : ""}</div><div class="rv-flow">${trig}<span class="rv-arr">→</span>` +

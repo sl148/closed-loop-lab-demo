@@ -22,9 +22,10 @@ HEAD = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
 
 
 def main() -> None:
-    if OUT.exists():
-        shutil.rmtree(OUT)
-    (OUT / "data").mkdir(parents=True)
+    for f in OUT.rglob("*"):  # clear files, keep folders (OneDrive may hold a folder open)
+        if f.is_file():
+            f.unlink()
+    (OUT / "data").mkdir(parents=True, exist_ok=True)
     (OUT / "index.html").write_text(HEAD + (SRC / "index.html").read_text(encoding="utf-8") + "</body></html>", encoding="utf-8")
     n = 0
     for f in sorted((SRC / "data").iterdir()):
