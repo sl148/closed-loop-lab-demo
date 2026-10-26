@@ -15,7 +15,7 @@ model and `max_tokens` fixed in the Worker. The hard cap is the spend limit on t
 4. `npx wrangler@4 secret put ANTHROPIC_API_KEY` (paste the workspace key)
 5. `node -e "console.log(crypto.randomBytes(32).toString('hex'))" | npx wrangler@4 secret put TOKEN_SECRET`
 6. `bash deploy.sh`, then build the site with the Worker's URL:
-   `python scripts/build_site.py --proxy https://labloop-live.<your-subdomain>.workers.dev`
+   `python scripts/build_site.py --proxy https://labloop-live.scottlee.workers.dev`
 
 ## Local test (no key in the Worker)
 

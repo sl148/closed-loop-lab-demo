@@ -12,7 +12,7 @@ SESSION_MIN = "30"    # one run's session lifetime (agent before launch + the da
 # run counters (created with `npx wrangler@4 kv namespace create COUNTS`)
 [[kv_namespaces]]
 binding = "COUNTS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "918676bd8d4d4dafa28bff93c9defe25"
 
 # turns per minute per session; the Worker skips the check if this binding is absent
 [[ratelimits]]
