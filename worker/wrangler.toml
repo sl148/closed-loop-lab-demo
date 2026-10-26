@@ -1,0 +1,32 @@
+# Live-mode proxy for https://sl148.github.io/closed-loop-lab-demo/ (see worker/README.md)
+name = "labloop-live"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://sl148.github.io"
+RUNS_PER_IP = "3"     # live runs per visitor per day
+RUNS_PER_DAY = "60"   # live runs per day for the whole site
+SESSION_MIN = "30"    # one run's session lifetime (agent before launch + the data review)
+
+# run counters (created with `npx wrangler@4 kv namespace create COUNTS`)
+[[kv_namespaces]]
+binding = "COUNTS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# turns per minute per session; the Worker skips the check if this binding is absent
+[[ratelimits]]
+name = "TURNS"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 40
+  period = 60
+
+# the archive is bundled as text (deploy.sh copies web/data/kb.json to src/kb.txt)
+[[rules]]
+type = "Text"
+globs = ["**/*.txt"]
+fallthrough = true
+
+# secrets, set once with `npx wrangler@4 secret put <NAME>`: ANTHROPIC_API_KEY, TOKEN_SECRET

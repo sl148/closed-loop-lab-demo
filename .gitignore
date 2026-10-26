@@ -18,3 +18,9 @@ web/data/agent_tool_cases.json
 tests/fixtures/agent_tool_cases.json
 web/data/replay_combo_*.json
 scripts/run_tip_sites_l4.sh
+
+# live-mode proxy: bundled archive, local secrets, wrangler state
+worker/src/kb.txt
+worker/.dev.vars
+worker/.wrangler/
+worker/node_modules/

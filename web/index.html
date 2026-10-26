@@ -1163,7 +1163,7 @@ function drawAgentTab() {
     answered = launch.map((c) => { const sl = slots.find((x) => x.id === c.id) || {}; return { q: sl.origin === "sweep" ? "Anything the questions missed?" : sl.question || c.id, spec: c, risk: ((L.precheck || {}).risk || {})[c.id] }; });
     asked = slots.filter((x) => !launch.some((c) => c.id === x.id)).map((x) => ({ q: x.question, why: x.abstain || "no limit", later: revs.some((r) => r.evidence && r.evidence.flag && r.evidence.flag.hypothesis === x.id && seen.includes(r)) }));
   }
-  $("#ag-action").innerHTML = `<b>${live ? "your Claude" : esc(A.model || "Claude")}</b>` + (live ? " · live" : ` · $${(usd + rusd).toFixed(3)}`);
+  $("#ag-action").innerHTML = `<b>${live ? LIVE_WHO() : esc(A.model || "Claude")}</b>` + (live ? " · live" : ` · $${(usd + rusd).toFixed(3)}`);
   let c = `<div class="ag-head"><b>Constraint agent</b><span>before launch · ${answered.length + asked.length} Q → ${answered.length} limits${!live && L.labware ? " + labware" : ""}${!live && L.prep ? " + prep" : ""}${live ? "" : ` · $${usd.toFixed(3)}`}</span></div>`;
   if (live && !run) c += `<div class="ag-card wait">Runs when Play reaches it.</div>`;
   for (const a of answered) c += `<div class="ag-card">` + agRow("q", "Q", clipT(a.q, 80)) + agRow("a", "A", `${limPlain(a.spec)}${srcLine(a.spec)}`) +
@@ -2823,7 +2823,8 @@ const KINDS = { max_between: "a(start|end) -> start of b <= minutes", min_betwee
 const kbTokens = (t) => (t.toLowerCase().replaceAll("°c", " degc ").replaceAll("µ", "u").match(/[a-z]+|\d+(?:\.\d+)?/g) || []).filter((w) => !STOPW.has(w));
 async function kbLoad() {
   if (KB.data) return KB;
-  KB.data = await (await fetch("data/kb.json")).json();
+  const site = window.LABLOOP_LIVE;  // GitHub Pages build: the archive comes from the site's proxy, not the repo
+  KB.data = site && site.kb ? await site.kb() : await (await fetch("data/kb.json")).json();
   KB.tf = KB.data.chunks.map((c) => { const m = new Map(); for (const w of kbTokens(c[2])) m.set(w, (m.get(w) || 0) + 1); return m; });
   KB.len = KB.tf.map((m) => [...m.values()].reduce((a, b) => a + b, 0));
   KB.avg = KB.len.reduce((a, b) => a + b, 0) / Math.max(1, KB.len.length);
@@ -2978,7 +2979,8 @@ async function liveRun() {
     if (!sweep.result) sweep.result = "none";
     run.status = "Done";
   } catch (e) {
-    run.err = e && e.code; run.status = e && e.code === "cancelled" ? "Stopped" : e && ["not_granted", "sampling_disabled", "tools_unavailable"].includes(e.code) ? "Claude is not available here" : "Interrupted";
+    run.err = e && e.code; run.status = e && e.code === "cancelled" ? "Stopped" : e && ["not_granted", "sampling_disabled", "tools_unavailable"].includes(e.code) ? "Claude is not available here"
+      : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : "Interrupted";
   }
   run.done = true; renderLiveSoon();
 }
@@ -2987,7 +2989,7 @@ function renderLiveSoon() { if (!liveRaf) liveRaf = requestAnimationFrame(() => 
 function renderLive(box) {
   const run = LIVE.run; if (!run) { box.innerHTML = ""; return; }
   const found = liveFound(Object.values(run.props)), rec = liveFound(RP.loop.launch || []).length;
-  let h = `<div class="eyebrow">Live · your Claude · ${esc(run.status)}</div>`;
+  let h = `<div class="eyebrow">Live · ${LIVE_WHO()} · ${esc(run.status)}</div>`;
   h += run.done ? (MODE.live ? "" : `<button class="chip" type="button" id="lp-back">Show the recorded run</button>`) : `<button class="chip" type="button" id="lp-stop">Stop</button>`;
   h += run.rows.map((r) => {
     const res = r.result && typeof r.result === "object" ? `<span class="ok">✓ ${esc(limShort(r.result))}${r.result.value_assumed ? " · assumed" : ""}</span>` : r.result === "none" ? `<span class="muted">nothing found</span>` : r.result === "ok" ? "" : `<span class="muted">…</span>`;
@@ -3129,7 +3131,8 @@ function stDryLive(stage) {
     `<div class="st-cap">${MODE.failed ? esc(MODE.failed) : MODE.done.dry ? `→ the recorded lab run made with these limits${c[2] === "0" ? ", with its cleaning review" : ""}` : "loading the matching lab run…"}</div>`;
 }
 $("#modesw").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { if (!b.disabled) setMode(b.dataset.m === "live"); }));
-function modeEnable() { const lb = $('#modesw [data-m="live"]'); lb.disabled = false; lb.title = "Run every step now with your Claude; the lab plays the recorded run made with the limits it finds"; }
+function modeEnable() { const lb = $('#modesw [data-m="live"]'); lb.disabled = false; lb.title = `Run every step now with ${LIVE_WHO()}; the lab plays the recorded run made with the limits it finds`; }
+const LIVE_WHO = () => (window.LABLOOP_LIVE ? "Claude Haiku" : "your Claude");
 
 /* ================================================================ boot */
 (async function boot() {

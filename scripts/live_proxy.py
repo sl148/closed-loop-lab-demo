@@ -42,7 +42,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.headers.get("Origin") != ORIGIN or self.path != "/messages":
+        # the local preview page, or a local `wrangler dev` Worker forwarding to here (no Origin header)
+        if self.headers.get("Origin") not in (ORIGIN, None) or self.path != "/messages":
             self.send_response(403)
             self.end_headers()
             return

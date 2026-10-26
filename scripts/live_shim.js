@@ -1,22 +1,42 @@
-// Test-only stand-in for claude.ai's `sample` capability (see scripts/live_proxy.py). Injected into a local
-// copy of the page before its own scripts; never part of the published page. Each turn goes to the local
-// proxy; tool calls run here in the page, the way claude.ai runs them.
+// Live mode outside claude.ai (the GitHub Pages build): a stand-in for claude.ai's `sample` capability that
+// sends each turn to the site's proxy (worker/), which calls Claude Haiku. Tool calls run here in the page,
+// the way claude.ai runs them. build_site.py sets window.LABLOOP_LIVE = { proxy } and inlines this file; the
+// artifact never carries it (claude.ai provides `sample` there).
 (() => {
-  const PROXY = "http://127.0.0.1:8777/messages";
-  const turn = async (messages, tools, system) => {
-    const r = await fetch(PROXY, { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ messages, system, max_tokens: 4000,
-        tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema || { type: "object", properties: {} } })) }) });
-    return r.json();
+  const cfg = window.LABLOOP_LIVE;
+  if (!cfg || !cfg.proxy || window.claude) return;
+  const base = cfg.proxy.replace(/\/$/, "");
+  let sess = null;  // one session per live run: {token, expires, runs_left}
+  const fail = async (r) => {
+    let e = {};
+    try { e = await r.json(); } catch (_) { /* not json */ }
+    throw { code: e.code || (r.status === 429 ? "rate_limited" : "error"), message: e.error || `proxy ${r.status}` };
   };
+  async function token() {
+    if (sess && sess.expires - Date.now() > 60000) return sess.token;
+    const r = await fetch(`${base}/session`, { method: "POST" });
+    if (!r.ok) await fail(r);
+    sess = await r.json();
+    cfg.runsLeft = sess.runs_left;
+    return sess.token;
+  }
+  async function call(path, init = {}, retry = true) {
+    const r = await fetch(base + path, { ...init, headers: { ...(init.headers || {}), authorization: `Bearer ${await token()}` } });
+    if (r.status === 401 && retry) { sess = null; return call(path, init, false); }
+    if (!r.ok) await fail(r);
+    return r.json();
+  }
+  cfg.kb = () => call("/kb");
+
   const sample = async (input, opts = {}) => {
     const msgs = typeof input === "string" ? [{ role: "user", content: input }] : input.slice();
     const tools = opts.tools || [];
+    const spec = tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema || { type: "object", properties: {} } }));
     let text = "";
     for (let i = 0; i < 30; i++) {
       if (opts.signal && opts.signal.aborted) throw { code: "cancelled", message: "aborted" };
-      const r = await turn(msgs, tools);
-      if (r.error) throw { code: "error", message: r.error };
+      const r = await call("/messages", { method: "POST", headers: { "content-type": "application/json" }, signal: opts.signal,
+        body: JSON.stringify({ messages: msgs, max_tokens: 4000, ...(spec.length ? { tools: spec } : {}) }) });
       msgs.push({ role: "assistant", content: r.content });
       text = r.content.filter((b) => b.type === "text").map((b) => b.text).join("");
       if (opts.onText) opts.onText({ text, delta: text });
@@ -31,7 +51,6 @@
       }
       msgs.push({ role: "user", content: results });
     }
-    window.__liveTurns = (window.__liveTurns || 0) + 1;
     return { text, truncated: false };
   };
   sample.json = async (input, opts = {}) => {
