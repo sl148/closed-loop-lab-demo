@@ -6,3 +6,15 @@ results/
 *.egg-info/
 .env
 MUJOCO_LOG.TXT
+# document archive: only the manifest is committed (documents and their extracted text stay local)
+data/kb/docs/
+data/kb/chunks.jsonl
+data/kb/pages.json
+
+# local test pages, and archive text from third-party documents (used only by Live mode; kept local)
+web/std*.html
+web/data/kb.json
+web/data/agent_tool_cases.json
+tests/fixtures/agent_tool_cases.json
+web/data/replay_combo_*.json
+scripts/run_tip_sites_l4.sh

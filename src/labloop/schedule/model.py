@@ -49,12 +49,18 @@ class Op:
 
 @dataclass(frozen=True)
 class Lag:
-    """start(after) - end(before) in [min_lag, max_lag]; max_lag None = unbounded."""
+    """start(after) - end(before) in [min_lag, max_lag]; max_lag None = unbounded. With
+    ref="start" the gap is measured from start(before) (e.g. dispense start to incubator entry)."""
 
     before: str
     after: str
     min_lag: int = 0
     max_lag: int | None = None
+    ref: str = "end"
+    tag: str | None = None  # id of the constraint spec that made this lag (None: the workflow's own)
+
+    def anchor(self, start: dict, end: dict) -> int:
+        return start[self.before] if self.ref == "start" else end[self.before]
 
 
 @dataclass(frozen=True)
@@ -88,6 +94,14 @@ class Problem:
     spans: list[Span] = field(default_factory=list)
     fixed_res: dict[str, str] = field(default_factory=dict)  # op -> resource (timing still free)
     span_start: dict[str, int] = field(default_factory=dict)  # link -> held since (first op done)
+    # Sequence-dependent setup: two ops of the same kind but different families on one resource
+    # need setup_min[kind] minutes between them (cleaning between cell lines on a liquid handler).
+    family: dict[str, str] = field(default_factory=dict)  # op -> family
+    setup_min: dict[str, int] = field(default_factory=dict)  # op kind -> minutes
+    res_last: dict[str, tuple[str, int]] = field(default_factory=dict)  # resource -> (family, end) already run
+
+    def setup_ops(self) -> list[str]:
+        return [o for o, op in self.ops.items() if o in self.family and op.kind in self.setup_min]
 
     def add_op(self, op: Op) -> None:
         self.ops[op.id] = op

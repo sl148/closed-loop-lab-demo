@@ -1,0 +1,20 @@
+# truth.yaml plus labware limits (execution/truth.py): the assay plate wall and tips used below
+# their validated volume. Kept apart so runs on configs/truth.yaml stay reproducible.
+read_equilibration_min: 30
+read_equilibration_noise: 0.15
+drug_rt_stable_min: 1440
+drug_halflife_min: 720
+changeover_wells: 24
+actual_timepoint: true
+qc_z_min: 0.5
+plates:
+  clear: {crosstalk: 0.05}       # each well picks up 5% of its neighbours' mean signal
+  black: {extra_noise: 0.04}     # less light reaches the reader
+under_range_cv: 0.25             # tip below its validated volume: dose spread
+under_range_bias: -0.25          # and 25% less liquid than asked
+sources:
+  read_equilibration_min: "promega_tb288 p.7: Equilibrate the plate and its contents at room temperature for approximately 30 minutes."
+  drug_rt_stable_min: "cayman_* p.1: We do not recommend storing the aqueous solution for more than one day."
+  changeover_wells: "atcc_culture_guide p.26: Cross-contamination of 1 cell line with another can sometimes lead to the replacement of the original cell with the contaminant"
+  plates: "promega_tb288 p.10: Opaque-walled plates with clear bottoms ... will have diminished signal intensity and greater cross talk between wells; lab_catalog p.1: PL-384-WHT ... for luminescence assays."
+  under_range: "lab_catalog p.2: Volumes below a tip's validated range are not covered by that check: expect less liquid than asked and more spread between channels."

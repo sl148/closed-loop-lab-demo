@@ -12,7 +12,8 @@ SHIFT_STEP = 15  # minutes to delay a job's start when an incubation stretch doe
 
 
 class Timeline:
-    """Committed intervals per resource; supports cumulative capacity and downtime."""
+    """Committed intervals per resource; supports cumulative capacity, downtime and
+    sequence-dependent setups between op families."""
 
     def __init__(self, problem: Problem):
         self.cap = {r: res.capacity for r, res in problem.resources.items()}
@@ -20,6 +21,21 @@ class Timeline:
         for r, windows in problem.unavailable.items():
             for a, b in windows:
                 self.busy[r] += [(a, b)] * self.cap[r]
+        self.fam: dict[str, list[tuple[int, int, str]]] = {r: [] for r in problem.resources}
+        for r, (f, t) in problem.res_last.items():
+            self.fam[r].append((t, t, f))
+
+    def setup_ok(self, res: str, s: int, e: int, fam: str | None, c: int) -> bool:
+        return fam is None or all(g == fam or b + c <= s or e + c <= a for a, b, g in self.fam[res])
+
+    def earliest_fit_setup(self, res: str, t: int, dur: int, fam: str | None, c: int) -> int:
+        if fam is None:
+            return self.earliest_fit(res, t, dur)
+        cands = {t, *(b for _, b in self.busy[res] if b > t), *(b + c for _, b, g in self.fam[res] if g != fam and b + c > t)}
+        for s in sorted(cands):
+            if self.fits(res, s, s + dur) and self.setup_ok(res, s, s + dur, fam, c):
+                return s
+        raise RuntimeError("unreachable: the last candidate clears every interval")
 
     def fits(self, res: str, s: int, e: int) -> bool:
         if e <= s:
@@ -59,6 +75,13 @@ def _place_chain(problem: Problem, tl: Timeline, ops: list[Op], t0: int, strict:
         min_lag = lag.min_lag if lag else 0
         max_lag = lag.max_lag if lag else None
         lo = max(cursor + min_lag, problem.earliest(op.id))
+        # Lags from earlier ops of the chain other than the previous one (e.g. dispense start ->
+        # incubator entry).
+        far = [l for l in problem.lags if l.after == op.id and l is not lag and l.before in start]
+        for l in far:
+            lo = max(lo, l.anchor(start, end) + l.min_lag)
+        fam = problem.family.get(op.id) if op.kind in problem.setup_min else None
+        c = problem.setup_min.get(op.kind, 0)
         if op.id in problem.pinned:
             res = problem.pinned[op.id]
             s = problem.start_lb[op.id]
@@ -66,10 +89,13 @@ def _place_chain(problem: Problem, tl: Timeline, ops: list[Op], t0: int, strict:
             best = None
             for r in problem.alternatives(op.id):
                 d = problem.dur_range(op.id, r)[0]
-                s_r = tl.earliest_fit(r, lo, d)
+                s_r = tl.earliest_fit_setup(r, lo, d, fam, c)
                 if best is None or s_r + d < best[0] + best[2]:
                     best = (s_r, r, d)
             s, res, _ = best
+        for l in far:
+            if strict and l.max_lag is not None and s - l.anchor(start, end) > l.max_lag:
+                return None, None, None, t0 + SHIFT_STEP
 
         if prev is not None and not prev.fixed:
             # A plate waiting on this op stays in the incubator, up to its max duration.
@@ -99,7 +125,11 @@ def _fit_spans(problem: Problem, tl: Timeline, spans, start, end, assigned) -> b
         s, e = problem.span_interval(sp, start, end)
         alts = (sp.res,) if sp.res else problem.alternatives(sp.link)
         pref = sorted(alts, key=lambda r: r != assigned.get(sp.link))
-        ok = next((r for r in pref if tl.fits(r, s, e)), None)
+        link = problem.ops.get(sp.link)
+        fam = problem.family.get(sp.link) if link and link.kind in problem.setup_min else None
+        c = problem.setup_min.get(link.kind, 0) if link else 0
+        setup = lambda r: fam is None or tl.setup_ok(r, start[sp.link], end[sp.link], fam, c)
+        ok = next((r for r in pref if tl.fits(r, s, e) and setup(r)), None)
         if ok is None:
             return False
         if sp.link in problem.ops:
@@ -141,6 +171,9 @@ def serial_schedule(problem: Problem, job_order: list[str], name: str, max_tries
                 tl.commit(assigned[op.id], start[op.id], end[op.id])
         for sp in spans:
             tl.commit(problem.span_res(sp, assigned), *problem.span_interval(sp, start, end))
+        for op in ops:
+            if op.id in problem.family and op.kind in problem.setup_min:
+                tl.fam[assigned[op.id]].append((start[op.id], end[op.id], problem.family[op.id]))
         sched.start.update(start)
         sched.end.update(end)
         sched.assigned.update(assigned)

@@ -1,0 +1,23 @@
+task: drug-combination viability screen, 384-well, CellTiter-Glo read
+constraints:
+- id: read_equilibration
+  kind: min_between
+  a: to_reader
+  a_anchor: start
+  b: read
+  minutes: 30
+  source:
+    doc: promega_tb288
+    page: 7
+    quote: Equilibrate the plate and its contents at room temperature for approximately
+      30 minutes.
+    verified: true
+- id: reagent_stability
+  kind: deadline_from_release
+  step: dispense
+  minutes: 1440
+  source:
+    doc: cayman_sorafenib
+    page: 1
+    quote: We do not recommend storing the aqueous solution for more than one day.
+    verified: true

@@ -44,7 +44,7 @@ OUT = Path("web/data")
 
 SCHEMA = "labloop-web/1"
 
-KINDS = ["transfer", "dispense", "incubate", "read", "tip_swap"]
+KINDS = ["transfer", "dispense", "incubate", "read", "tip_swap", "prep"]
 
 
 
@@ -378,6 +378,11 @@ def replay(run: dict, title: str, seed: int) -> dict:
         "tips": [{k: v for k, v in e.items() if k != "left"} for e in run["events"]
                  if e["kind"] in ("tip_order", "tip_refill", "tip_mid_swap", "tip_swap")],
         "protocols": protocol_traces(run),
+        # liquids the lab made (execution/supplies.py): dilution batches and cell reservoirs on each LH
+        "supplies": {**{k: v for k, v in run["supplies"].items() if k != "ledger"},
+                     "events": [{k: v for k, v in e.items() if k in ("t", "kind", "lh", "job", "line", "made", "left_ml", "reason", "prev")}
+                                for e in run["events"] if e["kind"] in ("prep", "cell_swap", "prep_order", "cells_order")]}
+                    if run.get("supplies") else None,
     }
 
 

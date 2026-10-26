@@ -1,0 +1,16 @@
+{
+ "best": {
+  "design": {
+   "tip_rail": 25,
+   "source_rail": 13,
+   "dest_rail": 19,
+   "cell_tip": "300uL",
+   "drug_tip": "50uL",
+   "racks_on_deck": 5,
+   "cell_source": "trough",
+   "tip_reuse": true,
+   "assay_plate": "white"
+  }
+ },
+ "note": "calibration: deck_level4 best with 50 uL drug tips and white plates"
+}

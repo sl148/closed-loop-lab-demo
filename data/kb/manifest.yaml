@@ -1,0 +1,30 @@
+# Document archive for the constraint agent (kb/archive.py). Files live in data/kb/docs/ (not
+# committed); fetched 2026-10-24 from the public URLs below.
+docs:
+  - id: promega_tb288
+    title: CellTiter-Glo Luminescent Cell Viability Assay, Technical Bulletin TB288 (rev. 1/23)
+    file: promega_tb288.pdf
+    url: https://ch.promega.com/-/media/files/resources/protocols/technical-bulletins/0/celltiter-glo-luminescent-cell-viability-assay-protocol.pdf
+  - id: atcc_culture_guide
+    title: ATCC Animal Cell Culture Guide
+    file: atcc_animal_cell_culture_guide.pdf
+    url: https://www.atcc.org/resources/culture-guides/animal-cell-culture-guide
+  - id: cayman_sorafenib
+    title: Cayman Chemical product information, sorafenib (item 10009644)
+    file: cayman_sorafenib.pdf
+    url: https://cdn.caymanchem.com/cdn/insert/10009644.pdf
+  - id: cayman_mk4827
+    title: Cayman Chemical product information, MK-4827 tosylate (item 20842)
+    file: cayman_mk4827.pdf
+    url: https://cdn.caymanchem.com/cdn/insert/20842.pdf
+  - id: cayman_erlotinib
+    title: Cayman Chemical product information, erlotinib (item 10483)
+    file: cayman_erlotinib.pdf
+    url: https://cdn.caymanchem.com/cdn/insert/10483.pdf
+  - id: cayman_vinblastine
+    title: Cayman Chemical product information, vinblastine sulfate (item 11762)
+    file: cayman_vinblastine.pdf
+    url: https://cdn.caymanchem.com/cdn/insert/11762.pdf
+  - id: lab_catalog
+    title: Screening lab consumables catalog (internal, rev. 3)
+    file: ../lab_catalog.txt  # written for this lab (committed), not fetched

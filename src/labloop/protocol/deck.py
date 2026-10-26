@@ -29,10 +29,13 @@ class TipType:
     name: str
     capacity_ul: float
     dead_ul: float  # kept in the tip, never dispensed
+    min_ul: float = 0.0  # smallest volume the lab has validated for this tip (data/kb lab_catalog)
 
 
-TIPS = {"50uL": TipType("50uL", 50.0, 5.0), "300uL": TipType("300uL", 300.0, 20.0),
-        "1000uL": TipType("1000uL", 1000.0, 50.0)}
+TIPS = {"50uL": TipType("50uL", 50.0, 5.0, 0.5), "300uL": TipType("300uL", 300.0, 20.0, 10.0),
+        "1000uL": TipType("1000uL", 1000.0, 50.0, 50.0)}
+# Assay plates the lab stocks (384-well, tissue-culture treated); "clear" is the stockroom default.
+ASSAY_PLATES = ("clear", "white", "black")
 
 
 @dataclass(frozen=True)
@@ -45,7 +48,23 @@ class DeckDesign:
     racks_on_deck: int = 5  # tip racks on the tip carrier (1-5)
     cell_source: str = "trough"  # "trough" (one big reservoir) or "plate" (96-well reservoir)
     tip_reuse: bool = True  # aspirate once per reagent, dispense to many wells without contact
+    assay_plate: str = "clear"  # plate wall (ASSAY_PLATES); timing does not depend on it
+    # Pipetting per reagent (protocol/pipetting.py): "jet" drops from above the well, "surface" touches
+    # it; reuse = one tip serves many wells of the same reagent (None: follow tip_reuse). drugs_first adds
+    # the drugs to the empty plate before the cells. The defaults are the original protocol.
+    cell_mode: str = "jet"
+    drug_mode: str = "jet"
+    cell_reuse: bool | None = None
+    drug_reuse: bool | None = None
+    drugs_first: bool = False
     meta: dict = field(default_factory=dict, hash=False, compare=False)
+
+    def reuse(self, cells: bool) -> bool:
+        r = self.cell_reuse if cells else self.drug_reuse
+        return self.tip_reuse if r is None else r
+
+    def mode(self, cells: bool) -> str:
+        return self.cell_mode if cells else self.drug_mode
 
     def x_of(self, rail: int, col_offset_mm: float = 0.0) -> float:
         return RAIL0_X + (rail - 1) * RAIL_PITCH + col_offset_mm
@@ -71,7 +90,7 @@ def candidate_designs() -> list[DeckDesign]:
     """Every valid combination of carrier rails (step 1), tip types, racks and options."""
     out = []
     for tip_r, src_r, dst_r in itertools.product(range(1, N_RAILS - 4), repeat=3):
-        for cell_tip, drug_tip in (("300uL", "50uL"), ("1000uL", "50uL"), ("300uL", "300uL")):
+        for cell_tip, drug_tip in (("300uL", "50uL"), ("1000uL", "50uL"), ("300uL", "300uL"), ("50uL", "50uL")):
             for racks in (2, 3, 4, 5):
                 for cell_source in ("trough", "plate"):
                     d = DeckDesign(tip_r, src_r, dst_r, cell_tip, drug_tip, racks, cell_source)

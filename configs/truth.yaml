@@ -1,0 +1,17 @@
+# Physical limits of the emulated lab that the scheduler is not told about (M9, execution/truth.py).
+# The constraint agent has to find them in the document archive (data/kb/manifest.yaml). Each
+# limit is set from a passage in that archive; effect sizes are emulator settings.
+read_equilibration_min: 30        # leave the incubator -> read
+read_equilibration_noise: 0.15
+drug_rt_stable_min: 1440          # aqueous drug dilutions, from plate release
+drug_halflife_min: 720
+changeover_wells: 24              # wells carried over by an uncleaned cell-line switch on an LH
+actual_timepoint: true            # reads respond to the real incubation time (biology, not a document)
+qc_z_min: 0.5                     # plate QC on controls (the lab's acceptance rule)
+sources:
+  read_equilibration_min: "promega_tb288 p.7: Equilibrate the plate and its contents at room temperature for approximately 30 minutes."
+  drug_rt_stable_min: "cayman_* p.1: We do not recommend storing the aqueous solution for more than one day."
+  changeover_wells: "atcc_culture_guide p.26: Cross-contamination of 1 cell line with another can sometimes lead to the replacement of the original cell with the contaminant"
+# Dropped after the corpus check: an out-of-incubator maximum for seeded plates. Nothing in the
+# archive supports it, and resting seeded plates at room temperature is reported to reduce edge
+# effects (Lundholt et al. 2003), the opposite direction.

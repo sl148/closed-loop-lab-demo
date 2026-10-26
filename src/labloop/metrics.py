@@ -30,7 +30,8 @@ def run_metrics(run: dict) -> dict:
     out["n_failures"] = sum(1 for e in run["events"] if e["kind"] == "failure")
     out["invalid_plates"] = run.get("invalid_plates", 0)
     reads = [e for e in run["events"] if e["kind"] == "read"]
-    out["corrupt_accepted"] = sum(e.get("corrupt_accepted", 0) for e in reads)
+    gone = {p for e in run["events"] if e["kind"] == "quarantine" for p in e.get("plates", [])}  # data dropped later
+    out["corrupt_accepted"] = sum(e.get("corrupt_accepted", 0) for e in reads if e.get("plate") not in gone)
     out["wells_invalid"] = sum(e["n"] - e["n_valid"] for e in reads)
     fails = [e for e in run["events"] if e["kind"] == "failure"]
     out["recovery_min"] = sum(a["minutes"] for e in fails for a in e["decision"]["actions"]

@@ -1,0 +1,39 @@
+Screening Lab Consumables Catalog (internal, rev. 3)
+Section 1. Assay plates
+
+All assay plates are 384-well, tissue-culture treated, sterile, with lids. Order by part number. Items not listed here are not stocked.
+
+PL-384-CLR  Clear polystyrene walls and clear bottom. Stockroom default for cell culture, microscopy and absorbance assays. Light passes through the walls between wells.
+PL-384-WHT  Solid white opaque walls and white bottom. Reflects light; for luminescence assays.
+PL-384-BLK  Solid black opaque walls and black bottom. Absorbs light; for fluorescence assays with low background. Luminescence signal is reduced compared to white plates.
+
+Working volume for all three plates: 10 to 100 ul per well.
+Section 2. Liquid handler tips and pipetting
+
+Tips for the Hamilton STARlet 8-channel head (CO-RE, filtered, sterile, 96 per rack): TIP-50 (50 ul), TIP-300 (300 ul), TIP-1000 (1000 ul). A volume larger than the tip holds is pipetted in several equal parts.
+
+Calibrated volume ranges, from the Hamilton STAR liquid classes (as shipped with PyLabRobot 0.2.2). Outside its range a liquid class is not calibrated: expect less liquid than asked and more spread between channels. Culture medium and buffers pipette like water.
+50 ul tip: medium jet 10 to 50 ul; medium surface 1 to 50 ul; dmso jet 10 to 50 ul; dmso surface 1 to 50 ul.
+300 ul tip: medium jet 20 to 300 ul; medium surface 0.5 to 300 ul; dmso jet 20 to 300 ul; dmso surface 1 to 300 ul.
+1000 ul tip: medium jet 10 to 1000 ul; medium surface 10 to 1000 ul; dmso jet 5 to 1000 ul; dmso surface 10 to 1000 ul.
+
+Dispense modes. Jet: the drop leaves the tip above the well, so one aspiration can serve many wells of the same reagent. Surface: the tip touches the well bottom or the liquid already in it to release the drop. A reused tip that touches liquid in a well carries that well's contents to the next wells it serves; a tip that only touches a dry, empty well does not.
+
+Current protocol volumes on 384-well plates: cell suspension 16 ul per well; each drug dilution 2 ul per well.
+Section 3. Reservoirs and source plates
+
+RES-CELL    60 ml single-well trough (Hamilton 1-trough 60 ml) for one cell suspension. All 8 channels draw from it. Use one reservoir per cell line; the cell prep station fills a reservoir to order (counted cells in culture medium) and the arm brings it to the liquid handler deck.
+SRC-DIL     Drug dilution plate, 96 deep-well, 1.2 ml maximum per well. One column per dose of one drug (rows A to H feed channels 1 to 8). The liquid handler prepares dilution series in it on the deck.
+TUBE-2ML    2 ml screw-cap tube for drug stock solutions.
+Section 4. Inventory on hand (start of campaign)
+
+Drugs as crystalline solid, stored at -20 C:
+  MK-4827 (tosylate), Cayman item 20842: 5 mg
+  Sorafenib, Cayman item 10009644: 10 mg
+  Erlotinib, Cayman item 10483: 10 mg
+  Vinblastine (sulfate), Cayman item 11762: 1 mg
+Solvents and media:
+  DMSO, anhydrous, cell culture grade: 100 ml
+  Culture medium with 10% FBS: 1000 ml
+Labware: SRC-DIL plates 60; RES-CELL reservoirs 20; TUBE-2ML tubes 50.
+Reorders of drug powder take about two weeks.

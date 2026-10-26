@@ -1,0 +1,19 @@
+{
+ "rules": {},
+ "deck_rules": {
+  "assay_plate": "white",
+  "cell_tips": [
+   "50uL"
+  ],
+  "drug_tips": [
+   "50uL"
+  ],
+  "pipetting": {
+   "cell_mode": "jet",
+   "cell_reuse": true,
+   "drug_mode": "surface",
+   "drug_reuse": true,
+   "drugs_first": true
+  }
+ }
+}

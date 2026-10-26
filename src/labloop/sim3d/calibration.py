@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -32,4 +33,14 @@ def apply_sim3d(cfg: dict, durations: DurationModel, failures):
         curve = ((0.0, 1.0), (100.0, 1.0))
     failures = dataclasses.replace(failures, p_tip_pickup=p_tip, perception_curve=curve,
                                    misplace_sigma_mm=cfg.get("misplace_sigma_mm", failures.misplace_sigma_mm))
+    # Tier-1 re-placement of a misplaced plate (scripts/sim3d_replace.py): MuJoCo time and success
+    # rate of re-gripping at the camera's estimate, instead of the hand-set constant. Opt-in so
+    # earlier calibrated runs keep their numbers.
+    rp = d / "replace.json"
+    if cfg.get("replace") and rp.exists():
+        s = json.loads(rp.read_text())["summary"]
+        mean_s = float(np.mean([v["mean_s"] for v in s.values()]))
+        ok = float(np.mean([v["success_rate"] for v in s.values()]))
+        failures = dataclasses.replace(failures, retry_min={**failures.retry_min, "plate_misplaced": max(1, math.ceil(mean_s / 60))},
+                                       p_replace_fail=round(1 - ok, 4))
     return durations, failures

@@ -41,11 +41,27 @@ def violations(problem: Problem, sched: Schedule, check_lags: bool = True) -> li
 
     if check_lags:
         for lag in problem.lags:
-            gap = sched.start[lag.after] - sched.end[lag.before]
+            gap = sched.start[lag.after] - (sched.start[lag.before] if lag.ref == "start" else sched.end[lag.before])
             if gap < lag.min_lag:
                 errs.append(f"{lag.before}->{lag.after}: gap {gap} < min {lag.min_lag}")
             if lag.max_lag is not None and gap > lag.max_lag:
                 errs.append(f"{lag.before}->{lag.after}: gap {gap} > max {lag.max_lag}")
+
+    # Setups: consecutive ops of different families on one resource need the setup gap.
+    by_res: dict[str, list[str]] = {}
+    for oid, op in problem.ops.items():
+        if oid in problem.family and op.kind in problem.setup_min:
+            by_res.setdefault(sched.assigned.get(oid, op.resources[0]), []).append(oid)
+    for rname, oids in by_res.items():
+        seq = sorted(oids, key=lambda o: sched.start[o])
+        last = problem.res_last.get(rname)
+        prev = [(last[0], last[1], None)] if last else []
+        for o in seq:
+            prev.append((problem.family[o], sched.end[o], o))
+        for (fa, ea, a), (fb, _, b) in zip(prev, prev[1:]):
+            need = problem.setup_min[problem.ops[b].kind]
+            if fa != fb and sched.start[b] - ea < need:
+                errs.append(f"{rname}: setup {fa}/{fb} before {b} is {sched.start[b] - ea} < {need}")
 
     # A span (deck zone held from loading to unloading) replaces its link op's interval.
     covered = problem.covered()

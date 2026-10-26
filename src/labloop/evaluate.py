@@ -17,6 +17,12 @@ class History:
     def add(self, reads: list[WellRead]) -> None:
         self.reads.extend(r for r in reads if r.valid)
 
+    def drop(self, plates: set[str]) -> int:
+        """Forget every read from these plates (quarantined data); returns how many reads went."""
+        n = len(self.reads)
+        self.reads = [r for r in self.reads if r.plate_id not in plates]
+        return n - len(self.reads)
+
     def tested(self) -> set[Condition]:
         return {r.content for r in self.reads if isinstance(r.content, Condition)}
 
@@ -54,13 +60,16 @@ class History:
     def ranked_excess(self) -> list[tuple[Condition, float]]:
         return sorted(self.excess_estimates().items(), key=lambda kv: (-kv[1], kv[0]))
 
-    def best(self) -> tuple[Condition, float] | None:
+    def best(self, min_n: int = 1) -> tuple[Condition, float] | None:
         """Recommended combination: highest lower confidence bound mean - sd/sqrt(n), so a
-        single lucky noisy well does not beat a replicated hit. Returns (condition, mean)."""
+        single lucky noisy well does not beat a replicated hit. With `min_n`, only combinations
+        read at least that often count (after a confirmation round). Returns (condition, mean)."""
         est = self.excess_estimates()
+        counts = {c: len(v) for c, v in self.samples().items()}
+        if min_n > 1 and any(counts[c] >= min_n for c in est):
+            est = {c: v for c, v in est.items() if counts[c] >= min_n}
         if not est:
             return None
-        counts = {c: len(v) for c, v in self.samples().items()}
         sd = self.noise_sd() * np.sqrt(2)  # excess combines a combo and its singles
         c = max(est, key=lambda k: (est[k] - sd / np.sqrt(counts[k]), k))
         return c, est[c]

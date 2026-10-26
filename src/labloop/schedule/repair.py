@@ -56,6 +56,8 @@ def invalid_jobs(problem: Problem, prior: Schedule, free: set[str]) -> set[str]:
             ea = problem.start_lb[a] + problem.dur_override[a]
         if a in problem.end_lb and ea is not None:
             ea = max(ea, problem.end_lb[a])
+        if lag.ref == "start":
+            ea = problem.start_lb[a] if a in problem.pinned else prior.start.get(a)
         sb = prior.start.get(b)
         if ea is None or sb is None:
             bad |= {ja, jb}
@@ -63,6 +65,18 @@ def invalid_jobs(problem: Problem, prior: Schedule, free: set[str]) -> set[str]:
         gap = sb - ea
         if gap < lag.min_lag or (lag.max_lag is not None and gap > lag.max_lag):
             bad.add(jb if b not in problem.pinned else ja)
+    # Setups between kept ops (e.g. a new cell line now runs right after another on an LH).
+    seqs: dict[str, list[str]] = {}
+    for oid in problem.setup_ops():
+        if problem.ops[oid].job not in free and oid in prior.start:
+            seqs.setdefault(problem.pinned.get(oid) or prior.assigned.get(oid), []).append(oid)
+    for r, oids in seqs.items():
+        seq = sorted(oids, key=lambda o: prior.start[o])
+        last = problem.res_last.get(r)
+        chain = ([(last[0], last[1], None)] if last else []) + [(problem.family[o], prior.end[o], o) for o in seq]
+        for (fa, ea, _), (fb, _, b) in zip(chain, chain[1:]):
+            if fa != fb and prior.start[b] - ea < problem.setup_min[problem.ops[b].kind] and b not in problem.pinned:
+                bad.add(problem.ops[b].job)
     return bad
 
 
@@ -109,10 +123,11 @@ def capacity_conflicts(problem: Problem, prior: Schedule, free: set[str]) -> set
 
 class RepairScheduler:
     def __init__(self, time_limit_s: float = 1.0, window_min: int = 240, full_time_limit_s: float = 5.0,
-                 objective: Objective | None = None, workers: int = 8):
+                 objective: Objective | None = None, workers: int = 8, deterministic: bool = False):
         self.time_limit_s, self.window_min, self.full_time_limit_s = time_limit_s, window_min, full_time_limit_s
         self.objective = objective or Objective(makespan=10, flow=1, stability=1)
         self.workers = workers
+        self.deterministic = deterministic  # reproducible solves (cpsat.build_and_solve), for replayable runs
         self.name = "repair"
         self.last_neighborhood = 0
 
@@ -134,12 +149,13 @@ class RepairScheduler:
                  for oid, op in problem.ops.items()
                  if op.job not in free and oid not in problem.pinned and oid in prior.start}
         return build_and_solve(problem, name=self.name, time_limit_s=limit, objective=self.objective,
-                               hint=prior, fixed=fixed, stability_ref=prior, workers=self.workers)
+                               hint=prior, fixed=fixed, stability_ref=prior, workers=self.workers,
+                               deterministic=self.deterministic)
 
     def schedule(self, problem: Problem, prior: Schedule | None = None, now: int = 0) -> Schedule:
         t0 = time.perf_counter()
         if prior is None or not prior.start:
-            out = CPSATScheduler(self.full_time_limit_s, self.objective, self.workers).schedule(problem)
+            out = CPSATScheduler(self.full_time_limit_s, self.objective, self.workers, self.deterministic).schedule(problem)
             out.solver = f"{self.name}:full"
             self.last_neighborhood = len(problem.jobs())
             return out
@@ -151,7 +167,7 @@ class RepairScheduler:
                 out.solver = f"{self.name}:{label}"
                 out.solve_time_s = time.perf_counter() - t0
                 return out
-        out = CPSATScheduler(self.full_time_limit_s, self.objective, self.workers).schedule(problem)
+        out = CPSATScheduler(self.full_time_limit_s, self.objective, self.workers, self.deterministic).schedule(problem)
         if out.start:
             out.solver = f"{self.name}:full"
         else:

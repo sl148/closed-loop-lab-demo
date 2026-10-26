@@ -245,11 +245,11 @@ class PLRBridge:
             src_plate = cells if what == 0 else sources[what - 1]
             col = ps.source_col
             per_asp = max(1, int((TIPS[ps.tip_type].capacity_ul - TIPS[ps.tip_type].dead_ul) // ps.vol_ul)) \
-                if proto.design.tip_reuse else 1
+                if ps.reuse else 1
             columns = sorted({w % cols for ws in ps.channels.values() for w in ws})
             left = None
             for a in range(ps.aspirations):
-                batch = columns[a * per_asp:(a + 1) * per_asp] if proto.design.tip_reuse else columns
+                batch = columns[a * per_asp:(a + 1) * per_asp] if ps.reuse else columns
                 vols = [ps.vol_ul * sum(1 for w in ps.channels[k] if w % cols in batch) for k in chans]
                 if what == 0 and trough:
                     well = cells
@@ -268,7 +268,7 @@ class PLRBridge:
                             for w in src_plate.get_all_items():
                                 w.tracker.set_volume(350.0)
                 if not (what == 0 and trough):
-                    srcs = [src_plate.get_well(f"{chr(65 + i)}{col}") for i in range(n)]
+                    srcs = [src_plate.get_well(f"{chr(65 + k)}{col}") for k in chans]  # channel k draws from row k
                     await lh.aspirate(srcs, vols=vols, use_channels=list(range(n)))
                     if left is None:
                         left = sum(w.tracker.get_used_volume() for w in srcs) / n
@@ -307,3 +307,188 @@ def deck_geometry() -> dict:
             out["resources"][res.name] = {"category": res.category, "origin": [loc.x, loc.y, loc.z],
                                           "size": [res.get_size_x(), res.get_size_y(), res.get_size_z()]}
     return out
+
+
+# ---------------------------------------------------------------------------------------------- in the loop
+class PLRStation:
+    """One simulated STARlet kept for a whole run: the deck from the design, the cell reservoir, one dilution
+    plate per drug, a medium trough and a prep plate (stocks in column 12, intermediate dilutions), with
+    PyLabRobot tracking every volume. Plates are dispensed from what the sources actually hold; batches
+    are pipetted transfer by transfer (execution/prep_protocol.py). Errors come back, they do not raise."""
+
+    def __init__(self, design: dict, n_drugs: int):
+        from pylabrobot.resources import (Thermo_TS_96_wellplate_1200ul_Rb, hamilton_1_trough_60mL_Vb,
+                                          hamilton_96_tiprack_300uL, hamilton_96_tiprack_1000uL)
+
+        from labloop.protocol.deck import DeckDesign
+
+        self.design, self.n_drugs = DeckDesign(**{k: v for k, v in design.items() if k != "meta"}), n_drugs
+        set_tip_tracking(True)
+        set_volume_tracking(True)
+        self.loop = asyncio.new_event_loop()
+        deck = self.deck = STARLetDeck()
+        self.lh = LiquidHandler(backend=STARChatterboxBackend(), deck=deck)
+        make = {"50uL": hamilton_96_tiprack_50uL, "300uL": hamilton_96_tiprack_300uL, "1000uL": hamilton_96_tiprack_1000uL}
+        tip_car = TIP_CAR_480_A00(name="tip_carrier")
+        self.racks: dict[str, list] = {}
+        for slot, t in enumerate(("50uL", "300uL", "1000uL", self.design.cell_tip, self.design.drug_tip)):
+            tip_car[slot] = make[t](name=f"tips_{t}_{slot}")
+            self.racks.setdefault(t, []).append(tip_car[slot].resource)
+        deck.assign_child_resource(tip_car, rails=self.design.tip_rail)
+        src = PLT_CAR_L5AC_A00(name="source_carrier")
+        src[0] = self.cells = hamilton_1_trough_60mL_Vb(name="cells")
+        self.dil = []
+        for i in range(n_drugs):
+            src[i + 1] = p = Thermo_TS_96_wellplate_1200ul_Rb(name=f"dilution{i}")
+            self.dil.append(p)
+        deck.assign_child_resource(src, rails=self.design.source_rail)
+        dst = self.dst_car = PLT_CAR_L5AC_A00(name="dest_carrier")
+        dst[1] = self.medium = hamilton_1_trough_200mL_Vb(name="medium")
+        dst[2] = self.prep = Thermo_TS_96_wellplate_1200ul_Rb(name="prep")
+        deck.assign_child_resource(dst, rails=self.design.dest_rail)
+        self.assay = None
+        self.tip_i = {t: 0 for t in self.racks}
+        self.n_plates = 0
+        self.loop.run_until_complete(self.lh.setup())
+
+    def _run(self, coro):
+        return self.loop.run_until_complete(coro)
+
+    def _tips(self, t: str, n: int):
+        pool = [tip for r in self.racks[t] for tip in r.get_all_items()]
+        if self.tip_i[t] + n > len(pool):  # the lab swaps racks (execution/lab.py models when and how long)
+            for r in self.racks[t]:
+                r.fill()
+            self.tip_i[t] = 0
+        out = pool[self.tip_i[t]: self.tip_i[t] + n]
+        self.tip_i[t] += n
+        return out
+
+    async def _move(self, tip: str, srcs, dsts, vols) -> None:
+        n = len(srcs)
+        tips = self._tips(tip, n)
+        ch = list(range(n))
+        await self.lh.pick_up_tips(tips, use_channels=ch)
+        try:
+            spread = {"spread": "tight"} if any(s is self.medium or s is self.cells for s in srcs) else {}
+            await self.lh.aspirate(srcs, vols=vols, use_channels=ch, **spread)
+            await self.lh.dispense(dsts, vols=vols, use_channels=ch)
+        finally:
+            await self.lh.discard_tips(use_channels=ch)
+
+    # ------------------------------------------------------------------ supplies
+    def seat_cells(self, ml: float) -> None:
+        self.cells.tracker.set_volume(ml * 1000)
+
+    def make_batch(self, transfers, plan) -> dict:
+        """Pipette one batch. Stocks are dissolved into prep-plate column 12 the first time; each batch
+        starts on fresh dilution plates."""
+        errors = []
+        drugs = list(dict.fromkeys(t.drug for t in transfers))
+        stock = {d: self.prep.get_well(f"{chr(65 + i)}12") for i, d in enumerate(drugs)}
+        for d, w in stock.items():  # dissolve (more) powder when the stock cannot cover this batch, as the lab does
+            need = sum(t.ul * t.channels * t.repeats for t in transfers if t.drug == d and t.src == "stock")
+            if w.tracker.get_used_volume() < need:
+                w.tracker.set_volume(w.tracker.get_used_volume() + plan.stocks[d]["dmso_ul"])
+        for p in self.dil:
+            for w in p.get_all_items():
+                w.tracker.set_volume(0)
+        for w in self.prep.get_all_items():  # intermediates are remade with every batch
+            if not w.get_identifier().endswith("12"):
+                w.tracker.set_volume(0)
+        self.medium.tracker.set_volume(190_000.0)
+        rows = [chr(65 + r) for r in range(8)]
+        for t in transfers:
+            i = drugs.index(t.drug)
+
+            def col(c):
+                return [self.dil[i].get_well(f"{r}{c}") for r in rows]
+
+            def where(x):
+                if x == "medium":
+                    return self.medium
+                if x == "stock":
+                    return stock[t.drug]
+                return self.prep.get_well(f"{chr(65 + i)}{x[3:]}")
+
+            try:
+                for _ in range(t.repeats):
+                    if t.dst.startswith("col"):
+                        dsts = col(t.dst[3:])
+                        if t.src.startswith("col"):
+                            self._run(self._move(t.tip, col(t.src[3:]), dsts, [t.ul] * 8))
+                        elif t.src == "medium":
+                            self._run(self._move(t.tip, [self.medium] * 8, dsts, [t.ul] * 8))
+                        else:  # a single well feeds each row in turn
+                            for dw in dsts:
+                                self._run(self._move(t.tip, [where(t.src)], [dw], [t.ul]))
+                    else:
+                        self._run(self._move(t.tip, [where(t.src)], [where(t.dst)], [t.ul]))
+            except Exception as e:  # PyLabRobot's volume or tip tracking says this cannot be done
+                errors.append(f"{t.drug} {t.role} {t.src}->{t.dst} {t.ul:.2f} ul: {type(e).__name__}: {str(e)[:120]}")
+        return {"errors": errors, "stock_ul": {d: round(stock[d].tracker.get_used_volume(), 2) for d in drugs},
+                "columns_ul": [[round(self.dil[i].get_well(f"A{c}").tracker.get_used_volume(), 1) for c in range(1, 8)]
+                               for i in range(len(drugs))]}
+
+    def scale_batch(self, ul: float) -> None:
+        """A batch made bigger than the plan's: every filled dilution well holds `ul`."""
+        for p in self.dil:
+            for w in p.get_all_items():
+                if w.tracker.get_used_volume() > 0:
+                    w.tracker.set_volume(min(ul, w.max_volume))
+
+    # ------------------------------------------------------------------ plates
+    def run_plate(self, pm: PlateMap, proto) -> dict:
+        """Dispense one plate from the sources as they stand (planner passes: mode, reuse, order)."""
+        from labloop.protocol.deck import TIPS
+
+        if self.assay is not None:
+            self.assay.unassign()
+        self.n_plates += 1
+        self.dst_car[0] = self.assay = Greiner_384_wellplate_28ul_Fb(name=f"assay{self.n_plates}")
+        cols, errors = pm.spec.cols, []
+
+        def names(ws):
+            return [self.assay.get_well(pm.spec.well_name(w // cols, w % cols)) for w in ws]
+
+        async def go():
+            for ps in proto.passes:
+                what = 0 if ps.reagent[0] == "cells" else ps.reagent[1] + 1
+                chans = sorted(ps.channels)
+                n = len(chans)
+                await self.lh.pick_up_tips(self._tips(ps.tip_type, n), use_channels=list(range(n)))
+                try:
+                    tip = TIPS[ps.tip_type]
+                    per = max(1, int((tip.capacity_ul - tip.dead_ul) // ps.vol_ul)) if ps.reuse else 1
+                    columns = sorted({w % cols for ws in ps.channels.values() for w in ws})
+                    for a in range(ps.aspirations):
+                        batch = columns[a * per:(a + 1) * per] if ps.reuse else columns
+                        vols = [ps.vol_ul * sum(1 for w in ps.channels[k] if w % cols in batch) for k in chans]
+                        srcs = [self.cells] * n if what == 0 else \
+                            [self.dil[what - 1].get_well(f"{chr(65 + k)}{ps.source_col}") for k in chans]  # channel k draws from row k
+                        await self.lh.aspirate(srcs, vols=vols, use_channels=list(range(n)),
+                                               **({"spread": "tight"} if what == 0 else {}))
+                        for c in batch:
+                            use = [i for i, k in enumerate(chans) if any(w % cols == c for w in ps.channels[k])]
+                            wells = [next(w for w in ps.channels[chans[i]] if w % cols == c) for i in use]
+                            await self.lh.dispense(names(wells), vols=[ps.vol_ul] * len(use), use_channels=use)
+                except Exception as e:  # a source ran short, or a well overfilled
+                    errors.append(f"{ps.reagent}: {type(e).__name__}: {str(e)[:120]}")
+                finally:
+                    await self.lh.discard_tips(use_channels=list(range(n)))
+
+        self._run(go())
+        return {"errors": errors, "cells_ml": round(self.cells.tracker.get_used_volume() / 1000, 3)}
+
+
+class PLRLab:
+    """The run's PyLabRobot stations, one per liquid handler."""
+
+    def __init__(self, design: dict, n_drugs: int):
+        self.design, self.n_drugs = design, n_drugs
+        self.stations: dict[str, PLRStation] = {}
+
+    def lh(self, name: str) -> PLRStation:
+        if name not in self.stations:
+            self.stations[name] = PLRStation(self.design, self.n_drugs)
+        return self.stations[name]

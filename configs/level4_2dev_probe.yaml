@@ -1,0 +1,49 @@
+# Level 4 complex: 4 drugs x 4 cell lines x 3 timepoints (49k conditions; full grid = 160
+# 384-well plates), two concurrent campaigns sharing the lab, one of each device (one STARlet,
+# one reader, one arm, one 12-slot incubator: the modelled workcell) with breakdowns, noise +
+# duration variance + failures + reagent expiry.
+name: level4
+designer: bo-ts
+layout: optimized
+scheduler: fifo
+policy: rules
+mode: async
+max_in_flight: 6
+async_plates: 2
+
+campaigns:
+  - name: A
+    rounds: 5
+    plates_per_round: 4
+    space:
+      cell_lines: [ZR751, LNCAP]
+      doses: &doses4
+        - {max: 10.0, steps: 7, fold: 3}    # MK-4827
+        - {max: 20.0, steps: 7, fold: 3}    # sorafenib
+        - {max: 5.0, steps: 7, fold: 3}     # erlotinib
+        - {max: 0.04, steps: 7, fold: 3}    # vinblastine
+      timepoints_h: [24, 48, 72]
+  - name: B
+    rounds: 5
+    plates_per_round: 4
+    space:
+      cell_lines: [NCIH2122, MDAMB436]
+      doses: *doses4
+      timepoints_h: [24, 48, 72]
+
+oracle:
+  source: oneil
+  drugs: [MK-4827, SORAFENIB, ERLOTINIB, VINBLASTINE]
+  cell_lines: [ZR751, LNCAP, NCIH2122, MDAMB436]
+
+noise: {rel_sigma: 0.07, edge_bias: 0.08, pipette_cv: 0.03}
+plate: {rows: 16, cols: 24}
+resources: {liquid_handlers: 2, readers: 2, arms: 1, incubators: 2, incubator_slots: 6}
+durations: {reagent_expiry_min: 960}
+failures:
+  duration_cv: 0.2
+  p_tip_pickup: 0.1
+  p_liquid_transfer: 0.05
+  p_misplace: 0.03
+  p_measurement: 0.1
+  breakdown_per_day: 0.25

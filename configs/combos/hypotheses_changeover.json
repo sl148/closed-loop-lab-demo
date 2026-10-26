@@ -1,0 +1,17 @@
+{
+ "hypotheses": [
+  {
+   "id": "liquid_handler_changeover_cell_line",
+   "concern": "What minimum time must separate dispensing plates of different cell lines on the same liquid handler to avoid cross-contamination?",
+   "kind": "changeover",
+   "steps": [
+    "dispense"
+   ],
+   "why": "plates of different cell lines share the liquid handler",
+   "origin": "reasoning"
+  }
+ ],
+ "abstained": {
+  "liquid_handler_changeover_cell_line": "no number in the archive"
+ }
+}

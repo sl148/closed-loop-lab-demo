@@ -1,0 +1,7 @@
+# What the lab has on hand at the start of a campaign (execution/supplies.py). The same items are
+# listed for the agent in data/kb/lab_catalog.txt, section 4.
+mg: {MK-4827: 5, SORAFENIB: 10, ERLOTINIB: 10, VINBLASTINE: 1}   # powder, -20 C
+DMSO (ul): 100000
+medium (ul): 1000000
+SRC-DIL plates: 60
+RES-CELL reservoirs: 20

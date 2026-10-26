@@ -1,5 +1,6 @@
 """CP-SAT scheduler: optional intervals per alternative resource, NoOverlap for unary
-resources, Cumulative for capacity resources, min/max time lags, absolute bounds, downtime.
+resources, Cumulative for capacity resources, min/max time lags, absolute bounds, downtime,
+sequence-dependent setups between op families.
 
 `build_and_solve` is shared with the repair scheduler, which adds fixed ops, hints, and a
 stability term.
@@ -38,7 +39,11 @@ def _horizon(problem: Problem, ub_hint: int | None) -> int:
 def build_and_solve(problem: Problem, *, name: str, time_limit_s: float, objective: Objective,
                     hint: Schedule | None = None, fixed: dict[str, tuple[int, int, str]] | None = None,
                     stability_ref: Schedule | None = None,
-                    soft_lags: bool = False, workers: int = 8, seed: int = 0) -> Schedule:
+                    soft_lags: bool = False, workers: int = 8, seed: int = 0,
+                    deterministic: bool = False) -> Schedule:
+    """deterministic=True makes the solve reproducible: one worker, and `time_limit_s` is read as
+    CP-SAT's deterministic time (work units, about a second each) instead of the wall clock, which
+    stays only as a safety cap (status gets "+wall_cap" if it fires)."""
     t_wall = time.perf_counter()
     fixed = fixed or {}
     ub_hint = int(hint.makespan * 1.5) + 600 if hint and hint.start else None
@@ -105,9 +110,11 @@ def build_and_solve(problem: Problem, *, name: str, time_limit_s: float, objecti
         else:
             m.AddCumulative(ivs, [1] * len(ivs), cap)
 
+    _setups(m, problem, S, E, P, fixed)
+
     penalties = []
     for lag in problem.lags:
-        gap = S[lag.after] - E[lag.before]
+        gap = S[lag.after] - (S[lag.before] if lag.ref == "start" else E[lag.before])
         m.Add(gap >= lag.min_lag)
         if lag.max_lag is not None:
             if soft_lags:
@@ -145,11 +152,18 @@ def build_and_solve(problem: Problem, *, name: str, time_limit_s: float, objecti
                             m.AddHint(p, 1 if r2 == r else 0)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_limit_s
-    solver.parameters.num_workers = workers
+    if deterministic:
+        solver.parameters.max_deterministic_time = time_limit_s
+        solver.parameters.max_time_in_seconds = 30 * time_limit_s
+        solver.parameters.num_workers = 1
+    else:
+        solver.parameters.max_time_in_seconds = time_limit_s
+        solver.parameters.num_workers = workers
     solver.parameters.random_seed = seed
     status = solver.Solve(m)
     out = Schedule(solver=name, status=solver.StatusName(status))
+    if deterministic and solver.WallTime() >= 0.99 * solver.parameters.max_time_in_seconds:
+        out.status += "+wall_cap"
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         for oid in problem.ops:
             out.start[oid] = solver.Value(S[oid])
@@ -162,24 +176,52 @@ def build_and_solve(problem: Problem, *, name: str, time_limit_s: float, objecti
     return out
 
 
+def _setups(m, problem: Problem, S, E, P, fixed) -> None:
+    """Two ops of different families on the same resource are `setup` minutes apart, in either
+    order; an op also waits that long after a different family already run on its resource."""
+    ops = problem.setup_ops()
+    alts = lambda o: (fixed[o][2],) if o in fixed else problem.alternatives(o)
+    for i, a in enumerate(ops):
+        c = problem.setup_min[problem.ops[a].kind]
+        for r in alts(a):
+            last = problem.res_last.get(r)
+            if last and last[0] != problem.family[a]:
+                m.Add(S[a] >= last[1] + c).OnlyEnforceIf(P[(a, r)])
+        for b in ops[i + 1:]:
+            if problem.family[a] == problem.family[b] or problem.ops[a].kind != problem.ops[b].kind:
+                continue
+            shared = [r for r in alts(a) if r in alts(b)]
+            if not shared:
+                continue
+            a_first = m.NewBoolVar(f"setup_{a}_{b}")
+            for r in shared:
+                both = [P[(a, r)], P[(b, r)]]
+                m.Add(S[b] >= E[a] + c).OnlyEnforceIf(both + [a_first])
+                m.Add(S[a] >= E[b] + c).OnlyEnforceIf(both + [a_first.Not()])
+
+
 class CPSATScheduler:
     """From-scratch CP-SAT solve, warm-started from a FIFO schedule. Falls back to soft
     max-lags when the hard model is infeasible, then to the FIFO schedule itself."""
 
-    def __init__(self, time_limit_s: float = 10.0, objective: Objective | None = None, workers: int = 8):
+    def __init__(self, time_limit_s: float = 10.0, objective: Objective | None = None, workers: int = 8,
+                 deterministic: bool = False):
         self.time_limit_s = time_limit_s
         self.objective = objective or Objective(makespan=1)
         self.workers = workers
+        self.deterministic = deterministic
         self.name = "cpsat"
 
     def schedule(self, problem: Problem, prior: Schedule | None = None, now: int = 0) -> Schedule:
         seed = FIFOScheduler().schedule(problem)
         hint = seed if seed.status == "feasible" else None
         out = build_and_solve(problem, name=self.name, time_limit_s=self.time_limit_s,
-                              objective=self.objective, hint=hint, workers=self.workers)
+                              objective=self.objective, hint=hint, workers=self.workers,
+                              deterministic=self.deterministic)
         if not out.start:
             out = build_and_solve(problem, name=self.name, time_limit_s=self.time_limit_s,
-                                  objective=self.objective, hint=hint, soft_lags=True, workers=self.workers)
+                                  objective=self.objective, hint=hint, soft_lags=True, workers=self.workers,
+                                  deterministic=self.deterministic)
         if not out.start:
             seed.solver = f"{self.name}->fifo"
             return seed

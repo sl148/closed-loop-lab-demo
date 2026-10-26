@@ -1,0 +1,60 @@
+{
+ "plan": {
+  "stocks": {
+   "MK-4827": {
+    "mg": 1.0,
+    "dmso_ul": 203
+   },
+   "SORAFENIB": {
+    "mg": 2.0,
+    "dmso_ul": 430
+   },
+   "ERLOTINIB": {
+    "mg": 1.0,
+    "dmso_ul": 254
+   },
+   "VINBLASTINE": {
+    "mg": 1.0,
+    "dmso_ul": 1100
+   }
+  },
+  "series_solvent": {
+   "MK-4827": "medium",
+   "SORAFENIB": "medium",
+   "ERLOTINIB": "medium",
+   "VINBLASTINE": "medium"
+  },
+  "ul_per_well": 600,
+  "max_age_min": 1380,
+  "cell_ml": 50,
+  "dilution": {
+   "VINBLASTINE": [
+    20
+   ]
+  },
+  "pipetting": {
+   "fill": {
+    "tip": "300uL",
+    "mode": "jet"
+   },
+   "stock": {
+    "tip": "50uL",
+    "mode": "surface"
+   },
+   "intermediate": {
+    "tip": "300uL",
+    "mode": "surface"
+   },
+   "top": {
+    "tip": "50uL",
+    "mode": "surface"
+   },
+   "series": {
+    "tip": "300uL",
+    "mode": "jet"
+   }
+  },
+  "source": "gold"
+ },
+ "note": "a sound plan: ~10 mM stocks (vinblastine ~1 mM, one 20-fold intermediate) under DMSO solubility, batches remade before 1 day, every transfer inside its liquid class"
+}

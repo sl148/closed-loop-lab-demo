@@ -130,6 +130,50 @@ def transfer_plan(spec: CellSpec, plate: str, src: str, dst: str) -> list[Segmen
     return segs
 
 
+def replace_plan(spec: CellSpec, plate: str, station: str, est_xy: tuple[float, float]) -> list[Segment]:
+    """Recover a misplaced plate: re-enter the station, grip it where the camera says it is,
+    lift just clear of the nest, slide over the nominal center, set it down, and leave."""
+    st = spec.stations[station]
+    grip_z = st.plate_z + PLATE[2] / 2
+    sign = cell.ELBOW
+
+    def at(z, xy=None):
+        return scara_ik(xy or st.center, z, st.yaw, elbow=sign)
+
+    def high(xy=None):
+        return {**at(0.0, xy), "arm_z": SAFE_Z}
+
+    def folded(q):
+        e = math.copysign(FOLD, q["arm_elbow"] or 1.0)
+        return {"arm_z": SAFE_Z, "arm_shoulder": q["arm_shoulder"], "arm_elbow": e,
+                "arm_wrist": _wrap(st.yaw - q["arm_shoulder"] - e)}
+
+    inside = station in INSIDE
+    stage = (st.center[0], STAGE_Y)
+    entry = high(stage) if inside else high()
+    segs = [Segment(folded(entry), label=f"to {station}"), Segment(entry, label=f"to {station}")]
+    if inside:
+        n = max(1, math.ceil(math.hypot(st.center[0] - stage[0], st.center[1] - stage[1]) / CART_STEP))
+        segs += [Segment(high((stage[0] + (est_xy[0] - stage[0]) * k / n, stage[1] + (est_xy[1] - stage[1]) * k / n)),
+                         label=f"to {station}") for k in range(1, n + 1)]
+    segs += [Segment(at(grip_z + APPROACH, est_xy), label="approach"),
+             Segment(at(grip_z, est_xy), label="descend"),
+             Segment(at(grip_z, est_xy), action=f"grasp:{plate}", dwell=GRIP_S, label="grip"),
+             Segment(at(grip_z + 0.006, est_xy), label="lift"),
+             Segment(at(grip_z + 0.006), label="center"),
+             Segment(at(grip_z + 0.001), label="place"),
+             Segment(at(grip_z + 0.001), action=f"release:{plate}", dwell=RELEASE_S, label="release"),
+             Segment(high(), label="retract")]
+    if inside:
+        segs.append(Segment(high(stage), label="retract"))
+    segs.append(Segment(folded(entry), label="retract"))
+    w = segs[0].target["arm_wrist"]
+    for sg in segs:
+        sg.target = {**sg.target, "arm_wrist": w + _wrap(sg.target["arm_wrist"] - w)}
+        w = sg.target["arm_wrist"]
+    return segs
+
+
 def lh_pass_plan(spec: CellSpec) -> list[Segment]:
     """One 8-channel pass: pick tips, aspirate from a source column, dispense into the assay
     plate, eject tips. Positions from the PLR deck."""

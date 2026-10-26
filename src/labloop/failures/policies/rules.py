@@ -33,6 +33,15 @@ class RulePolicy:
             else:
                 acts = [RecoveryAction(A.HUMAN, self.human_min)]
                 why = "arm re-placement failed; operator fixes it"
+        elif ev.type is F.PLATE_DROPPED and ev.detail.get("after_read"):
+            acts = [RecoveryAction(A.HUMAN, self.human_min)]
+            why = "plate dropped after its read: data kept, operator cleans the spill"
+        elif ev.type is F.PLATE_DROPPED:
+            # Spilled cells and drug: the plate cannot be picked up and used. Void it, rerun its
+            # conditions, and stop the arm while an operator cleans the spill.
+            acts = [RecoveryAction(A.INVALIDATE_PLATE, plate=ev.plate), RecoveryAction(A.RETEST, plate=ev.plate),
+                    RecoveryAction(A.HUMAN, self.human_min)]
+            why = "plate dropped and spilled; void it, rerun its conditions, operator cleans the arm zone"
         elif ev.type is F.DEVICE_DOWN:
             alts = state.resources.get(ev.resource, {}).get("alternatives", [])
             if alts:

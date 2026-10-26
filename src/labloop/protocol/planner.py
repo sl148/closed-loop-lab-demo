@@ -50,6 +50,8 @@ class Pass:
     aspirations: int
     source_col: int
     waypoints: list[Waypoint] = field(default_factory=list)
+    mode: str = "jet"  # protocol/pipetting.py
+    reuse: bool = True
 
 
 @dataclass
@@ -94,11 +96,15 @@ def plan_plate(pm: PlateMap, design: DeckDesign, ladders: tuple[tuple[float, ...
     tips_used: dict[str, int] = {}
     lanes = _lanes(pm)
     parities = sorted({p for p, _ in lanes})
-    for reagent, wells in reagents.items():
+    order = list(reagents.items())
+    if design.drugs_first:  # drugs into the empty plate, cells on top
+        order = order[1:] + order[:1]
+    for reagent, wells in order:
         is_cells = reagent[0] == "cells"
         vol = CELLS_UL[size] if is_cells else DRUG_UL[size]
         tip = TIPS[design.cell_tip if is_cells else design.drug_tip]
-        per_asp = max(1, int((tip.capacity_ul - tip.dead_ul) // vol)) if design.tip_reuse else 1
+        reuse, mode = design.reuse(is_cells), design.mode(is_cells)
+        per_asp = max(1, int((tip.capacity_ul - tip.dead_ul) // vol)) if reuse else 1
         src_col = 1 if is_cells else ladders[reagent[1]].index(reagent[2])
         for parity in parities:
             lane_wells: dict[int, list[int]] = {}
@@ -110,7 +116,7 @@ def plan_plate(pm: PlateMap, design: DeckDesign, ladders: tuple[tuple[float, ...
                     lane_wells[k] = ws
             if not lane_wells:
                 continue
-            if design.tip_reuse:
+            if reuse:
                 chunks = [lane_wells]
             else:  # one column per pass, fresh tips each time
                 columns = sorted({w % cols for ws in lane_wells.values() for w in ws})
@@ -119,7 +125,7 @@ def plan_plate(pm: PlateMap, design: DeckDesign, ladders: tuple[tuple[float, ...
             for chunk in chunks:
                 n_disp = max(len(ws) for ws in chunk.values())
                 asps = math.ceil(n_disp / per_asp)
-                ps = Pass(reagent, chunk, vol, tip.name, asps, src_col)
+                ps = Pass(reagent, chunk, vol, tip.name, asps, src_col, mode=mode, reuse=reuse)
                 tips_used[tip.name] = tips_used.get(tip.name, 0) + len(chunk)
                 _waypoints(ps, design, pitch, cols, rows, per_asp, parity, size)
                 passes.append(ps)
@@ -131,13 +137,13 @@ def _waypoints(ps: Pass, design: DeckDesign, pitch: float, cols: int, rows: int,
     wp = ps.waypoints
     wp.append(Waypoint("tips", 0.0, 0.0, "pick", DWELL["pick"]))
     src_dx = (ps.source_col - 1) * 9.0
-    jet = design.tip_reuse
+    jet = ps.mode == "jet"
     # Column visit order: all channels dispense at a column together (aligned rows).
     columns = sorted({w % cols for ws in ps.channels.values() for w in ws})
     done = 0
     for a in range(ps.aspirations):
         wp.append(Waypoint("source", src_dx, 0.0, "aspirate", DWELL["aspirate"]))
-        batch = columns[a * per_asp:(a + 1) * per_asp] if design.tip_reuse else columns
+        batch = columns[a * per_asp:(a + 1) * per_asp] if ps.reuse else columns
         for c in batch:
             wp.append(Waypoint("dest", c * pitch, parity * pitch, "dispense",
                                DWELL["dispense_jet"] if jet else DWELL["dispense_contact"], dip=not jet))

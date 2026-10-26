@@ -11,6 +11,7 @@ class FailureType(str, Enum):
     TIP_PICKUP = "tip_pickup"  # physics contact check / tip tracker mismatch
     LIQUID_TRANSFER = "liquid_transfer"  # volume tracker mismatch, short aspiration
     PLATE_MISPLACED = "plate_misplaced"  # camera perception vs planned layout
+    PLATE_DROPPED = "plate_dropped"  # gripper lost the plate in transit: spilled, contaminated
     DEVICE_DOWN = "device_down"  # device status / timeout
     MEASUREMENT = "measurement"  # reader outliers
     TIME_WINDOW = "time_window"  # incubation window or reagent expiry violated

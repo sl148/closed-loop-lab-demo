@@ -8,6 +8,39 @@ The contribution is the automation: experiment selection, scheduling, deck and p
 In plain words: the lab hunts for two or three cancer drugs that work better together than apart. Every test
 takes days in an incubator with limited room, so *what* to test next and *when* each machine runs both matter.
 
+**Live demo:** https://sl148.github.io/closed-loop-lab-demo/ (recorded runs; the page's Live mode reruns the
+agent with your own Claude when opened inside claude.ai).
+
+## Agentic loop
+
+Nobody tells the lab its physical limits. Before launch a Claude agent (Haiku) reads the lab's document
+archive (assay protocol, compound datasheets, cell-culture guide, consumables catalog), brainstorms which
+timing limits might exist, and proposes each one only with a verbatim quote that contains the number. It also
+picks the labware (plate, tips, dispense modes) and plans the liquid prep (stocks, dilution series, cell
+reservoirs), checked on a simulated Hamilton STARlet in PyLabRobot. During the run, statistics on the lab's
+own reads call the agent back: a data review adds a limit the documents never stated and quarantines the
+plates it spoiled; a schedule review re-checks costly assumed values. Bayesian optimization picks the plates,
+CP-SAT repair schedules the robots, and every plate and dilution batch is pipetted on the simulated STARlet.
+
+Level 4 with hidden limits (read equilibration, drug-dilution shelf life, cell-line changeover), liquid prep,
+labware and pipetting truth; 3 seeds, deterministic scheduling:
+
+| Run | Synergy missed (regret) | True best pairs found | Wrong values kept | Invalid plates |
+|---|---|---|---|---|
+| No limits | 0.74 | 0 / 6 | 58 | 34 |
+| Agent, before launch | 0.29 | 1 / 6 | 453 | 12 |
+| Agent + in-run reviews | 0.27 | 2 / 6 | 90 | 12 |
+| All real limits (gold) | 0.09 | 5 / 6 | 3 | 3 |
+
+- Before launch the agent grounds 2 of the 3 real limits (drug dilutions within 1 day, Cayman datasheet;
+  a wait before reading, TB288 p. 7) and misses cell-line cleaning, which no document quantifies.
+- The data review then flags plates read after an uncleaned cell-line switch, adds a cleaning step as a
+  soft, assumed limit, and drops those plates: wrong values kept fall from 453 to 90 (all 3 seeds).
+- The remaining gap to gold comes from values, not missing limits: the agent's 10 min pre-read wait (the
+  protocol's room-temperature step is 30 min) and its slower labware choice (drug tips used fresh, 118 vs
+  36 min per plate). With the agent's labware and prep but the gold limit values, regret is 0.08 (4 / 6).
+- Agent cost per campaign: about $0.13 (Haiku): limits $0.09, labware $0.005, prep $0.03, reviews $0.01.
+
 ## Headline results
 
 | Question | Result |
@@ -73,13 +106,17 @@ is extracted by `scripts/extract_oneil.py` from the DrugComb v1.4 dump on Zenodo
 
 ## Honest limits
 
+- The agent's archive is 7 documents; the hidden limits are designed so the documents ground two of three.
+- Live mode replays recorded lab runs: the browser reruns the agent, the deck search and the camera check,
+  then plays the recorded run made with the limits the live agent found.
 - The biology is an emulator: pair surfaces come from 4x4 dose grids, and synergy beyond pairs is additive.
 - Failure rates are configured, except tip pickup, which comes from the MuJoCo contact model.
 - No liquid physics: PyLabRobot tracks volumes; dispensing accuracy is a noise term.
 - A tip-box swap replaces every empty or partly used rack at once.
 - Batch MC acquisitions (qEI, qUCB) are impractical at ~300-point plates (about 1.4 h per seed vs minutes for
   Thompson sampling); qUCB was not run to completion.
-- CP-SAT runs use wall-clock limits, so they are not bit-reproducible; FIFO and priority runs are.
+- CP-SAT runs in experiments A-C use wall-clock limits, so they are not bit-reproducible; the agentic Level 4
+  runs use deterministic mode (one worker, deterministic time limit) and replay bit-identically.
 - Arm motion is a fixed set of taught routes checked for collisions in MuJoCo, not an online motion planner.
 - In campaigns, whether the camera flags a misplaced plate is sampled from the detection rate measured in
   MuJoCo; the web viewer redraws the logged offset (x10) rather than a rendered camera frame.

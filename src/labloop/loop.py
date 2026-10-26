@@ -22,6 +22,8 @@ from labloop.design.simple import GridDesigner, GridThenRefine, LHSDesigner, Ran
 from labloop.design.throughput import ThroughputAwareBO
 from labloop.evaluate import History
 from labloop.execution.durations import build_durations
+from labloop.execution.truth import build_truth
+from labloop.constraints.compile import load_constraints
 from labloop.execution.lab import FailureModel, Lab
 from labloop.execution.reader import PlateReader
 from labloop.failures.policies.rules import RulePolicy
@@ -45,6 +47,28 @@ DESIGNERS = {
 }
 
 
+def build_supplies(cfg: dict):
+    """Liquid supplies (execution/supplies.py) when the config has a prep plan: "default", a dict, or a
+    prep.json path (agent/prep.py); `inventory` is what the lab has on hand. Returns (supplies, top doses)."""
+    if not cfg.get("prep"):
+        return None, {}
+    import yaml
+
+    from labloop.execution.supplies import PrepPlan, Supplies
+
+    drugs = cfg["oracle"]["drugs"]
+    ladders = build_space((cfg.get("campaigns") or [{}])[0].get("space") or cfg["space"]).ladders
+    p = cfg["prep"]
+    if p == "default":
+        plan = PrepPlan.default(drugs)
+    else:
+        d = p if isinstance(p, dict) else json.loads(Path(p).read_text(encoding="utf-8"))
+        plan = PrepPlan.from_dict(d.get("plan", d))
+    inv = cfg.get("inventory") or {}
+    inv = yaml.safe_load(Path(inv).read_text()) if isinstance(inv, str) else inv
+    return Supplies(plan, drugs, ladders, inv), {d: max(l) for d, l in zip(drugs, ladders)}
+
+
 def load_deck(spec) -> dict:
     """A deck design dict, or 'path/deck_x.json' (optimized design) / 'path#baseline'."""
     if isinstance(spec, dict):
@@ -60,12 +84,13 @@ def build_scheduler(name: str, cfg: dict | None = None):
         return FIFOScheduler()
     if name.startswith("priority"):
         return PriorityScheduler(name.split("-", 1)[1] if "-" in name else "lwr")
+    det, workers = bool(cfg.get("deterministic", False)), cfg.get("workers", 8)
     if name == "cpsat":
-        return CPSATScheduler(cfg.get("time_limit_s", 5.0), obj)
+        return CPSATScheduler(cfg.get("time_limit_s", 5.0), obj, workers, det)
     if name == "repair":
         return RepairScheduler(cfg.get("repair_time_limit_s", 1.0), cfg.get("window_min", 240),
                                cfg.get("time_limit_s", 5.0),
-                               Objective(obj.makespan, obj.flow, cfg.get("stability", 1)))
+                               Objective(obj.makespan, obj.flow, cfg.get("stability", 1)), workers, det)
     raise KeyError(name)
 
 
@@ -76,6 +101,11 @@ def build_policy(name: str, cfg: dict | None = None):
         from labloop.failures.policies.llm import build_llm_policy
 
         return build_llm_policy(name, cfg or {})
+    if name == "tiered":  # rules first, Claude only when they run out (provider: live | replay | scripted)
+        from labloop.failures.policies.llm import build_llm_policy
+        from labloop.failures.policies.tiered import TieredPolicy
+
+        return TieredPolicy(build_llm_policy("llm", cfg or {}))
     raise KeyError(name)
 
 
@@ -103,6 +133,9 @@ class Campaign:
     async_plates: int = 1
     landscape_eval: bool = False
     belief_log: bool = False
+    # Last plates of the budget re-test the best candidates (and their single-drug wells) with
+    # replicates; the final answer then comes from confirmed candidates only.
+    confirm: dict | None = None  # {"plates": 2, "candidates": 8, "replicates": 6}
     history: History = field(default_factory=History)
     in_flight: dict[str, list[Condition]] = field(default_factory=dict)
     retest: list[Condition] = field(default_factory=list)
@@ -121,6 +154,19 @@ class Campaign:
     def plate_budget(self) -> int:
         return self.plates_per_round * self.rounds
 
+    @property
+    def explore_budget(self) -> int:
+        return self.plate_budget - (self.confirm or {}).get("plates", 0)
+
+    confirmed: bool = False  # the confirmation plates have all been read
+    confirm_plates: list = field(default_factory=list)
+
+    def quarantine(self, pm: PlateMap) -> int:
+        """Forget a plate's reads and queue its conditions again (they ride on later plates)."""
+        n = self.history.drop({pm.plate_id})
+        self.retest += pm.conditions()
+        return n
+
     def pending(self) -> list[Condition]:
         return [c for conds in self.in_flight.values() for c in conds]
 
@@ -128,7 +174,11 @@ class Campaign:
         def cb(pm: PlateMap, reads: list[WellRead]) -> None:
             self.history.add(reads)
             self.in_flight.pop(pm.plate_id, None)
+            if self.confirm_plates and not self.in_flight and all(p not in self.in_flight for p in self.confirm_plates):
+                self.confirmed = True
             self.record(lab, pm.plate_id)
+            if getattr(lab, "reviewer", None):  # in-loop review (M10): may change the lab's constraints
+                lab.reviewer.after_read(lab)
             if not self.changed.triggered:
                 self.changed.succeed()
         return cb
@@ -140,7 +190,7 @@ class Campaign:
         self.retest += conds
 
     def record(self, lab: Lab, plate_id: str) -> None:
-        best = self.history.best()
+        best = self.history.best((self.confirm or {}).get("replicates", 1) if self.confirmed else 1)
         true = self.oracle.true_excess(best[0].cell_line, best[0].doses, best[0].timepoint_h) if best else None
         self.progress.append({
             "t": int(lab.env.now), "plate": plate_id, "plates_read": self.plates_used - len(self.in_flight),
@@ -220,7 +270,7 @@ class Campaign:
             if conds:
                 chosen += conds
                 plates += self.layout.place(conds, campaign=self.name)
-        plates = plates[: max(0, self.plate_budget - self.plates_used)]
+        plates = plates[: max(0, self.explore_budget - self.plates_used)]
         if not plates:
             return 0
         if self.belief_log:
@@ -230,16 +280,60 @@ class Campaign:
             self.wells_used += len(pm.conditions())
             self.reagent_nmol += sum(sum(c.doses) for c in pm.conditions()) * WELL_VOLUME_UL * 1e-3
         self.plates_used += len(plates)
-        lab.submit(plates, self.name, self.on_read(lab), self.on_retest)
+        lab.submit(plates, self.name, self.on_read(lab), self.on_retest, self.quarantine)
+        return len(plates)
+
+    def confirm_conditions(self) -> list[list[Condition]]:
+        """One list per confirmation plate: the best candidates of one (cell line, timepoint) group by
+        lower confidence bound, each with its single-drug conditions, `replicates` times over."""
+        cf = self.confirm or {}
+        n_pl, k, r = cf.get("plates", 0), cf.get("candidates", 8), cf.get("replicates", 6)
+        est, counts = self.history.excess_estimates(), {c: len(v) for c, v in self.history.samples().items()}
+        sd = self.history.noise_sd() * np.sqrt(2)
+        ranked = sorted(est, key=lambda c: (-(est[c] - sd / np.sqrt(counts[c])), c))
+        groups: list[tuple[str, int]] = []
+        for c in ranked:  # groups in the order of their best candidate
+            if c.group() not in groups:
+                groups.append(c.group())
+        out = []
+        for g in groups[:n_pl]:
+            cands, conds = [], {}
+            for c in (c for c in ranked if c.group() == g):
+                trial = dict(conds)
+                for x in (c, *[c.single(i) for i in c.active]):
+                    trial[x] = r
+                if sum(trial.values()) > self.layout.capacity:
+                    break
+                cands.append(c)
+                conds = trial
+                if len(cands) >= k:
+                    break
+            if cands:
+                out.append([x for x, m in conds.items() for _ in range(m)])
+        return out
+
+    def _confirm(self, lab: Lab) -> int:
+        plates = [pm for conds in self.confirm_conditions() for pm in self.layout.place(conds, campaign=self.name)]
+        plates = plates[: max(0, self.plate_budget - self.plates_used)]
+        for pm in plates:
+            self.in_flight[pm.plate_id] = pm.conditions()
+            self.wells_used += len(pm.conditions())
+            self.reagent_nmol += sum(sum(c.doses) for c in pm.conditions()) * WELL_VOLUME_UL * 1e-3
+        self.plates_used += len(plates)
+        self.confirm_plates = [pm.plate_id for pm in plates]
+        if plates:
+            lab._log("confirm", campaign=self.name, plates=self.confirm_plates,
+                     candidates=len({c for pm in plates for c in pm.conditions() if c.is_combo}))
+            lab.submit(plates, self.name, self.on_read(lab), self.on_retest, self.quarantine)
         return len(plates)
 
     def process(self, lab: Lab):
         env = lab.env
         rnd = 0
-        while self.plates_used < self.plate_budget:
+        while self.plates_used < self.explore_budget:
             self.changed = env.event()
             if self.mode == "sync":
-                if not self._submit(lab, min(self.plates_per_round, self.plate_budget - self.plates_used)):
+                if not self._submit(lab, min(self.plates_per_round, self.explore_budget - self.plates_used)):
                     break
                 rnd += 1
                 while self.in_flight:
@@ -251,7 +345,7 @@ class Campaign:
             else:
                 room = self.max_in_flight - len(self.in_flight)
                 if room >= self.async_plates or not self.in_flight:
-                    if not self._submit(lab, min(self.async_plates, self.plate_budget - self.plates_used)):
+                    if not self._submit(lab, min(self.async_plates, self.explore_budget - self.plates_used)):
                         if not self.in_flight:
                             break
                         yield self.changed
@@ -260,14 +354,19 @@ class Campaign:
         while self.in_flight:
             self.changed = env.event()
             yield self.changed
+        if self.confirm and self._confirm(lab):  # after the whole screen is in: confirm, then answer
+            while self.in_flight:
+                self.changed = env.event()
+                yield self.changed
         if self.landscape_eval and (not self.landscape or self.landscape[-1]["plates"] != self.plates_used):
             self.landscape.append({"t": int(env.now), "round": rnd, "plates": self.plates_used,
                                    "rmse": self.landscape_rmse()})
         self.done.succeed()
 
 
-def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
-    """Runs every campaign in `cfg` on one shared lab. Returns a JSON-able result dict."""
+def run_campaign(cfg: dict, seed: int, overrides: dict | None = None, on_lab=None) -> dict:
+    """Runs every campaign in `cfg` on one shared lab. Returns a JSON-able result dict.
+    `on_lab(env, lab)` is called once the lab exists, before the run (tests, reviews)."""
     cfg = {**cfg, **(overrides or {})}
     ss = np.random.SeedSequence(seed)
     lab_rng, *camp_seeds = ss.spawn(1 + len(cfg.get("campaigns", [{}])))
@@ -287,13 +386,24 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
         durations, failures = apply_sim3d(cfg["sim3d"], durations, failures)
     lab = Lab(env, resources, durations, reader, scheduler, policy, np.random.default_rng(lab_rng), failures,
               plr_verify=cfg.get("plr_verify", False),
-              shadow=CPSATScheduler(cfg["shadow_time_s"], Objective(10, 1)) if cfg.get("shadow_time_s") else None)
+              shadow=CPSATScheduler(cfg["shadow_time_s"], Objective(10, 1)) if cfg.get("shadow_time_s") else None,
+              truth=build_truth(cfg.get("truth")), constraints=load_constraints(cfg.get("constraints")),
+              supplies=(sup := build_supplies(cfg))[0])
+    lab.prep_tops = sup[1]
+    if cfg.get("plr") and durations.deck:  # the liquid handler's work runs on PyLabRobot (execution/plr_bridge.py)
+        from labloop.execution.plr_bridge import PLRLab
+
+        lab.plr = PLRLab(durations.deck, len(cfg["oracle"]["drugs"]))
+    if cfg.get("review"):
+        from labloop.review.reviewer import Reviewer
+
+        lab.reviewer = Reviewer(cfg["review"], cfg)
 
     spec = PlateSpec(**cfg.get("plate", {}))
     campaigns = []
     for i, ccfg in enumerate(cfg.get("campaigns", [{}])):
         ccfg = {**{k: cfg[k] for k in ("space", "designer", "rounds", "plates_per_round", "mode", "max_in_flight",
-                                       "async_plates", "layout", "designer_cfg", "landscape_eval", "belief_log")
+                                       "async_plates", "layout", "designer_cfg", "landscape_eval", "belief_log", "confirm")
                      if k in cfg},
                 **ccfg}
         space = build_space(ccfg["space"])
@@ -302,12 +412,20 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
         designer = DESIGNERS[ccfg["designer"]](space, **ccfg.get("designer_cfg", {}))
         c = Campaign(ccfg.get("name", f"C{i}"), space, designer, layout, oracle, rng, ccfg.get("plates_per_round", 1),
                      ccfg.get("rounds", 4), ccfg.get("mode", "sync"), ccfg.get("max_in_flight", 4),
-                     ccfg.get("async_plates", 1), ccfg.get("landscape_eval", False), ccfg.get("belief_log", False))
+                     ccfg.get("async_plates", 1), ccfg.get("landscape_eval", False), ccfg.get("belief_log", False),
+                     ccfg.get("confirm"))
         c.optimum = true_optimum(space, oracle)
         c.done = env.event()
         campaigns.append(c)
         env.process(c.process(lab))
-    env.run(until=simpy.AllOf(env, [c.done for c in campaigns]))
+    if on_lab:
+        on_lab(env, lab)
+    from labloop.review.providers import ReviewPending
+
+    try:
+        env.run(until=simpy.AllOf(env, [c.done for c in campaigns]))
+    except ReviewPending as e:  # a review needs an answer from elsewhere; rerun once it is in the log
+        return {"name": cfg["name"], "seed": seed, "pending": e.request, "reviews": lab.reviewer.records}
 
     executed = lab.executed()
     prob = _executed_problem(lab)
@@ -328,8 +446,41 @@ def run_campaign(cfg: dict, seed: int, overrides: dict | None = None) -> dict:
         "plates": {pid: _plate_summary(lab, pm) for pid, pm in lab.plates.items()},
         "resources": {r: res.capacity for r, res in resources.items()},
         "invalid_plates": sum(1 for s in lab.plate_status.values() if s == "invalid"),
+        "truth": _truth_summary(lab),
+        "constraint_history": lab.constraint_history,
+        "reviews": lab.reviewer.records if getattr(lab, "reviewer", None) else [],
+        "plate_version": lab.plate_version,
+        "recovery": _recovery_summary(lab),
         "deck": durations.deck,
+        "supplies": {"plan": lab.supplies.plan.to_dict(), "batches": lab.supplies.n_batches, "ledger": lab.supplies.ledger,
+                     "inventory_left": lab.supplies.inv, "stock_ul": lab.supplies.stock_ul} if lab.supplies else None,
     }
+
+
+def _recovery_summary(lab: Lab) -> dict:
+    """Decisions per policy path, and LLM usage when a live provider ran."""
+    out: dict = {}
+    for e in lab.events:
+        if e["kind"] == "failure":
+            k = e["decision"]["policy"]
+            out[k] = out.get(k, 0) + 1
+    llm = getattr(lab.policy, "llm", lab.policy)
+    usage = getattr(getattr(llm, "provider", None), "usage", None)
+    if usage:
+        out["usage"] = dict(usage)
+    return out
+
+
+def _truth_summary(lab: Lab) -> dict:
+    """Plates that broke each physical limit, and plates rejected by QC."""
+    out: dict[str, int] = {}
+    for e in lab.events:
+        if e["kind"] == "truth":
+            for k in e["limit"].split("+"):
+                out[k] = out.get(k, 0) + 1
+        elif e["kind"] == "qc_fail":
+            out["qc_fail"] = out.get("qc_fail", 0) + 1
+    return out
 
 
 def _executed_problem(lab: Lab):
@@ -337,7 +488,7 @@ def _executed_problem(lab: Lab):
 
     prob = Problem(resources=lab.resources)
     for oid, r in lab.run.items():
-        if r.status == "done":
+        if r.status == "done" and not r.cancelled:
             prob.add_op(lab.ops[oid])
     return prob
 

@@ -1,0 +1,250 @@
+{
+ "config": "configs/level4.yaml",
+ "sample_plates": 4,
+ "best": {
+  "design": {
+   "tip_rail": 25,
+   "source_rail": 19,
+   "dest_rail": 13,
+   "cell_tip": "50uL",
+   "drug_tip": "50uL",
+   "racks_on_deck": 3,
+   "cell_source": "trough",
+   "tip_reuse": true,
+   "assay_plate": "white",
+   "cell_mode": "jet",
+   "drug_mode": "surface",
+   "cell_reuse": true,
+   "drug_reuse": false,
+   "drugs_first": false
+  },
+  "protocol_min": 116.44,
+  "swaps_per_plate": 3.8,
+  "lh_min_per_plate": 118.09
+ },
+ "top": [
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 3,
+    "cell_source": "trough",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "protocol_min": 116.44,
+   "swaps_per_plate": 3.8,
+   "lh_min_per_plate": 118.09
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 3,
+    "cell_source": "plate",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "protocol_min": 116.44,
+   "swaps_per_plate": 3.8,
+   "lh_min_per_plate": 118.09
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "protocol_min": 115.93,
+   "swaps_per_plate": 5.7,
+   "lh_min_per_plate": 118.4
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "plate",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "protocol_min": 115.93,
+   "swaps_per_plate": 5.7,
+   "lh_min_per_plate": 118.4
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 4,
+    "cell_source": "trough",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "protocol_min": 117.33,
+   "swaps_per_plate": 2.85,
+   "lh_min_per_plate": 118.56
+  }
+ ],
+ "baseline": {
+  "design": {
+   "tip_rail": 15,
+   "source_rail": 8,
+   "dest_rail": 21,
+   "cell_tip": "300uL",
+   "drug_tip": "300uL",
+   "racks_on_deck": 5,
+   "cell_source": "plate",
+   "tip_reuse": false,
+   "assay_plate": "clear",
+   "cell_mode": "jet",
+   "drug_mode": "jet",
+   "cell_reuse": null,
+   "drug_reuse": null,
+   "drugs_first": false
+  },
+  "protocol_min": 113.58,
+  "swaps_per_plate": 2.9,
+  "lh_min_per_plate": 114.83
+ },
+ "candidates": {
+  "n": 4928,
+  "lh_min_hist": {
+   "edges": [
+    118.085,
+    118.469,
+    118.853,
+    119.237,
+    119.621,
+    120.005,
+    120.389,
+    120.773,
+    121.157,
+    121.541,
+    121.925,
+    122.309,
+    122.693,
+    123.077,
+    123.461,
+    123.845,
+    124.229,
+    124.613,
+    124.997,
+    125.381,
+    125.765,
+    126.149,
+    126.533,
+    126.917,
+    127.301
+   ],
+   "counts": [
+    4,
+    8,
+    16,
+    12,
+    32,
+    52,
+    52,
+    100,
+    100,
+    164,
+    202,
+    244,
+    302,
+    342,
+    404,
+    386,
+    420,
+    404,
+    378,
+    406,
+    460,
+    232,
+    98,
+    110
+   ]
+  }
+ },
+ "labware": {
+  "rules": {
+   "assay_plate": "white",
+   "cell_tips": [
+    "50uL"
+   ],
+   "drug_tips": [
+    "50uL"
+   ],
+   "pipetting": {
+    "cell_mode": "jet",
+    "cell_reuse": true,
+    "drug_mode": "surface",
+    "drug_reuse": false
+   }
+  },
+  "source": "results/constraints/open_haiku/labware.json",
+  "fastest_without_rules": {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 13,
+    "dest_rail": 19,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 5,
+    "cell_source": "trough",
+    "tip_reuse": true,
+    "assay_plate": "clear",
+    "cell_mode": "jet",
+    "drug_mode": "jet",
+    "cell_reuse": null,
+    "drug_reuse": null,
+    "drugs_first": false
+   },
+   "protocol_min": 19.19,
+   "swaps_per_plate": 0.81,
+   "lh_min_per_plate": 19.54
+  }
+ }
+}

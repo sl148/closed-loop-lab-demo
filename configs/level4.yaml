@@ -1,6 +1,7 @@
 # Level 4 complex: 4 drugs x 4 cell lines x 3 timepoints (49k conditions; full grid = 160
-# 384-well plates), two concurrent campaigns sharing the lab, duplicated devices with
-# breakdowns, noise + duration variance + failures + reagent expiry.
+# 384-well plates), two concurrent campaigns sharing the lab, one of each device (one STARlet,
+# one reader, one arm, one 12-slot incubator: the modelled workcell) with breakdowns, noise +
+# duration variance + failures + reagent expiry.
 name: level4
 designer: bo-ts
 layout: optimized
@@ -37,7 +38,7 @@ oracle:
 
 noise: {rel_sigma: 0.07, edge_bias: 0.08, pipette_cv: 0.03}
 plate: {rows: 16, cols: 24}
-resources: {liquid_handlers: 2, readers: 2, arms: 1, incubators: 2, incubator_slots: 6}
+resources: {liquid_handlers: 1, readers: 1, arms: 1, incubators: 1, incubator_slots: 12}
 durations: {reagent_expiry_min: 960}
 failures:
   duration_cv: 0.2
@@ -46,3 +47,6 @@ failures:
   p_misplace: 0.03
   p_measurement: 0.1
   breakdown_per_day: 0.25
+# campaign end: the last 2 plates re-test the best candidates (loop.Campaign.confirm)
+confirm: {plates: 2, candidates: 8, replicates: 6}
+inventory: configs/inventory_level4.yaml

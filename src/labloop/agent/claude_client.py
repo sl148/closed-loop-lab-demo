@@ -31,6 +31,9 @@ costs are physical and fixed; the `minutes` field is ignored:
 - invalidate_wells / invalidate_plate: exclude data from the analysis.
 - retest: queue the affected conditions again in the campaign's next batch.
 - skip: accept the situation with no action.
+A dropped plate is spilled and contaminated: it cannot be picked up and used again.
+When event.detail.escalated is set, a fixed rule table already handled the routine options and
+passed the case to you (rule_proposal is what it would do next); pick what is best now.
 
 Wells hit by a liquid-transfer or measurement failure carry WRONG values unless remeasured or
 invalidated; wrong data silently misleads the optimizer, which is worse than lost wells.

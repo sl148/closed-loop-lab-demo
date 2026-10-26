@@ -7,6 +7,9 @@ for a full one from the rack hotel (two arm transfers, with the head idle meanwh
 
 Designs are grouped by what changes the *plan* (tip types, reuse); each group is planned once
 per sample plate and then timed on every carrier placement in the group.
+
+`rules` (agent/labware.py `deck_rules`) restrict the search to the labware the agent allowed:
+which tips may serve the cells and the drugs, and the assay plate every design carries.
 """
 
 from __future__ import annotations
@@ -61,12 +64,25 @@ def score(design: DeckDesign, protocols) -> DeckScore:
     return DeckScore(design, prot, swaps, prot + swaps * RACK_SWAP_S)
 
 
-def optimize_deck(sample: list[PlateMap], reuse: bool = True, top: int = 5) -> tuple[DeckScore, list[DeckScore], DeckScore]:
-    """Returns (best, top-k, baseline score)."""
+def allowed(d: DeckDesign, rules: dict | None) -> bool:
+    r = rules or {}
+    return ((not r.get("cell_tips") or d.cell_tip in r["cell_tips"]) and
+            (not r.get("drug_tips") or d.drug_tip in r["drug_tips"]))
+
+
+def optimize_deck(sample: list[PlateMap], reuse: bool = True, top: int = 5, all_scores: list | None = None,
+                  rules: dict | None = None) -> tuple[DeckScore, list[DeckScore], DeckScore]:
+    """Returns (best, top-k, baseline score); `all_scores`, if given, receives every candidate's score.
+    Raises ValueError when the rules leave no deck."""
     groups: dict[tuple, list[DeckDesign]] = defaultdict(list)
+    plate = (rules or {}).get("assay_plate", "clear")
+    pip = (rules or {}).get("pipetting") or {}  # agent/labware.py: mode, reuse, order
     for d in candidate_designs():
-        d = replace(d, tip_reuse=reuse)
-        groups[(d.cell_tip, d.drug_tip, d.cell_source, d.tip_reuse)].append(d)
+        d = replace(d, tip_reuse=reuse, assay_plate=plate, **pip)
+        if allowed(d, rules):
+            groups[(d.cell_tip, d.drug_tip, d.cell_source, d.tip_reuse)].append(d)
+    if not groups:
+        raise ValueError(f"no deck satisfies the labware rules {rules}")
     scored: list[DeckScore] = []
     for key, designs in groups.items():
         protocols = [plan_plate(pm, designs[0]) for pm in sample]
@@ -74,6 +90,8 @@ def optimize_deck(sample: list[PlateMap], reuse: bool = True, top: int = 5) -> t
         for d in designs:
             scored.append(score(d, protocols))
     scored.sort(key=lambda s: s.total_s)
+    if all_scores is not None:
+        all_scores.extend(scored)
     base = score(BASELINE, [plan_plate(pm, BASELINE) for pm in sample])
     return scored[0], scored[:top], base
 

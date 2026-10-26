@@ -57,17 +57,24 @@ class ThroughputAwareBO(BODesigner):
                 out[(cl, t)] = float(np.sort(gain)[::-1][:capacity].sum())
         return out
 
-    def hours_to_result(self, lab, probe_plates: list[PlateMap], group: tuple, capacity: int) -> float:
+    def hours_to_result(self, lab, probe_plates: list[PlateMap], group: tuple, capacity: int,
+                        constrained: bool = True) -> float:
+        """Probe plates get the lab's constraints like a submitted plate would (constrained=False
+        leaves them off, to measure what the constraints cost)."""
         prob, _ = lab.build_problem()
         now = int(lab.env.now)
         for pm in probe_plates:
             plate_job(prob, pm, lab.durations, now)
+            if constrained:
+                lab.cons.apply(prob, pm)
         cl, t = group
         dummy = PlateMap(f"__probe{len(probe_plates)}", probe_plates[0].spec if probe_plates else self._spec,
                          cl, t)
         for k in range(capacity):
             dummy.wells[divmod(k, dummy.spec.cols)] = Condition(cl, (1.0,) * self.space.n_drugs, t)
         plate_job(prob, dummy, lab.durations, now)
+        if constrained:
+            lab.cons.apply(prob, dummy)
         sched = FIFOScheduler().schedule(prob)
         return max(1.0, (sched.end[f"{dummy.plate_id}.read"] - now) / 60.0), dummy
 
@@ -81,10 +88,12 @@ class ThroughputAwareBO(BODesigner):
         values = self.group_values(model, history, rng, cap)
         order, probes = [], []
         for _ in range(n_plates):
-            scored = {}
+            scored, free = {}, {}
             for g, v in values.items():
                 hours, _ = self.hours_to_result(lab, probes, g, cap)
                 scored[g] = (v / hours, v, hours)
+                if lab.cons.specs:  # what the same pick would cost without the constraints
+                    free[g] = self.hours_to_result(lab, probes, g, cap, constrained=False)[0]
             g = max(scored, key=lambda k: (scored[k][0], k))
             order.append(g)
             _, dummy = self.hours_to_result(lab, probes, g, cap)
@@ -92,5 +101,6 @@ class ThroughputAwareBO(BODesigner):
             values[g] *= self.diminish
             self.decisions.append({"t": int(lab.env.now), "chosen": list(g),
                                    "scores": {f"{k[0]}@{k[1]}h": [round(s[1], 4), round(s[2], 2)]
+                                              + ([round(free[k], 2)] if k in free else [])
                                               for k, s in scored.items()}})
         return order

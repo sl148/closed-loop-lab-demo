@@ -1,0 +1,24 @@
+task: drug-combination viability screen, 384-well, CellTiter-Glo read
+constraints:
+- id: reagent_stability
+  kind: deadline_from_release
+  step: dispense
+  minutes: 1440
+  source:
+    doc: cayman_sorafenib
+    page: 1
+    quote: We do not recommend storing the aqueous solution for more than one day.
+    verified: true
+- id: changeover
+  kind: changeover
+  step: dispense
+  by: cell_line
+  minutes: 15
+  hard: false
+  rationale: the source shows the risk but gives no cleaning time; 15 min is assumed
+  source:
+    doc: atcc_culture_guide
+    page: 26
+    quote: Cross-contamination of 1 cell line with another can sometimes lead to the
+      replacement of the original cell with the contaminant
+    verified: true

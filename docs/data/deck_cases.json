@@ -1,0 +1,215 @@
+{
+ "n_candidates": 14784,
+ "best": {
+  "design": {
+   "tip_rail": 25,
+   "source_rail": 13,
+   "dest_rail": 19,
+   "cell_tip": "300uL",
+   "drug_tip": "300uL",
+   "racks_on_deck": 5,
+   "cell_source": "trough",
+   "tip_reuse": true
+  },
+  "total_s": 1172.4654,
+  "protocol_s": 1151.3945,
+  "swaps": 0.810417
+ },
+ "baseline": {
+  "design": {
+   "tip_rail": 15,
+   "source_rail": 8,
+   "dest_rail": 21,
+   "cell_tip": "300uL",
+   "drug_tip": "300uL",
+   "racks_on_deck": 5,
+   "cell_source": "plate",
+   "tip_reuse": false
+  },
+  "total_s": 7879.6757,
+  "protocol_s": 7804.208,
+  "swaps": 2.902604
+ },
+ "designs": [
+  {
+   "design": {
+    "tip_rail": 12,
+    "source_rail": 1,
+    "dest_rail": 18,
+    "cell_tip": "300uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1298.9943,
+   "protocol_s": 1193.6402,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 12,
+    "source_rail": 24,
+    "dest_rail": 18,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1276.4948,
+   "protocol_s": 1171.1406,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 13,
+    "source_rail": 7,
+    "dest_rail": 25,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1220.7304,
+   "protocol_s": 1168.0533,
+   "swaps": 2.026042
+  },
+  {
+   "design": {
+    "tip_rail": 15,
+    "source_rail": 1,
+    "dest_rail": 22,
+    "cell_tip": "300uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1297.3559,
+   "protocol_s": 1192.0018,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 16,
+    "source_rail": 2,
+    "dest_rail": 25,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1284.1724,
+   "protocol_s": 1178.8182,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 17,
+    "source_rail": 7,
+    "dest_rail": 23,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1222.3436,
+   "protocol_s": 1169.6666,
+   "swaps": 2.026042
+  },
+  {
+   "design": {
+    "tip_rail": 19,
+    "source_rail": 2,
+    "dest_rail": 25,
+    "cell_tip": "300uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1294.031,
+   "protocol_s": 1188.6769,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 21,
+    "source_rail": 2,
+    "dest_rail": 15,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1287.2798,
+   "protocol_s": 1181.9256,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 22,
+    "source_rail": 6,
+    "dest_rail": 15,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1228.4407,
+   "protocol_s": 1175.7636,
+   "swaps": 2.026042
+  },
+  {
+   "design": {
+    "tip_rail": 23,
+    "source_rail": 7,
+    "dest_rail": 17,
+    "cell_tip": "300uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1277.5705,
+   "protocol_s": 1172.2163,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 24,
+    "source_rail": 6,
+    "dest_rail": 17,
+    "cell_tip": "1000uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1272.1633,
+   "protocol_s": 1166.8091,
+   "swaps": 4.052083
+  },
+  {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 4,
+    "dest_rail": 15,
+    "cell_tip": "300uL",
+    "drug_tip": "300uL",
+    "racks_on_deck": 2,
+    "cell_source": "trough",
+    "tip_reuse": true
+   },
+   "total_s": 1234.2663,
+   "protocol_s": 1181.5892,
+   "swaps": 2.026042
+  }
+ ]
+}
