@@ -2089,7 +2089,7 @@ function frame(ts) {
     CUR_RATE = auto ? autoRate(T) : +$("#speed").value;
     if (playing && auto) followLH(T);
     if (playing && PRE.on) { PRE.t = MODE.live ? liveReach(liveGate(PRE.t + dt), "preMax") : PRE.t + dt; if (PRE.t >= PRE_END) { if (MODE.live) liveEnterLab(); PRE.on = false; T = 0; update(); } else if (con) stepsRender(); else if (ts - lastDraw > 250) { lastDraw = ts; update(); } }
-    else if (playing) { T = clampT(T + dt * CUR_RATE); if (MODE.live) T = liveReach(liveLabGate(T), "labMax"); if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; }
+    else if (playing) { T = clampT(T + dt * CUR_RATE); if (MODE.live) T = liveReach(liveLabGate(T), "labMax"); if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; update(); }  // draw the last read and open Result
       if (ts - lastDraw > (con ? 60 : 120)) { lastDraw = ts; update(); } else if (con && SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); } }
     else if (con && SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); }
     if (con) hoodTick();
