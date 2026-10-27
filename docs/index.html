@@ -137,6 +137,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-vi
 .loop-steps li b::before { counter-increment: step; content: counter(step) "  "; font: 500 11px var(--mono); color: var(--accent); }
 .loop-steps.pre { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .ex-sec { font: 500 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; }
+.ex-map { display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 18px; align-items: start; }
+.ex-map figure { margin: 0; min-width: 0; } #explain-cycle svg { width: 100%; height: auto !important; }
+.ex-detail { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+.hd-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; } .hd-head b { font: 600 16px var(--display); color: var(--ink); } .hd-head span { font: 11px var(--mono); color: var(--muted); }
+.hd-viz svg { width: 100%; height: auto !important; }
+.hd-steps { margin: 0; padding: 0; display: grid; gap: 5px; counter-reset: hs; }
+.hd-steps li { list-style: none; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 7px; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.hd-steps li::before { counter-increment: hs; content: counter(hs); font: 600 10.5px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; }
+.hd-stat { font: 11.5px var(--mono); color: var(--ink); border-top: 1px solid var(--line); padding-top: 6px; }
+.cy-node.hpick { cursor: pointer; } .cy-node.hpick:hover > circle:not(.ai-halo) { stroke: var(--ink-2); } .cy-node.hpick:focus { outline: none; } .cy-node.hpick:focus-visible > circle:not(.ai-halo) { stroke: var(--ink); stroke-width: 2.4; }
+#explain-cycle .ai-halo { fill: color-mix(in srgb, var(--s7) 13%, transparent); stroke: var(--s7); stroke-width: 1; stroke-dasharray: 2 2; }
+#explain-cycle .cy-node.ai > circle:not(.ai-halo) { stroke: var(--s7); stroke-width: 2; } #explain-cycle .cy-node.ai .cy-ic { stroke: var(--s7); }
+#explain-cycle .ai-badge circle, .ai-key circle, .hd-ai circle { fill: var(--s7); stroke: var(--surface); stroke-width: 1.5; } #explain-cycle .ai-badge path, .ai-key path, .hd-ai path { fill: var(--surface); stroke: none; }
+.cy-node.hsel > circle:not(.ai-halo), #explain-cycle .cy-node.ai.hsel > circle:not(.ai-halo) { stroke: var(--ink); stroke-width: 2.6; }
+.ai-key { display: flex; gap: 6px; align-items: center; justify-content: center; font: 11px var(--mono); color: var(--s7); margin-top: 2px; }
+.hd-ai { vertical-align: -2px; margin-right: 2px; }
+@media (max-width: 760px) { .ex-map { grid-template-columns: minmax(0, 1fr); } .ex-map figure { max-width: 430px; width: 100%; margin: 0 auto; } }
 .ex-loop { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: center; }
 .ex-loop figure { margin: 0; } .ex-loop figcaption { font: 11px var(--mono); color: var(--muted); text-align: center; }
 .ex-mods { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px 12px; font-size: 13px; color: var(--ink-2); align-items: baseline; }
@@ -370,6 +387,13 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 .st-call .big { font: 600 14px var(--mono); }
 .st-now blockquote { margin: 0; border-left: 3px solid var(--good); padding: 1px 0 1px 8px; font-size: 11.5px; color: var(--ink-2); font-style: italic; }
 .st-hit { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; align-items: center; font: 11px var(--mono); color: var(--ink-2); padding-left: 22px; }
+.st-sum { display: grid; gap: 6px; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--ink-2); }
+.st-sum .sh { font: 600 12.5px var(--body); color: var(--ink); }
+.st-sum .sg { display: grid; gap: 2px; }
+.st-sum .sk { font: 500 10px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.st-sum .sr { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; }
+.st-sum .sr b { font: 600 12px var(--mono); color: var(--good); } .st-sum .sr i { font: 10.5px var(--mono); color: var(--muted); font-style: normal; }
+.st-sum .sx { font-size: 11.5px; color: var(--muted); }
 .st-hit i { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; } .st-hit i b { display: block; height: 100%; background: var(--s1); border-radius: 3px; }
 .st-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .st-run { width: 18px; height: 18px; border-radius: 9px; border: 1.5px dashed var(--axis); display: grid; place-items: center; box-sizing: border-box; }
@@ -537,7 +561,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     <div class="kpis" id="lr-kpis"></div>
     <div class="lr-grid">
       <div class="panel"><div class="qhead"><h3>Wrong values kept</h3><span class="legend">right edge: 3-seed means</span></div><div class="fill" id="lr-wrong"></div></div>
-      <div class="panel"><div class="qhead"><h3>Synergy found</h3><span class="legend" id="lr-syn-leg"></span><button class="chip" type="button" id="lr-cmp" aria-pressed="true" hidden title="Overlay ours and the baselines run in this same lab (3 seeds each); pick baselines in the panel below">Compare methods</button></div><div class="fill" id="lr-syn"></div></div>
+      <div class="panel"><div class="qhead"><h3>Synergy found</h3><span class="legend" id="lr-syn-leg"></span></div><div class="fill" id="lr-syn"></div></div>
       <div class="panel"><div class="qhead"><h3>Plates read</h3><span class="legend" id="lr-plates-leg"></span></div><div class="fill" id="lr-plates"></div></div>
     </div>
     <div class="panel bl-panel" id="bl-panel" hidden>
@@ -545,7 +569,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
       <div class="bl-verdict" id="bl-verdict"></div>
       <div class="bl-toggles" id="bl-toggles" role="group" aria-label="Baselines shown"></div>
       <div class="bl-grid">
-        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs <span class="muted">(dot: median run holds 90% from here · labels: final answer, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
+        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs, drawn up to the replay's clock <span class="muted">(dot: median run holds 90% from here · at the end, labels: final answer, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
         <div class="bl-box"><div class="bl-cap">Scheduling · same optimizer, different scheduler</div><div class="bl-sched" id="bl-sched"></div></div>
       </div>
     </div>
@@ -569,27 +593,10 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
       <h2 id="explain-title">Closing the loop: agents, scheduling and optimization run the lab</h2>
     </div>
     <p>Goal: cancer drug pairs that work better together. Thousands of dose pairs, days per test: the lab tests a few, learns, picks the next. No human in the loop.</p>
-    <div class="ex-sec">Before launch</div>
-    <ol class="loop-steps pre">
-      <li><b>Task</b>Goal, machines, drugs. No limits given.</li>
-      <li><b>Agent</b>Claude reads lab documents: timing limits, labware, liquid prep.</li>
-      <li><b>Deck</b>Fastest layout within the agent's labware rules.</li>
-      <li><b>Camera</b>Deck set up as designed?</li>
-      <li><b>Dry run</b>Simulate the plan 6 times.</li>
-    </ol>
-    <div class="ex-sec">The lab loop</div>
-    <div class="ex-loop">
-      <figure><div id="explain-cycle"></div><figcaption>solid: the loop · dashed: side paths</figcaption></figure>
-      <div class="ex-mods">
-        <b>Optimizer</b><span>picks the next plates</span><i>Bayesian opt.</i>
-        <b>Scheduler</b><span>times every robot step</span><i>CP-SAT</i>
-        <b>Robots</b><span>arm, liquid handler, incubator</span><i>simulated</i>
-        <b>Camera</b><span>checks each plate move</span><i>depth + labels</i>
-        <b>Reader</b><span>counts surviving cells</span><i>384 wells</i>
-        <b>Model</b><span>learns synergy over doses</span><i>Gaussian process</i>
-        <b>Recovery</b><span>failure → replan</span><i>rules</i>
-        <b>Agent</b><span>bad data → new limit, drop bad plates</span><i>Claude</i>
-      </div>
+    <div class="ex-sec">How it works · click any part</div>
+    <div class="ex-map">
+      <figure><div id="explain-cycle"></div><figcaption class="ai-key"><svg viewBox="-8 -8 16 16" width="15" height="15" aria-hidden="true"><circle r="7"/><path d="M0,-4 L1.1,-1.1 L4,0 L1.1,1.1 L0,4 L-1.1,1.1 L-4,0 L-1.1,-1.1 Z"/></svg>AI agent (Claude)</figcaption></figure>
+      <div class="ex-detail" id="explain-detail" aria-live="polite"></div>
     </div>
     <div class="ex-sec">What you see</div>
     <div class="explain-grid">
@@ -631,23 +638,25 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     heat.appendChild(r);
   }
   let drawn = false;  // the loop diagram is the Steps panel's, drawn once the page script has loaded
-  const cycle = () => { if (drawn) return; drawn = true; const host = document.getElementById("explain-cycle"), W = 290, R = 92, cx = W / 2, cy = R + 44;
-    const s = stSvg(host, W, cy + R + 46), f = cycleFig(s, cx, cy, R, "excyarrow", false);
+  const cycle = () => { if (drawn) return; drawn = true;
+    const f = helpMap(document.getElementById("explain-cycle"), document.getElementById("explain-detail"));
     const sub = { opt: "BO", sched: "CP-SAT", robots: "3 machines", camera: "plate check", reader: "viability", model: "GP" };
-    for (const [k, n] of Object.entries(f.nodes)) n.cnt.textContent = sub[k] || "";
+    for (const [k, n] of Object.entries(f.nodes)) if (n.cnt) n.cnt.textContent = sub[k] || "";
+    const pre = [["task", "on", "pre1", "on"], ["agentpre", "on", "pre2", "on"], ["deck", "on", "pre3", "on"], ["deckcheck", "on", "pre4", "on"], ["dry", "on", "launch", "on"]];
     const ring = ["opt", "sched", "robots", "camera", "reader", "model"].map((k) => [k, "on", k, "on"]);
-    const seq = [...ring, ["robots", "bad", "fault", "bad"], ["recovery", "bad", "replan", "bad"], ["sched", "on", null],
+    const seq = [...pre, ...ring, ["robots", "bad", "fault", "bad"], ["recovery", "bad", "replan", "bad"], ["sched", "on", null],
       ...ring, ["model", "on", "evidence", "agent"], ["agent", "on", "limits", "agent"], ["sched", "on", null]];
-    const base = (k) => "cy-node" + (k === "agent" ? " agent" : k === "recovery" ? " rec" : ""), side = { fault: 1, replan: 1, evidence: 1, limits: 1 };
+    const side = { fault: 1, replan: 1, evidence: 1, limits: 1 }, edgeCls = (k) => "cy-edge" + (side[k] ? " side" : "");
+    const clear = () => { for (const n of Object.values(f.nodes)) n.g.classList.remove("on", "bad"); for (const [k, e] of Object.entries(f.edges)) e.setAttribute("class", edgeCls(k)); };
     let i = 0;
     const step = () => {
       if (box.hidden) return;
-      for (const [k, n] of Object.entries(f.nodes)) n.g.setAttribute("class", base(k));
-      for (const [k, e] of Object.entries(f.edges)) e.setAttribute("class", "cy-edge" + (side[k] ? " side" : ""));
+      clear();
       const [k, nc, ek, ec] = seq[i++ % seq.length];
-      f.nodes[k].g.setAttribute("class", `${base(k)} ${nc}`); if (ek) f.edges[ek].setAttribute("class", `cy-edge${side[ek] ? " side" : ""} ${ec}`);
+      f.nodes[k].g.classList.add(nc); if (ek) f.edges[ek].setAttribute("class", `${edgeCls(ek)} ${ec}`);
     };
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) cycle.timer = setInterval(step, 700); };
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) cycle.timer = setInterval(step, 700);
+    helpMap.stop = () => { clearInterval(cycle.timer); clear(); }; };  // a click: hold still on the chosen part
   const open = () => { box.hidden = false; setTimeout(cycle, 0); document.getElementById("help-close").focus(); };
   const close = () => { box.hidden = true; try { localStorage.setItem("labloop.explained", "1"); } catch (_) {} };
   document.getElementById("help-open").addEventListener("click", open);
@@ -835,6 +844,38 @@ function activeDispense() { // the dispense running on the selected LH now, else
   const u = running ? (T - op[3]) / Math.max(1, op[4] - op[3]) : 1;
   return { lhs, op, running, st: lhState(op[0], u * P.norm.length) };
 }
+/* a dilution batch on the liquid handler: RP.supplies.transfers is one batch as pipetted (execution/prep_protocol.py,
+   [drug, role, from, to, ul, channels, repeats, mix, tip, seconds]); a PREP job plays them in order over its span */
+function prepNow(lh) {
+  const TR = RP.supplies && RP.supplies.transfers; if (!TR || !TR.length) return null;
+  const op = RP.ops.find((o) => RP.kinds[o[1]] === "prep" && o[2] === lh && String(o[0]).startsWith("PREP") && o[3] <= T && o[4] > T); if (!op) return null;
+  const tot = TR.reduce((a, t) => a + t[9], 0), at = (T - op[3]) / Math.max(1e-6, op[4] - op[3]) * tot;
+  let acc = 0, j = 0; while (j < TR.length - 1 && acc + TR[j][9] <= at) acc += TR[j++][9];
+  const g = Math.min(1, Math.max(0, (at - acc) / TR[j][9])), vol = {}, add = (d, c, v) => { const k = `${d}:${c}`; vol[k] = (vol[k] || 0) + v; };
+  for (let i = 0; i <= j; i++) { const [d, , src, dst, ul, , rep] = TR[i];  // per drug and dilution column: µL per well so far
+    if (src.startsWith("col") && (i < j || g > .45)) add(d, +src.slice(3), -ul * rep);
+    if (dst.startsWith("col") && (i < j || g > .85)) add(d, +dst.slice(3), ul * rep); }
+  return { op, j, n: TR.length, g, t: TR[j], vol, started: new Set(TR.slice(0, j + 1).map((t) => t[0])) };
+}
+// where a transfer's liquid sits: medium trough (assay carrier site 3), prep plate (site 4: stocks in column 12,
+// intermediate dilutions in the drug's row), the drug's dilution plate (source carrier) column by column
+function prepWhere(x, d, deck) {
+  if (x === "medium") return [carrierX(deck.dest_rail), siteY(2) + 0.0315];
+  if (x.startsWith("col")) return wellXY(deck.source_rail, d + 1, 0, +x.slice(3) - 1, 96);
+  return wellXY(deck.dest_rail, 3, d, x === "stock" ? 11 : +x.slice(3) - 1, 96);
+}
+function prepHead(pr, deck) {  // pick tips, aspirate, dispense, eject: each move rises, travels high, descends
+  const [d, , src, dst] = pr.t, tipXY = [carrierX(deck.tip_rail), siteY(0)], W = DK.WASTE, waste = [W.x, (W.y0 + W.y1) / 2 - DK.HEAD_SPAN / 2];
+  const legs = [[0, .15, waste, tipXY], [.15, .45, tipXY, prepWhere(src, d, deck)], [.45, .85, prepWhere(src, d, deck), prepWhere(dst, d, deck)], [.85, 1, prepWhere(dst, d, deck), waste]];
+  const [a, b, P, Q] = legs.find(([a, b]) => pr.g >= a && pr.g <= b) || legs[3], u = (pr.g - a) / (b - a), m = ease(Math.min(1, Math.max(0, (u - .1) / .6)));
+  const up = 0.33, down = DK.CAR_TOP + 0.06, z = u < .1 ? lerp(down, up, u / .1) : u < .7 ? up : lerp(up, down, Math.min(1, (u - .7) / .3));
+  return { p: [lerp(P[0], Q[0], m), lerp(P[1], Q[1], m), z], tips: pr.g > .15 && pr.g < .92 ? 1 : 0 };
+}
+const PREP_ROLE = { fill: "medium", stock: "stock", intermediate: "dilution", top: "top dose", series: "3-fold step" };
+function prepCaption(pr) {
+  const [d, role, src, dst, ul, ch, rep] = pr.t, nm = (x) => x === "medium" ? "medium" : x === "stock" ? "stock" : x.startsWith("int") ? `dilution ${x.slice(3)}` : `column ${x.slice(3)}`;
+  return `<b>${pr.op[0].split("_")[0]}</b> · ${drugLabel(d)}: ${PREP_ROLE[role] || role}, ${nm(src)} → ${nm(dst)} · ${ul * rep >= 10 ? Math.round(ul * rep) : (ul * rep).toFixed(1)} µL × ${ch} <span class="muted">· ${pr.j + 1}/${pr.n}</span>`;
+}
 function tipsDiscarded(st) { // tips ejected into the waste so far in this protocol
   const upto = st.done ? st.n : st.idx + (st.stage === "eject" && st.g > .8 ? 1 : 0);
   return st.P.norm.slice(0, upto).reduce((a, p) => a + p.chans.length, 0);
@@ -880,8 +921,9 @@ function drawLH() {
   $("#lh-legend").innerHTML = `<span><i class="box" style="background:var(--cells)"></i>cells</span>` + drugs.map((d, i) => `<span><i class="box" style="background:${DRUG_COLOR[i]}"></i>${d.toLowerCase()}</span>`).join("") +
     `<span><i class="box" style="background:var(--ink-2);border-radius:50%"></i>tip</span><span><i class="box" style="background:var(--accent);border-radius:50%"></i>on the head</span>`;
   const st = A.op && A.st ? A.st : null, plate = st ? A.op[0] : null, P = st ? st.P : null, pm = plate ? RP.plates[plate] : null, cur = st ? st.cur : null;
-  const prepOp = !st && RP.ops.find((o) => RP.kinds[o[1]] === "prep" && o[2] === LHSEL && o[3] <= T && o[4] > T);
-  if (prepOp) $("#lh-action").innerHTML = `<b>${prepOp[0].split("_")[0]}</b> · ${prepOp[0].startsWith("PREP") ? "making the drug dilution series" : "seating the next cell reservoir"}`;
+  const prepOp = !A.running && RP.ops.find((o) => RP.kinds[o[1]] === "prep" && o[2] === LHSEL && o[3] <= T && o[4] > T), PR = prepOp ? prepNow(LHSEL) : null;
+  if (PR) $("#lh-action").innerHTML = prepCaption(PR);
+  else if (prepOp) $("#lh-action").innerHTML = `<b>${prepOp[0].split("_")[0]}</b> · ${prepOp[0].startsWith("PREP") ? "making the drug dilution series" : "seating the next cell reservoir"}`;
   else if (!st) $("#lh-action").textContent = "";
   else if (st.done) $("#lh-action").innerHTML = `<b>${plate}</b>${P.bad.length ? ` · <span style="color:var(--critical)">${P.bad.length} wells off</span>` : ""}`;
   else $("#lh-action").innerHTML = `<b>${plate}</b> · ${cur.what === 0 ? "cells" : drugLabel(cur.what - 1)} · ${st.stage}`;
@@ -968,7 +1010,7 @@ function drawLH() {
   };
   const tipCx = sites(deck.tip_rail, "tips", () => `<b>Tip carrier</b> · rails ${deck.tip_rail}-${deck.tip_rail + 5}<br>${racks.length} tip boxes · ${[...new Set(racks.map((r) => TIP_UL(r.type)))].join(" + ")} tips`);
   const srcCx = sites(deck.source_rail, "sources", () => `<b>Source carrier</b> · rails ${deck.source_rail}-${deck.source_rail + 5}<br>${deck.cell_source === "trough" ? "cell trough" : "cell reservoir"} + one dilution plate per drug`);
-  const dstCx = sites(deck.dest_rail, "assay", () => `<b>Assay carrier</b> · rails ${deck.dest_rail}-${deck.dest_rail + 5}<br>site 1: assay plate · site 2: tip-box handoff`);
+  const dstCx = sites(deck.dest_rail, "assay", () => `<b>Assay carrier</b> · rails ${deck.dest_rail}-${deck.dest_rail + 5}<br>site 1: assay plate · site 2: tip-box handoff${RP.supplies && RP.supplies.transfers ? " · site 3: medium · site 4: prep plate" : ""}`);
   // tip boxes
   for (const r of racks) {
     const cy = siteY(r.site) * 1000, out = rackOut(r.site), tr = setup("tips" + r.site);
@@ -997,6 +1039,7 @@ function drawLH() {
     if (CK && pl.k) R(srcCx, cy - 38.2, 80, 7, { rx: 1.5, fill: color }, gq);  // its label, which the camera reads
     const leftOf = (c) => st && st.srcLeft[`${pl.k}:${c}`] != null ? st.srcLeft[`${pl.k}:${c}`] : 350;
     const SU = supplyAt(LHSEL), frac = (c) => SU ? Math.max(0, SU.drug[`${pl.k}:${c}`] ?? 0) / SU.ul : leftOf(c) / 350;
+    const remade = PR && pl.k && PR.started.has(pl.k - 1), pv = (c) => Math.max(0, PR.vol[`${pl.k - 1}:${c}`] || 0) / RP.supplies.plan.ul_per_well;  // this batch so far
     if (pl.k === 0 && SU) {  // one reservoir per cell line, swapped in by the arm
       const cl = SU.cells, lv = cl ? cl.left / cl.full : 0;
       if (cl) R(srcCx, cy, 118, 76, { rx: 3, fill: color, "fill-opacity": .15 + .8 * lv, stroke: cur && cur.what === 0 ? "var(--accent)" : "none", "stroke-width": 2 }, gq);
@@ -1013,6 +1056,12 @@ function drawLH() {
     const usedCols = P ? [...new Set(P.norm.filter((p) => p.what === pl.k).map((p) => p.col))] : [];
     for (let c = 1; c <= 12; c++) {
       const [x, yA] = wellXY(deck.source_rail, si, 0, c - 1, 96), yH = wellXY(deck.source_rail, si, 7, c - 1, 96)[1], used = usedCols.includes(c), isCur = cur && cur.what === pl.k && cur.col === c;
+      if (remade) {  // the dilution being made: columns fill as the transfers land
+        const v = pv(c), hot = PR.t[0] === pl.k - 1 && (PR.t[2] === `col${c}` || PR.t[3] === `col${c}`);
+        el("rect", { x: X(x * 1000 - 3.6), y: Y(yA * 1000 + 3.6), width: 7.2 * k, height: (yA - yH) * 1000 * k + 7.2 * k, rx: 3.6 * k,
+          fill: v > 0 ? color : "none", "fill-opacity": .12 + .8 * Math.min(1, v), stroke: hot ? "var(--accent)" : "var(--axis)", "stroke-width": hot ? 2 : .6 }, gq);
+        continue;
+      }
       el("rect", { x: X(x * 1000 - 3.6), y: Y(yA * 1000 + 3.6), width: 7.2 * k, height: (yA - yH) * 1000 * k + 7.2 * k, rx: 3.6 * k,
         fill: used || CK || (SU && SU.drug[`${pl.k}:${c}`] != null) ? color : "none", "fill-opacity": SU ? (SU.drug[`${pl.k}:${c}`] != null ? .12 + .8 * frac(c) : 1) : used ? .2 + .75 * leftOf(c) / 350 : CK ? .4 : 1, stroke: isCur ? "var(--accent)" : used || CK ? "none" : "var(--grid)", "stroke-width": isCur ? 2 : .7 }, gq);
     }
@@ -1042,6 +1091,21 @@ function drawLH() {
         (content === "NEG" ? "vehicle control" : content === "POS" ? "kill control" : content ? "doses (µM) " + content.replaceAll("|", " · ") : "unused") + `<br>in the well: ${has}`;
     }, zoomOf(deck.dest_rail, 0, pm.rows, pm.cols));
   }
+  // dilution prep: medium trough at site 3 and the prep plate at site 4 (stocks in column 12, dilutions in each drug's row)
+  if (RP.supplies && RP.supplies.transfers) {
+    const my = siteY(2) * 1000, py = siteY(3) * 1000, hotX = (x) => PR && (PR.t[2] === x || PR.t[3] === x);
+    R(dstCx, my, 127.76, 85.48, { rx: 3, fill: "var(--surface)", stroke: "var(--ink-2)", "stroke-width": .8 });
+    R(dstCx, my, 118, 76, { rx: 3, fill: "var(--s1)", "fill-opacity": .14, stroke: hotX("medium") ? "var(--accent)" : "none", "stroke-width": 2 });
+    el("text", { x: X(dstCx), y: Y(my) + 3, "text-anchor": "middle", style: "font-size:9px;fill:var(--ink-2)" }, s).textContent = "medium";
+    hit(X(dstCx - 64), Y(my + 43), 128 * k, 86 * k, () => "<b>Medium trough</b> · site 3<br>fills each dilution column before the drug goes in");
+    R(dstCx, py, 127.76, 85.48, { rx: 3, fill: "var(--surface)", stroke: "var(--ink-2)", "stroke-width": .8 });
+    const nInt = (d) => Math.max(0, ...RP.supplies.transfers.filter((t) => t[0] === d && t[3].startsWith("int")).map((t) => +t[3].slice(3)));
+    drugs.forEach((dn, d) => { for (const c of [...Array(nInt(d)).keys()].map((i) => i + 1).concat([12])) {
+      const [x, y] = wellXY(deck.dest_rail, 3, d, c - 1, 96), id = c === 12 ? "stock" : `int${c}`, hot = PR && PR.t[0] === d && hotX(id);
+      el("circle", { cx: X(x * 1000), cy: Y(y * 1000), r: 3.4 * k, fill: DRUG_COLOR[d], "fill-opacity": c === 12 ? .9 : .45, stroke: hot ? "var(--accent)" : "none", "stroke-width": 2 }, s); } });
+    el("text", { x: X(dstCx - 60), y: Y(py - 43) - 4, class: "label-ink", style: "font-size:9.5px" }, s).textContent = "prep plate";
+    hit(X(dstCx - 64), Y(py + 43), 128 * k, 86 * k, () => "<b>Prep plate</b> · site 4<br>column 12: each drug's DMSO stock · left: intermediate dilutions, row by drug");
+  }
   // handoff site (site 2): the CO-RE gripper and the arm pass tip boxes here
   const mineOps = RP.ops.filter(mine), parked = (a, b) => mineOps.some((o) => o[5] === a && o[4] <= T && mineOps.some((q) => q[0] === o[0] && q[5] === b && q[6] === o[6] && q[3] > T));
   const ho = siteY(1) * 1000, boxHere = parked("core_out", "handoff>rackwaste") || parked("rackhotel>handoff", "core_in");
@@ -1068,16 +1132,16 @@ function drawLH() {
   el("text", { x: X(790), y: Y(560) - 4, "text-anchor": "middle", class: "label-ink", style: "font-size:10px" }, s).textContent = "waste";
   hit(X(775), Y(560) - 14, 30 * k, 445 * k + 14, wasteTip);
   // the head: X-arm across the deck and the 8 channels at 9 mm pitch
-  const hd = SIM.head; LHHEAD = [];
+  const hd = PR ? (() => { const h = prepHead(PR, deck); return { x: h.p[0], y: h.p[1], tips: h.tips }; })() : SIM.head; LHHEAD = [];
   if (hd) {
     const hx = hd.x * 1000;
     el("rect", { x: X(hx) - 5, y: Y(vy1), width: 10, height: (vy1 - 20) * k, rx: 3, fill: "var(--ink)", "fill-opacity": .07, class: "hd" }, s);
     for (let c = 0; c < 8; c++) {
-      const act = chanSet.has(c) && on;
+      const act = PR ? c < PR.t[5] && hd.tips : chanSet.has(c) && on;
       el("circle", { cx: X(hx), cy: Y(hd.y * 1000 - c * 9), r: 3.4, fill: act && hd.tips ? "var(--accent)" : "var(--surface)", stroke: act ? "var(--accent)" : "var(--ink-2)", "stroke-width": 1.2, class: "hd" }, s);
       LHHEAD.push({ x: X(hx), y: Y(hd.y * 1000 - c * 9), act: act && hd.tips });
     }
-    hit(X(hx) - 7, Y(hd.y * 1000 + 6), 14, 75 * k, () => `<b>Pipetting head</b> · ${cur && A.running ? `${st.stage}, pass ${st.idx + 1}/${st.n}` : "parked"}<br>x ${hx.toFixed(0)} mm (rail ${Math.round((hx - 100) / 22.5) + 1}) · y ${(hd.y * 1000).toFixed(0)} mm`);
+    hit(X(hx) - 7, Y(hd.y * 1000 + 6), 14, 75 * k, () => `<b>Pipetting head</b> · ${PR ? `dilution batch, transfer ${PR.j + 1}/${PR.n}` : cur && A.running ? `${st.stage}, pass ${st.idx + 1}/${st.n}` : "parked"}<br>x ${hx.toFixed(0)} mm (rail ${Math.round((hx - 100) / 22.5) + 1}) · y ${(hd.y * 1000).toFixed(0)} mm`);
   }
   if (LHPT) lhHover(LHPT);
 }
@@ -1777,6 +1841,7 @@ function initThree() {
     const nDisposed = RP.ops.filter((o) => o[5] === "lh>rackwaste" && o[4] <= T).length; // used tip boxes in the bin
     binnedRacks.forEach((m, k) => { m.visible = k < Math.min(8, nDisposed); });
     let hp = headPose(dispensing ? st : null, pmA || { rows: 16, cols: 24 });
+    const prH = dispensing ? null : prepNow(LHSEL || "lh1"); if (prH) hp = prepHead(prH, deckOf());  // a dilution batch
     // LH CO-RE gripper moving a tip box between a deep site and the handoff site
     const coreOp = RP.ops.find((o) => o[5] && String(o[5]).startsWith("core_") && o[3] <= T && o[4] > T);
     let carryCore = false;
@@ -2172,11 +2237,11 @@ function lrChart(host, { series, ymax, yfmt, markers = [], xmarks = [], ylabel, 
   for (const sr of series) {
     const pts = sr.pts.filter((p) => p[0] <= T); if (!pts.length) continue;
     let d = `M${X(pts[0][0])},${Y(pts[0][1])}`; for (const p of pts.slice(1)) d += `H${X(p[0])}V${Y(p[1])}`; d += `H${X(T)}`;
-    el("path", { d, fill: "none", stroke: sr.color, "stroke-width": sr.w || 2.4, "stroke-linejoin": "round", ...(sr.dash ? { "stroke-dasharray": sr.dash } : {}) }, s);
-    const v = pts[pts.length - 1][1]; ends.push({ x: X(T), y: Y(v), v, color: sr.color, r: sr.dash ? 2.5 : 3.5 });
+    el("path", { d, fill: "none", stroke: sr.color, "stroke-width": 2.4, "stroke-linejoin": "round" }, s);
+    const v = pts[pts.length - 1][1]; ends.push({ x: X(T), y: Y(v), v, color: sr.color });
   }
   el("line", { x1: X(T), x2: X(T), y1: Tp, y2: H - B, stroke: "var(--ink)", "stroke-width": 1.2 }, s);
-  for (const e of ends) { el("circle", { cx: e.x, cy: e.y, r: e.r, fill: e.color }, s); }
+  for (const e of ends) { el("circle", { cx: e.x, cy: e.y, r: 3.5, fill: e.color }, s); }
   // right edge: others' final values, labels kept apart
   const lab = markers.map((m) => ({ ...m, y: Y(m.v) })).sort((a, b) => a.y - b.y);
   lab.forEach((m, i) => { if (i && m.y - lab[i - 1].ly < 11) m.ly = lab[i - 1].ly + 11; else m.ly = m.y; });
@@ -2194,12 +2259,11 @@ function renderLiveResults() {
   $("#lr-kpis").innerHTML = tiles.map(([k, v]) => `<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
   const ownW = S.wrong[S.wrong.length - 1][1];
   lrChart($("#lr-wrong"), { series: [{ pts: S.wrong, color: "var(--s7)" }], ymax: Math.max(10, ownW, ...res.map((r) => r.mean.corrupt_accepted || 0)) * 1.05, yfmt: (v) => Math.round(v), markers: finals("corrupt_accepted") });
-  const cmp = lrCmpSeries(S);
-  lrChart($("#lr-syn"), { series: cmp ? cmp.series : S.syn.map((x) => ({ pts: x.pts, color: campColor(x.c) })), ymax: 1, yfmt: (v) => `${Math.round(100 * v)}%`, markers: cmp ? [] : finals("regret", (v) => clamp01(1 - v)) });
+  lrChart($("#lr-syn"), { series: S.syn.map((x) => ({ pts: x.pts, color: campColor(x.c) })), ymax: 1, yfmt: (v) => `${Math.round(100 * v)}%`, markers: finals("regret", (v) => clamp01(1 - v)) });
   lrChart($("#lr-plates"), { series: [{ pts: S.read, color: "var(--ink-2)" }, { pts: S.bad, color: "var(--critical)" }], ymax: nP * 1.05, yfmt: (v) => Math.round(v),
     xmarks: MODE.live ? [] : res.map((r) => ({ t: (r.mean.makespan_h || 0) * 60, color: VAR_COLOR[r.label] || "var(--muted)" })),
     xmax: MODE.live ? viewMax() : Math.max(TMAX, ...res.map((r) => (r.mean.makespan_h || 0) * 60)) * 1.02 });
-  $("#lr-syn-leg").innerHTML = cmp ? cmp.legend : campNames().map((c) => `<span><i class="box" style="background:${campColor(c)}"></i>${campLabel(c)}</span>`).join("");
+  $("#lr-syn-leg").innerHTML = campNames().map((c) => `<span><i class="box" style="background:${campColor(c)}"></i>${campLabel(c)}</span>`).join("");
   $("#lr-plates-leg").innerHTML = `<span><i class="box" style="background:var(--ink-2)"></i>read</span><span><i class="box" style="background:var(--critical)"></i>invalid</span>` +
     (MODE.live ? "" : res.map((r) => `<span style="color:${VAR_COLOR[r.label]}">┆ ${VAR_SHORT[r.label]} done ${Math.round(r.mean.makespan_h || 0)} h</span>`).join(""));
   blLoad(); renderBaselines();
@@ -2230,43 +2294,23 @@ async function blLoad() {
   $("#bl-toggles").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k; if (BL.on.has(k)) BL.on.delete(k); else BL.on.add(k); b.setAttribute("aria-pressed", String(BL.on.has(k)));
     try { localStorage.setItem("labloop-baselines", JSON.stringify([...BL.on])); } catch (e) { /* private window: not remembered */ }
-    BL.key = ""; renderBaselines(); update(); }));
+    BL.key = ""; renderBaselines(); }));
   BL.key = ""; renderBaselines();
-}
-// Results "Synergy found" with methods compared: this run (mean of its cell lines, the baselines' measure) against
-// ours and the baselines run in this run's lab (data/baselines_lab.json, LAB=agent scripts/run_baselines.sh), drawn up to the clock
-const LRC = { data: null, on: true };
-try { LRC.on = localStorage.getItem("labloop-compare") !== "0"; } catch (e) { /* default on */ }
-fetch("data/baselines_lab.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
-  if (!d || !d.methods || !d.methods.some((m) => m.key === "ours")) return;
-  LRC.data = d; const b = $("#lr-cmp"); b.hidden = false; b.setAttribute("aria-pressed", String(LRC.on));
-  b.addEventListener("click", () => { LRC.on = !LRC.on; b.setAttribute("aria-pressed", String(LRC.on)); try { localStorage.setItem("labloop-compare", LRC.on ? "1" : "0"); } catch (e) { /* not remembered */ } update(); });
-}).catch(() => {});
-function lrCmpSeries(S) {
-  const b = $("#lr-cmp"); if (b) b.hidden = !LRC.data || !!MODE.live;
-  if (!LRC.on || !LRC.data || MODE.live) return null;
-  const ts = [...new Set(S.syn.flatMap((x) => x.pts.map((p) => p[0])))].sort((a, b) => a - b);
-  const run = ts.map((t) => [t, S.syn.reduce((a, x) => a + (atT(x.pts, t) || [0, 0])[1], 0) / S.syn.length]);
-  const on = BL.on || new Set(LRC.data.methods.filter((m) => m.default).map((m) => m.key)), step = LRC.data.step_min, xmax = viewMax();
-  const ms = LRC.data.methods.filter((m) => m.key === "ours" || on.has(m.key)).reverse();  // ours drawn last of the dashed
-  const series = ms.map((m) => ({ pts: m.synergy.map((v, i) => [i * step, v]).filter((p) => p[0] <= xmax), color: BL_COLOR[m.key], dash: m.key === "ours" ? "6 3" : "3 3", w: m.key === "ours" ? 2.2 : 1.6 }));
-  series.push({ pts: run, color: "var(--ink)", w: 2.6 });
-  const n = LRC.data.seeds;
-  const legend = `<span><i class="box" style="background:var(--ink)"></i>this run</span>` + ms.slice().reverse().map((m) =>
-    `<span title="${esc(m.desc)}"><i class="box" style="background:none;border-top:2px dashed ${BL_COLOR[m.key]};height:0;width:14px"></i>${esc(m.label)}</span>`).join("") + `<span class="muted">dashed: ${n} seeds, same lab</span>`;
-  return { series, legend };
 }
 function renderBaselines() {
   if (!BL.on || $("#view-results").hidden) return;
-  const host = $("#bl-syn"), [W, H] = boxSize(host), key = `${W}x${H}|${[...BL.on].sort()}`;
+  const host = $("#bl-syn"), [W, H] = boxSize(host), upTo = blUpTo(), key = `${W}x${H}|${[...BL.on].sort()}|${Math.floor(upTo / 30)}`;
   if (BL.key === key) return; BL.key = key;
   const M = BL.data.methods, ours = M.find((m) => m.key === "ours"), on = (g) => [ours, ...M.filter((m) => m.group === g && BL.on.has(m.key))];
   blSynChart(host, on("discovery"), W, H);
   blSchedTable($("#bl-sched"), on("schedule"));
 }
+// lab time drawn so far: the clock, or everything once the replay has ended
+const blUpTo = () => (PRE.on ? 0 : T >= TMAX - 1 && !MODE.live ? Infinity : T);
 function blSynChart(host, ms, W, H) {
-  const s = svgRoot(host, W, H), step = BL.data.step_min, n = Math.max(...ms.map((m) => m.synergy.length)), xmax = (n - 1) * step;
-  const lab = (m) => `${m.label} ${Math.round(100 * m.final)}% · ${m.hits}/${m.of || 6}`;  // the confirmed answer, as in the table
+  const s = svgRoot(host, W, H), step = BL.data.step_min, n = Math.max(...ms.map((m) => m.synergy.length)), xmax = (n - 1) * step, upTo = blUpTo(), all = upTo >= xmax;
+  const shownTo = (m) => Math.min(m.synergy.length - 1, Math.floor(upTo / step));  // last grid point at or before the clock
+  const lab = (m) => all ? `${m.label} ${Math.round(100 * m.final)}% · ${m.hits}/${m.of || 6}` : `${m.label} ${Math.round(100 * m.synergy[Math.max(0, shownTo(m))])}%`;  // final: the confirmed answer
   const narrow = W < 560, R = narrow ? 14 : 16 + 6.4 * Math.max(...ms.map((m) => lab(m).length));  // room for the end labels; narrow: a legend below
   $("#bl-syn-leg").innerHTML = narrow ? ms.map((m) => `<span><i class="box" style="background:${BL_COLOR[m.key]}"></i>${esc(lab(m))}</span>`).join("") : "";
   const L = 40, Tp = 8, B = 24, X = (t) => L + (W - L - R) * t / xmax, Y = (v) => Tp + (H - Tp - B) * (1 - v);
@@ -2275,11 +2319,14 @@ function blSynChart(host, ms, W, H) {
   el("line", { x1: L, x2: W - R, y1: Y(0.9), y2: Y(0.9), stroke: "var(--ink-2)", "stroke-dasharray": "4 3" }, s);
   el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair";
   const ends = [];
+  if (!all) { const x = X(Math.min(upTo, xmax)); el("line", { x1: x, x2: x, y1: Tp, y2: H - B, stroke: "var(--ink)", "stroke-width": 1.2 }, s); }
   for (const m of [...ms].reverse()) {  // ours last, on top
-    let d = ""; m.synergy.forEach((v, i) => { d += i ? `H${X(i * step)}V${Y(v)}` : `M${X(0)},${Y(v)}`; });
+    const k = shownTo(m); if (k < 0) continue;
+    let d = ""; m.synergy.slice(0, k + 1).forEach((v, i) => { d += i ? `H${X(i * step)}V${Y(v)}` : `M${X(0)},${Y(v)}`; });
+    if (!all) d += `H${X(Math.min(upTo, xmax))}`;
     el("path", { d, fill: "none", stroke: BL_COLOR[m.key], "stroke-width": m.key === "ours" ? 3 : 2, "stroke-linejoin": "round" }, s);
-    if (m.ttt_h != null) el("circle", { cx: X(m.ttt_h * 60), cy: Y(0.9), r: 4, fill: BL_COLOR[m.key], stroke: "var(--surface)", "stroke-width": 1.5 }, s);
-    ends.push({ y: Y(m.synergy[m.synergy.length - 1]), m });
+    if (m.ttt_h != null && m.ttt_h * 60 <= upTo) el("circle", { cx: X(m.ttt_h * 60), cy: Y(0.9), r: 4, fill: BL_COLOR[m.key], stroke: "var(--surface)", "stroke-width": 1.5 }, s);
+    ends.push({ y: Y(m.synergy[k]), m, x: all ? null : X(Math.min(upTo, xmax)) });
   }
   ends.sort((a, b) => a.y - b.y).forEach((e, i, a) => { e.ly = i && e.y - a[i - 1].ly < 15 ? a[i - 1].ly + 15 : e.y; });
   if (!narrow) for (const e of ends) el("text", { x: W - R + 8, y: e.ly + 4, style: `font-size:11px; fill:${BL_COLOR[e.m.key]}; font-weight:${e.m.key === "ours" ? 600 : 500}` }, s).textContent =
@@ -2287,6 +2334,7 @@ function blSynChart(host, ms, W, H) {
   const hit = el("rect", { x: L, y: Tp, width: W - L - R, height: H - Tp - B, fill: "transparent" }, s);
   hit.addEventListener("pointermove", (evt) => {
     const r = s.getBoundingClientRect(), x = (evt.clientX - r.left) * W / r.width, i = Math.max(0, Math.min(n - 1, Math.round((x - L) / (W - L - R) * xmax / step)));
+    if (i * step > upTo) { hideTip(); return; }  // not reached yet on the clock
     showTip(evt, `<b>${Math.round(i * step / 60)} h</b><br>` + ms.map((m) => `<span style="color:${BL_COLOR[m.key]}">${esc(m.label)}</span> ${Math.round(100 * m.synergy[Math.min(i, m.synergy.length - 1)])}%`).join("<br>"));
   });
   hit.addEventListener("pointerleave", hideTip);
@@ -2412,7 +2460,7 @@ function tipOn(node, html) { node.addEventListener("pointermove", (e) => showTip
 function txt(s, x, y, t, style, anchor) { const e = el("text", { x, y, ...(anchor ? { "text-anchor": anchor } : {}), ...(style ? { style } : {}) }, s); e.textContent = t; return e; }
 
 const PRE = { on: true, t: 0 };
-const PRE_STEPS = [["task", 5], ["agent", 34], ["deck", 8], ["camera", 16], ["dry", 6]];
+const PRE_STEPS = [["task", 5], ["agent", 40], ["deck", 8], ["camera", 16], ["dry", 6]];
 const PRE_END = PRE_STEPS.reduce((a, s) => a + s[1], 0);
 const STEP_LIST = [["task", "Task"], ["agent", "Agent searches the archive"], ["deck", "Deck design"], ["camera", "Camera check"], ["dry", "Dry run"], ["lab", "Lab loop"], ["result", "Result"]];
 const STEP_FOCUS = { deck: 1, camera: 1 };  // which console panel the step is about (index in .quads)
@@ -2488,7 +2536,7 @@ let AGL = null;  // episode length, stable over the episode
 function agentLayout() { const tr = RP.loop.agent.trace; return AGL = { end: tr[tr.length - 1].t + 4 }; }
 const TOOL_NAME = { describe_lab: "Reads the task", list_documents: "Lists the documents", list_parameters: "Reads the lab's settings", merge_hypotheses: "Merges duplicate ideas",
   hypothesize: "Idea", search_corpus: "Search", read_pages: "Reads pages", propose: "Proposes a limit", abstain: "Gives up on a number" };
-const stepPair = (sp) => sp.step ? `before ${STEP_SHORT[sp.step] || sp.step}` : `${STEP_SHORT[sp.a] || sp.a} → ${STEP_SHORT[sp.b] || sp.b}`;
+const stepPair = (sp) => sp.step ? `${sp.kind === "deadline_from_release" ? "made → " : "before "}${STEP_SHORT[sp.step] || sp.step}` : `${STEP_SHORT[sp.a] || sp.a} → ${STEP_SHORT[sp.b] || sp.b}`;
 // hover card for one trace entry: the question, what came back, and which idea / limit it serves
 function agentTip(t, tr) {
   const idea = tr.find((x) => x.tool === "hypothesize" && x.limit_id === t.slot), row = (k, v) => `<div><span class="muted">${k}</span> ${v}</div>`;
@@ -2518,12 +2566,26 @@ function agentState(i) {
     if (t.tool === "abstain" && !res[t.slot]) res[t.slot] = "none"; }
   return { res, started };
 }
+// end of the search: what the agent found, and which part of the loop uses it
+function agentSummary(tr) {
+  const lims = RP.loop.launch || [], LW = (RP.loop.labware || {}).rules, PP = (RP.loop.prep || {}).plan;
+  const none = new Set(tr.filter((t) => t.tool === "abstain").map((t) => t.slot)).size;
+  let h = `<div class="sh">Found, and used in the loop</div><div class="sg"><span class="sk">Limits → scheduler</span>` +
+    lims.map((c) => `<div class="sr"><b>${esc(limShort(c))}</b><span>${esc(stepPair(c))}</span><i>${c.source && c.source.doc ? `${esc(docShort(c.source.doc))}${c.source.page ? " p." + c.source.page : ""}` : "assumed"}</i></div>`).join("") + `</div>`;
+  if (LW) { const pp = LW.pipetting || {}, how = (r, n) => r ? `${n} ${r.tip.replace("uL", " µL")} ${r.mode === "jet" ? "jet" : "touch"}${r.reuse ? "" : ", new tip per well"}` : "";
+    h += `<div class="sg"><span class="sk">Labware → deck search</span><span>${esc([LW.assay_plate ? `${LW.assay_plate.value} plate` : "", how(pp.cells, "cells"), how(pp.drug, "drugs")].filter(Boolean).join(" · "))}</span></div>`; }
+  if (PP) { const nd = Object.values(PP.dilution || {}).reduce((a, d) => a + d.length, 0);
+    h += `<div class="sg"><span class="sk">Liquid prep → liquid handler</span><span>${Object.keys(PP.stocks || {}).length} DMSO stocks${nd ? ` · ${nd} intermediate dilutions` : ""} · 3‑fold series · ${PP.ul_per_well} µL per dose</span></div>`; }
+  if (none) h += `<div class="sx">${none} idea${none > 1 ? "s" : ""}: no number found, lab defaults kept. Reviews can add limits later.</div>`;
+  return h;
+}
 function stAgent(stage, u) {
   if (LIVE.run) { const run = LIVE.run, k = "live" + run.status + run.rows.map((r) => `${r.trace.length}.${r.text.length}.${r.result ? 1 : 0}`).join(",");
     if (ST.key !== k) { ST.key = k; renderLive(stage); } return; }
-  const L = AGL || agentLayout(), tr = RP.loop.agent.trace, tau = u * L.end;
+  const SUM_U = 0.85, L = AGL || agentLayout(), tr = RP.loop.agent.trace, tau = Math.min(1, u / SUM_U) * L.end;  // the last 15%: what was found
   let i = 0; while (i + 1 < tr.length && tr[i + 1].t <= tau) i++;
-  const key = "agent" + i + "|" + stage.clientWidth; if (ST.key === key) return; ST.key = key;
+  if (u >= SUM_U) i = tr.length - 1;
+  const key = "agent" + i + "|" + (u >= SUM_U) + "|" + stage.clientWidth; if (ST.key === key) return; ST.key = key;
   const cur = tr[i], { res } = agentState(i), cnt = (k) => tr.slice(0, i + 1).filter((t) => t.tool === k).length;
   const found = Object.values(res).filter((r) => r && r !== "none").length;
   stage.innerHTML = `<div class="st-counts"><span>${icon("idea")}${cnt("hypothesize")}<small>ideas</small></span><span>${icon("search")}${cnt("search_corpus")}<small>searches</small></span>` +
@@ -2534,6 +2596,7 @@ function stAgent(stage, u) {
   const rb = stage.querySelector(".st-ribbon");
   rb.addEventListener("pointermove", (e) => { const b = e.target.closest("i[data-j]"); if (b) showTip(e, agentTip(tr[+b.dataset.j], tr)); else hideTip(); });
   rb.addEventListener("pointerleave", hideTip);
+  if (u >= SUM_U) { const nowEl = stage.querySelector(".st-now"); nowEl.className = "st-sum"; nowEl.innerHTML = agentSummary(tr); return; }
   // the call in progress
   const nowEl = stage.querySelector(".st-now"); let h = "";
   if (cur.tool === "search_corpus") {
@@ -2673,6 +2736,145 @@ function cycleFig(s, cx, cy, R, mid, tips) {
     nodes[k] = { g, cnt }; };
   CY.forEach(([k, name]) => add(k, name, r0)); add("recovery", "Recovery", 13); add("agent", "Agent", 13);
   return { nodes, edges, P };
+}
+/* ================================================================ "What am I looking at?": the whole system as one diagram.
+   Before launch (a chain) runs once, then the lab loop (the Steps panel's ring) runs until the budget is spent.
+   Click a part: a small picture and the steps it takes. */
+const HELP_PRE = [["task", "Task", "list"], ["agentpre", "Agent", "search"], ["deck", "Deck", "lab"], ["deckcheck", "Deck check", "camera"], ["dry", "Dry run", "check"]];
+function helpMap(host, detail) {
+  const W = 430, R = 86, cx = 205, cy = 222, H = cy + R + 46, s = stSvg(host, W, H);
+  s.setAttribute("aria-label", "Before launch: task, agent, deck, deck check, dry run; then the lab loop");
+  txt(s, 4, 11, "BEFORE LAUNCH · ONCE", "font: 500 9.5px var(--mono); letter-spacing: .06em; fill: var(--muted)");
+  txt(s, 4, 90, "THE LAB LOOP · UNTIL THE BUDGET IS SPENT", "font: 500 9.5px var(--mono); letter-spacing: .06em; fill: var(--muted)");
+  const f = cycleFig(s, cx, cy, R, "helparrow", false), xs = HELP_PRE.map((_, i) => 22 + i * 96), y0 = 36, r0 = 14;
+  f.nodes.agent.g.querySelector("text").textContent = "Review";
+  HELP_PRE.forEach(([k, name, ic], i) => {
+    if (i) f.edges["pre" + i] = el("path", { class: "cy-edge", d: `M${xs[i - 1] + r0 + 3},${y0} H${xs[i] - r0 - 5}`, "marker-end": "url(#helparrow)" }, s);
+    const g = el("g", { class: "cy-node" + (k === "agentpre" ? " agent" : "") }, s);
+    el("circle", { cx: xs[i], cy: y0, r: r0 }, g); svgIcon(g, ic, xs[i], y0, r0 * 0.95);
+    txt(g, xs[i], y0 + r0 + 13, name, "font: 600 10px var(--body); fill: var(--ink)", "middle");
+    f.nodes[k] = { g };
+  });
+  const [ox, oy] = f.P.opt;  // launch: the dry run hands the plan to the loop
+  f.edges.launch = el("path", { class: "cy-edge", d: `M${xs[4]},${y0 + r0 + 18} C${xs[4]},${oy} ${xs[4] - 40},${oy} ${ox + 22},${oy}`, "marker-end": "url(#helparrow)" }, s);
+  txt(s, xs[4] - 6, oy - 26, "launch", "font: 500 9.5px var(--mono); fill: var(--muted)", "end");
+  for (const k of ["agentpre", "agent"]) {  // the parts where Claude works: a purple halo and a sparkle badge
+    const n = f.nodes[k], c = n.g.querySelector("circle"), x = +c.getAttribute("cx"), y = +c.getAttribute("cy"), r = +c.getAttribute("r");
+    n.g.classList.add("ai"); n.g.insertBefore(el("circle", { class: "ai-halo", cx: x, cy: y, r: r + 5 }), n.g.firstChild);
+    const b = el("g", { class: "ai-badge", transform: `translate(${x + r * 0.78},${y - r * 0.78})` }, n.g);
+    el("circle", { r: 6.5 }, b); el("path", { d: "M0,-4 L1.1,-1.1 L4,0 L1.1,1.1 L0,4 L-1.1,1.1 L-4,0 L-1.1,-1.1 Z" }, b);
+  }
+  const pick = (k) => {
+    for (const [j, n] of Object.entries(f.nodes)) n.g.classList.toggle("hsel", j === k);
+    helpDetail(detail, k);
+  };
+  for (const [k, n] of Object.entries(f.nodes)) {
+    const name = HELP_INFO[k] ? HELP_INFO[k].name : k;
+    n.g.setAttribute("tabindex", "0"); n.g.setAttribute("role", "button"); n.g.setAttribute("aria-label", name); n.g.classList.add("hpick");
+    n.g.addEventListener("click", () => { pick(k); if (helpMap.stop) helpMap.stop(); });
+    n.g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(k); if (helpMap.stop) helpMap.stop(); } });
+  }
+  pick("task");
+  return f;
+}
+// small drawing helpers for the detail pictures (290 x 102)
+const hv = (s, x, y, t, style, anchor) => txt(s, x, y, t, style || "font: 10px var(--body); fill: var(--ink-2)", anchor);
+const hmono = (col = "var(--muted)", size = 9.5) => `font: ${size}px var(--mono); fill: ${col}`;
+const hchip = (s, x, y, t, col) => { const w = 8 + t.length * 6.1; el("rect", { x, y: y - 11, width: w, height: 16, rx: 8, fill: `color-mix(in srgb, ${col} 16%, var(--surface))`, stroke: col }, s); hv(s, x + w / 2, y + 1, t, `font: 600 9.5px var(--mono); fill: ${col}`, "middle"); return w; };
+const hlane = (s, y, name) => { hv(s, 4, y + 8, name, hmono()); el("line", { x1: 74, x2: 286, y1: y + 12, y2: y + 12, stroke: "var(--grid)" }, s); };
+const hbox = (s, x, y, w, h, col, dash) => el("rect", { x, y, width: w, height: h, rx: 3, fill: dash ? "none" : `color-mix(in srgb, ${col} 70%, var(--surface))`, stroke: col, ...(dash ? { "stroke-dasharray": "3 2" } : {}) }, s);
+const harrow = (s, x0, y0, x1, y1, col = "var(--ink-2)") => el("path", { d: `M${x0},${y0} L${x1},${y1}`, stroke: col, "stroke-width": 1.4, fill: "none", "marker-end": "url(#helparrow2)" }, s);
+const HELP_INFO = {
+  task: { name: "Task", tag: "the starting point",
+    steps: ["Goal: drug pairs that kill more cancer cells together than each drug alone.", "Given: 4 drugs, 4 cell lines, reads at 24, 48 or 72 h, and the machines.", "Not given: timing limits, labware, liquid recipes. The agent has to find them."],
+    viz: (s) => { const m = ((RP.loop && RP.loop.task) || {}).materials || {};
+      let x = 4; (m.drugs || ["drug 1", "drug 2", "drug 3", "drug 4"]).forEach((d, i) => { x += hchip(s, x, 16, d.toLowerCase(), DRUG_COLOR[i % 4]) + 4; });
+      x = 4; (m.cell_lines || []).forEach((c) => { x += hchip(s, x, 40, c, "var(--ink-2)") + 4; });
+      x = 4; ["timing limits?", "labware?", "recipes?"].forEach((c) => { const w = 8 + c.length * 6.1; el("rect", { x, y: 53, width: w, height: 16, rx: 8, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 2" }, s); hv(s, x + w / 2, 65, c, hmono(), "middle"); x += w + 4; });
+      hv(s, 4, 90, "1 arm · 1 liquid handler · 1 incubator · 1 reader", hmono()); } },
+  agentpre: { name: "Agent", tag: "Claude Haiku · before launch",
+    steps: ["Lists what could limit this lab: waits, deadlines, cleaning.", "Searches 7 documents: assay protocol, drug datasheets, culture guide, catalog.", "Proposes a limit only with a quote that holds the number; a checker rejects impossible or duplicate ones.", "Also picks labware (plate, tips, pipetting) and the liquid prep."],
+    stat: () => { const tr = (RP.loop.agent || {}).trace || [], c = (k) => tr.filter((t) => t.tool === k).length; return tr.length ? `this run: ${c("hypothesize")} ideas · ${c("search_corpus")} searches · ${(RP.loop.launch || []).length} limits` : ""; },
+    viz: (s) => { el("rect", { x: 4, y: 6, width: 58, height: 76, rx: 3, fill: "var(--surface)", stroke: "var(--axis)" }, s);
+      for (let i = 0; i < 8; i++) el("line", { x1: 10, x2: i === 4 ? 56 : 50 - (i % 3) * 6, y1: 16 + i * 8, y2: 16 + i * 8, stroke: i === 4 ? "var(--good)" : "var(--grid)", "stroke-width": i === 4 ? 3 : 2 }, s);
+      hv(s, 33, 96, "a quote", hmono(), "middle"); harrow(s, 66, 48, 90, 48, "var(--good)");
+      (RP.loop.launch || []).slice(0, 4).forEach((c, i) => { const w = hchip(s, 96, 16 + i * 22, limShort(c), "var(--good)"); hv(s, 101 + w, 20 + i * 22, stepPair(c), "font: 9.5px var(--body); fill: var(--ink-2)"); }); } },
+  deck: { name: "Deck", tag: "search over layouts",
+    steps: ["Lists every deck layout: where the carriers sit, tip sizes, tip racks.", "Keeps the ones that follow the agent's labware rules.", "Plans every pipetting move on each layout and times it.", "Picks the fastest."],
+    stat: () => { const D = RP.loop.deck; return D && D.best ? `this run: ${D.candidates.n.toLocaleString()} layouts checked · ${D.best.lh_min_per_plate.toFixed(0)} min per plate` : ""; },
+    viz: (s) => { const D = RP.loop.deck; if (D && D.best) { deckStrip(s, 4, 286, 20, D.baseline.design, "Start", true); deckStrip(s, 4, 286, 64, D.best.design, "Chosen", true); }
+      hv(s, 4, 98, "T tips · S sources · A assay plate", hmono()); } },
+  deckcheck: { name: "Deck check", tag: "camera · before launch",
+    steps: ["A person loads the deck by hand.", "An overhead camera takes a depth and a color image.", "Each plate and tip box is found and compared with the design.", "Anything off by over 1.5 mm or 1°, swapped or missing is flagged and fixed."],
+    viz: (s) => { for (let i = 0; i < 6; i++) { const x = 8 + (i % 3) * 94, y = 8 + Math.floor(i / 3) * 46; el("rect", { x, y, width: 84, height: 38, rx: 3, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 2" }, s);
+        const off = i === 1 ? [6, 4] : [0, 0], bad = i === 1 || i === 5;
+        el("rect", { x: x + 3 + off[0], y: y + 3 + off[1], width: 78, height: 32, rx: 3, fill: i >= 3 ? "color-mix(in srgb, var(--s4) 35%, var(--surface))" : "var(--surface-2)", stroke: bad ? "var(--critical)" : "var(--ink-2)", "stroke-width": bad ? 2 : 1 }, s);
+        hv(s, x + 42 + off[0], y + 23 + off[1], i === 1 ? "off 2.4 mm" : i === 5 ? "wrong tips" : i >= 3 ? "tips" : "plate", hmono(bad ? "var(--critical)" : "var(--ink-2)"), "middle"); } } },
+  dry: { name: "Dry run", tag: "simulation · before launch",
+    steps: ["Simulates the whole campaign 6 times, with random faults.", "Checks every limit on every plate, and every arm route for collisions.", "Launches only if nothing breaks."],
+    stat: () => { const P = RP.loop.precheck; if (!P) return ""; const v = Object.values(P.risk || {}).reduce((a, r) => a + (r.violated || 0), 0); return `this run: ${P.n_runs} runs · ${v} limits broken · ${(P.motion || {}).routes_used || 0} arm routes`; },
+    viz: (s) => { [0.86, 0.9, 0.84, 0.92, 0.88, 0.9].forEach((l, i) => { const y = 6 + i * 15; for (let k = 0; k < 9; k++) el("rect", { x: 6 + k * 27 * l, y, width: 21 * l, height: 10, rx: 2, fill: ["var(--s1)", "var(--s3)", "var(--s2)"][k % 3], opacity: .75 }, s);
+      svgIcon(el("g", { style: "stroke: var(--good)" }, s), "check", 272, y + 5, 13); }); } },
+  opt: { name: "Optimizer", tag: "Bayesian optimization",
+    steps: ["Reads the model's map: predicted synergy and how sure it is.", "Scores candidate plates by expected gain per lab hour.", "Sends the next plates: drugs, doses, cell line, read time."],
+    viz: (s) => { const n = 8, c = 11;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = Math.exp(-((i - 5.2) ** 2 + (j - 2.4) ** 2) / 2.4); el("rect", { x: 6 + i * c, y: 4 + j * c, width: c - 1, height: c - 1, rx: 1, fill: `color-mix(in srgb, var(--heat-1) ${Math.round(8 + 92 * v)}%, var(--heat-0))` }, s); }
+      [[1, 6], [3, 2], [6, 5], [2, 4]].forEach(([i, j]) => el("circle", { cx: 6 + i * c + 5, cy: 4 + j * c + 5, r: 3, fill: "none", stroke: "var(--ink)" }, s));
+      hv(s, 6 + 5 * c + 5, 4 + 2 * c + 9, "★", "font: 12px var(--body); fill: var(--accent)", "middle");
+      hv(s, 104, 22, "◯ already tested"); hv(s, 104, 40, "★ next pick: most expected"); hv(s, 116, 54, "gain per lab hour"); hv(s, 104, 78, "darker = more synergy", hmono()); } },
+  sched: { name: "Scheduler", tag: "CP-SAT",
+    steps: ["Turns every plate's steps into one timing problem.", "Solves it: no machine double-booked, every limit kept.", "When something changes, repairs only the part that is affected."],
+    viz: (s) => { hlane(s, 4, "arm"); hlane(s, 30, "liq. handler"); hlane(s, 56, "reader");
+      hbox(s, 80, 6, 16, 10, "var(--s4)"); hbox(s, 100, 32, 60, 10, "var(--s1)"); hbox(s, 164, 6, 16, 10, "var(--s4)"); hbox(s, 230, 6, 16, 10, "var(--s4)"); hbox(s, 258, 58, 26, 10, "var(--s2)");
+      el("path", { d: "M246,20 V27 H258 V20", stroke: "var(--good)", fill: "none", "stroke-width": 1.5 }, s);
+      hv(s, 205, 82, "incubator, 24 to 72 h", hmono(), "middle"); hv(s, 4, 98, "a limit keeps a gap: ≥ 30 min before the read", hmono("var(--good)")); } },
+  robots: { name: "Robots", tag: "simulated · PyLabRobot",
+    steps: ["The arm moves each plate: hotel → liquid handler → incubator → reader → hotel.", "The liquid handler adds cells and drug doses (a simulated Hamilton STARlet).", "The incubator holds plates 24 to 72 h at 37 °C.", "Faults happen at random: tip pickups, clogs, machines going down."],
+    viz: (s) => { [["hotel", "list"], ["liquid h.", "lab"], ["incubator", "incubator"], ["reader", "reader"]].forEach(([n, ic], i) => { const x = 6 + i * 72;
+        el("rect", { x, y: 12, width: 58, height: 46, rx: 6, fill: "var(--surface-2)", stroke: "var(--axis)" }, s); svgIcon(el("g", { style: "stroke: var(--ink-2)" }, s), ic, x + 29, 30, 18); hv(s, x + 29, 52, n, "font: 9.5px var(--body); fill: var(--ink-2)", "middle");
+        if (i < 3) harrow(s, x + 60, 35, x + 70, 35); });
+      el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "the arm carries every plate", hmono(), "middle"); } },
+  camera: { name: "Camera", tag: "after each plate move",
+    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged and put back before pipetting; otherwise wells get the wrong liquid."],
+    viz: (s) => { el("rect", { x: 30, y: 8, width: 120, height: 76, rx: 4, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "4 3" }, s); el("rect", { x: 39, y: 14, width: 120, height: 76, rx: 4, fill: "color-mix(in srgb, var(--critical) 8%, var(--surface))", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
+      hv(s, 172, 34, "dashed: the nest", hmono()); hv(s, 172, 50, "red: the plate, off", hmono("var(--critical)")); hv(s, 172, 66, "→ flag, put back", hmono("var(--ink-2)")); } },
+  reader: { name: "Reader", tag: "luminescence · 384 wells",
+    steps: ["Detection reagent goes in; light shows how many cells are alive.", "Control wells check the plate; a noisy plate is marked invalid and redone.", "Each well's reading becomes a synergy score: does the pair beat each drug alone?"],
+    stat: () => RP.reads && RP.reads.length ? `this run: ${RP.reads.length} plates read` : "",
+    viz: (s) => { for (let r = 0; r < 16; r++) for (let c = 0; c < 24; c++) { const ctl = c === 0 || c === 23, v = Math.max(0, Math.min(1, 1 - 0.03 * c - 0.03 * r + 0.3 * Math.exp(-((c - 16) ** 2 + (r - 4) ** 2) / 12)));
+        el("rect", { x: 6 + c * 7.2, y: 4 + r * 5.8, width: 6.2, height: 4.9, rx: 1, fill: ctl ? (r % 2 ? "var(--ink-2)" : "var(--grid)") : `color-mix(in srgb, var(--accent) ${Math.round(100 * v)}%, var(--surface-2))` }, s); }
+      hv(s, 186, 26, "brighter = more", hmono()); hv(s, 186, 38, "cells alive", hmono()); hv(s, 186, 62, "edge columns:", hmono()); hv(s, 186, 74, "controls", hmono()); } },
+  model: { name: "Model", tag: "Gaussian process",
+    steps: ["After every read, refits synergy over the doses, per cell line and read time.", "Predicts synergy everywhere, and how sure it is.", "The optimizer scores its next picks on this."],
+    viz: (s) => { const X = (u) => 8 + u * 274, Y = (v) => 80 - v * 66, pts = [0.1, 0.35, 0.6, 0.7, 0.9], m = (u) => 0.22 + 0.55 * Math.exp(-((u - 0.62) ** 2) / 0.02), sd = (u) => 0.04 + Math.min(0.22, Math.min(...pts.map((p) => Math.abs(u - p))) * 1.6);
+      let up = "", lo = "", mid = ""; for (let i = 0; i <= 60; i++) { const u = i / 60; up += `${i ? "L" : "M"}${X(u)},${Y(m(u) + sd(u))}`; lo = `L${X(u)},${Y(m(u) - sd(u))}` + lo; mid += `${i ? "L" : "M"}${X(u)},${Y(m(u))}`; }
+      el("path", { d: up + lo + "Z", fill: "var(--accent-soft)" }, s); el("path", { d: mid, fill: "none", stroke: "var(--accent)", "stroke-width": 2 }, s);
+      pts.forEach((u) => el("circle", { cx: X(u), cy: Y(m(u)), r: 3, fill: "var(--ink)" }, s));
+      hv(s, 8, 98, "dose → · dots: wells read · band: how unsure", hmono()); } },
+  recovery: { name: "Recovery", tag: "rules",
+    steps: ["A fault: tip pickup, clog, reader error, a missed time window, a machine down.", "A rule picks the fix: retry, wait for repair, measure again, or redo the plate.", "The scheduler replans around it."],
+    stat: () => { const fs = RP.failures || []; return fs.length ? `this run: ${fs.length} faults, each one handled` : ""; },
+    viz: (s) => { hlane(s, 10, "liq. handler"); hbox(s, 80, 12, 50, 10, "var(--s1)"); el("path", { d: "M136,6 l6,10 h-12 z", fill: "var(--critical)" }, s); hv(s, 136, 40, "fault", hmono("var(--critical)", 9), "middle");
+      hbox(s, 150, 12, 50, 10, "var(--s1)", true); hbox(s, 222, 12, 50, 10, "var(--s1)"); harrow(s, 176, 34, 238, 34, "var(--accent)"); hv(s, 208, 50, "moved by the replan", hmono("var(--accent)", 9), "middle");
+      hv(s, 4, 80, "retry · wait for repair · measure again · redo", hmono("var(--ink-2)")); } },
+  agent: { name: "Review", tag: "Claude Haiku · during the run",
+    steps: ["Every 2 reads, statistics test the schedule for links to bad wells.", "A flag: plates dispensed right after an uncleaned cell-line switch go bad.", "Claude reads the evidence and the documents, and adds a cleaning step.", "Data from the spoiled plates is dropped; those plates run again."],
+    stat: () => { const r = (RP.loop.reviews || []).find((x) => x.applied && x.kind === "data"), m = r && r.answer && r.answer.spec ? r.answer.spec.minutes : null, q = r && r.quarantine ? (r.quarantine.plates || []).length : 0;
+      return r ? `this run: at ${fmtH(r.t)}, a ${m} min cleaning step added${q ? `, ${q} plates redone` : ""}` : ""; },
+    viz: (s) => { hv(s, 4, 12, "after an uncleaned switch", hmono("var(--critical)")); hv(s, 4, 50, "other plates", hmono());
+      [0.1, 0.8, 0.35, 0.95, 0.55, 0.2, 0.7, 0.45].forEach((v, i) => el("circle", { cx: 10 + v * 150, cy: 25 + (i % 2) * 7, r: 3, fill: "var(--critical)", opacity: .8 }, s));
+      [0.48, 0.52, 0.5, 0.46, 0.55, 0.49, 0.51, 0.53, 0.47, 0.5].forEach((v, i) => el("circle", { cx: 10 + v * 150, cy: 63 + (i % 2) * 7, r: 3, fill: "var(--ink-2)", opacity: .6 }, s));
+      hv(s, 85, 94, "spread of well readings", hmono("var(--muted)", 9), "middle"); harrow(s, 172, 46, 194, 46, "var(--s7)"); hchip(s, 198, 36, "clean 15 min", "var(--s7)"); hchip(s, 198, 62, "redo plates", "var(--s7)"); } },
+};
+function helpDetail(host, k) {
+  const I = HELP_INFO[k]; if (!I) return;
+  const ai = k === "agentpre" || k === "agent" ? `<svg class="hd-ai" viewBox="-8 -8 16 16" width="16" height="16" aria-label="AI agent"><circle r="7"/><path d="M0,-4 L1.1,-1.1 L4,0 L1.1,1.1 L0,4 L-1.1,1.1 L-4,0 L-1.1,-1.1 Z"/></svg>` : "";
+  host.innerHTML = `<div class="hd-head"><b>${ai}${esc(I.name)}</b><span>${esc(I.tag)}</span></div><div class="hd-viz"></div><ol class="hd-steps">${I.steps.map((t) => `<li>${esc(t)}</li>`).join("")}</ol><div class="hd-stat"></div>`;
+  const s = stSvg(host.querySelector(".hd-viz"), 290, 104), mk = el("marker", { id: "helparrow2", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" }, el("defs", {}, s));
+  el("path", { d: "M0,0 L10,5 L0,10 z", fill: "context-stroke" }, mk);
+  try { I.viz(s); } catch (e) { /* run data not loaded yet: the steps still read */ }
+  let st = ""; try { st = I.stat ? I.stat() : ""; } catch (e) { st = ""; }
+  const sb = host.querySelector(".hd-stat"); sb.textContent = st; sb.hidden = !st;
 }
 function labStrip(stage, W, { nodes, edges }) {
   // run strip: batches, failures, camera flags, reviews on lab time

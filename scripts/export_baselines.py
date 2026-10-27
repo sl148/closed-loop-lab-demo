@@ -7,8 +7,7 @@ lab (scripts/run_baselines.sh): every run knows all real limits and uses the gol
 the method differs. Fresh seeds (10-17), none used while choosing our settings. Discovery curves: the reported best pair's true synergy as a share of the
 best possible, mean over both campaigns and all seeds, against lab hours.
 
-    --suffix agentlab --out web/data/baselines_lab.json   # the web replay's lab (LAB=agent run_baselines.sh),
-                                                          # overlaid on the Results tab's running synergy chart
+    --suffix agentlab --out results/m9/baselines_agentlab.json   # the web replay's lab (LAB=agent run_baselines.sh)
 """
 
 from __future__ import annotations

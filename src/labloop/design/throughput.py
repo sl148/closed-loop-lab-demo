@@ -46,9 +46,12 @@ class ThroughputAwareBO(BODesigner):
 
     def group_values(self, model, history: History, rng, capacity: int) -> dict[tuple, float]:
         # Incumbent: best posterior mean at tested points (stable, unlike a noisy max).
+        # None yet when a review has just dropped the data that measured the singles (quarantine): score from 0.
         tested = sorted(history.excess_estimates())
-        with torch.no_grad():
-            incumbent = float(model.posterior(torch.tensor(self.space.features(tested))).mean.max())
+        incumbent = 0.0
+        if tested:
+            with torch.no_grad():
+                incumbent = float(model.posterior(torch.tensor(self.space.features(tested))).mean.max())
         out = {}
         for cl in self.space.cell_lines:
             for t in self.space.timepoints_h:

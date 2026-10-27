@@ -332,6 +332,29 @@ def discovery(run: dict, campaign: str, read_t: dict, ladders: list | None = Non
     return {"levels": levels, "tested": tested, "opt_idx": idx(opt["doses"])}
 
 
+def prep_transfers(run: dict) -> list | None:
+    """One dilution batch as the liquid handler pipettes it (execution/prep_protocol.py), for the page to
+    animate during each PREP job: [drug index, role, from, to, ul, channels, repeats, mix, tip, seconds]."""
+    sup = run.get("supplies")
+    if not sup or not sup.get("plan"):
+        return None
+    import yaml
+
+    from labloop.execution import prep_protocol as pp
+    from labloop.execution.supplies import PrepPlan
+    from labloop.loop import build_space
+
+    cfg = yaml.safe_load(Path(f"configs/{run['name']}.yaml").read_text())
+    drugs = drug_names(run)
+    ladders = build_space((cfg.get("campaigns") or [{}])[0].get("space") or cfg["space"]).ladders
+    tops, n = {d: max(l) for d, l in zip(drugs, ladders)}, max(len(l) for l in ladders)
+    out = []
+    for t in PrepPlan.from_dict(sup["plan"]).protocol(drugs, tops, n):
+        sec = (pp.S_PER_TRANSFER[t.channels] + (pp.S_MIX if t.mix else 0)) * t.repeats
+        out.append([drugs.index(t.drug), t.role, t.src, t.dst, round(t.ul, 1), t.channels, t.repeats, t.mix, t.tip, sec])
+    return out
+
+
 def replay(run: dict, title: str, seed: int) -> dict:
     ops = sorted(run["schedule"], key=lambda o: (o["start"], o["op"]))
     plates = {}
@@ -379,7 +402,7 @@ def replay(run: dict, title: str, seed: int) -> dict:
                  if e["kind"] in ("tip_order", "tip_refill", "tip_mid_swap", "tip_swap")],
         "protocols": protocol_traces(run),
         # liquids the lab made (execution/supplies.py): dilution batches and cell reservoirs on each LH
-        "supplies": {**{k: v for k, v in run["supplies"].items() if k != "ledger"},
+        "supplies": {**{k: v for k, v in run["supplies"].items() if k != "ledger"}, "transfers": prep_transfers(run),
                      "events": [{k: v for k, v in e.items() if k in ("t", "kind", "lh", "job", "line", "made", "left_ml", "reason", "prev")}
                                 for e in run["events"] if e["kind"] in ("prep", "cell_swap", "prep_order", "cells_order")]}
                     if run.get("supplies") else None,

@@ -7,7 +7,6 @@ HOST=${HOST:-scottlee@130.126.138.27}; REPO=${REPO:-labloop2}  # relative to the
 PROXY=${PROXY:-https://labloop-live.scottlee.workers.dev}
 cd "$(dirname "$0")/.."
 scp -q "$HOST:$REPO/web/data/replay_console.json" "$HOST:$REPO/web/data/baselines.json" web/data/
-scp -q "$HOST:$REPO/web/data/baselines_lab.json" web/data/ 2>/dev/null || echo "no baselines_lab.json yet: the Results overlay stays hidden"
 scp -q "$HOST:$REPO/web/data/replay_combo_*.json" web/data/
 rm -f web/std.html web/std_live.html
 python scripts/build_site.py --proxy "$PROXY"
