@@ -5,7 +5,7 @@ set -u
 export PYTHONHASHSEED=0 PYTHONPATH=src LABLOOP_TORCH_THREADS=2 MUJOCO_GL=egl
 P=${P:-.venv/bin/python}; J=${J:-6}
 L=results/logs; mkdir -p $L
-BASE="designer=throughput-bo;scheduler=repair;scheduler_cfg={deterministic: true, stability: 0, objective: {makespan: 1, flow: 10}};deck=configs/deck_level4_agentlw2.json;sim3d={misplace_sigma_mm: 1.5, perception: true};truth=configs/truth_prep.yaml;plr=true;prep=results/constraints/open_haiku/prep.json"
+BASE="designer=throughput-bo;scheduler=repair;scheduler_cfg={deterministic: true, stability: 0, objective: {makespan: 1, flow: 10}};deck=configs/deck_level4_agentlw2.json;sim3d={misplace_sigma_mm: 1.5, perception: true, replace: true};truth=configs/truth_prep.yaml;plr=true;prep=results/constraints/open_haiku/prep.json"
 R="review={data: true, sched: false, provider: scripted, hypotheses: configs/combos/hypotheses_changeover.json, every_reads: 2, max_calls: 4}"
 spec() {  # variant name -> its --set string
   case $1 in

@@ -1688,8 +1688,28 @@ function initThree() {
     let w = keys[0][0][3]; for (const k of keys) { k[0] = [...k[0]]; k[0][3] = w + wrapA(k[0][3] - w); w = k[0][3]; }
     return keys;
   }
-  function armPose(route, u, site = 0) { // keyframes timed by joint travel (PF400-class speeds), eased per segment
-    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"], keys = [[lastQ, 0, ""], ...transferKeys(a, b, site)];
+  // re-placing a plate the camera flagged, mirroring replace_plan in sim3d/motion.py: re-enter the station, grip the
+  // plate where the camera says it is, lift just clear of the nest, slide over its center, set it down, leave
+  function replaceKeys(st, est) {
+    const P = stationXYZ(st), h = 0.0071, keys = [], push = (q, tag = "", dwell = 0) => keys.push([q, dwell, tag]);
+    const high = (x, y) => [ARM.safeZ, ...scaraIK(x, y, 0).slice(1)];
+    const folded = (q) => { const e = Math.sign(q[2] || 1) * MOTION.fold; return [ARM.safeZ, q[1], e, wrapA(-q[1] - e)]; };
+    const line = (x0, y0, x1, y1) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / MOTION.step));
+      for (let k = 1; k <= n; k++) push(high(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n)); };
+    const inside = MOTION.inside.includes(st), entry = inside ? high(P[0], MOTION.stageY) : high(P[0], P[1]);
+    push(folded(entry)); push(entry); if (inside) line(P[0], MOTION.stageY, est[0], est[1]);
+    push(scaraIK(est[0], est[1], P[2] + h + 0.05)); push(scaraIK(est[0], est[1], P[2] + h)); push(scaraIK(est[0], est[1], P[2] + h), "grip", 0.6);
+    push(scaraIK(est[0], est[1], P[2] + h + 0.006)); push(scaraIK(P[0], P[1], P[2] + h + 0.006));
+    push(scaraIK(P[0], P[1], P[2] + h + 0.001)); push(scaraIK(P[0], P[1], P[2] + h + 0.001), "release", 0.4);
+    push(high(P[0], P[1])); if (inside) line(P[0], P[1], P[0], MOTION.stageY); push(folded(entry));
+    let w = keys[0][0][3]; for (const k of keys) { k[0] = [...k[0]]; k[0][3] = w + wrapA(k[0][3] - w); w = k[0][3]; }
+    return keys;
+  }
+  function armPose(route, u, site = 0) {
+    const [a, b] = ROUTE_ENDS[route] || ["hotel", "lh"];
+    return armPlay([[lastQ, 0, ""], ...transferKeys(a, b, site)], u);
+  }
+  function armPlay(keys, u) { // keyframes timed by joint travel (PF400-class speeds), eased per segment
     const dt = keys.map((k, i) => i === 0 ? 0 : Math.max(Math.abs(k[0][0] - keys[i - 1][0][0]) / 0.5, Math.abs(k[0][1] - keys[i - 1][0][1]) / 3.5,
       Math.abs(k[0][2] - keys[i - 1][0][2]) / 3.5, Math.abs(k[0][3] - keys[i - 1][0][3]) / 6.3) + 0.15 + k[1]);
     const total = dt.reduce((x, y) => x + y, 0), at = u * total;
@@ -1736,14 +1756,25 @@ function initThree() {
     // arm: plate transfers and tip-rack resupply
     const tr = snap.arm.find((s) => s.op && s.op.route);
     const rackJob = RP.ops.find((o) => /^(TIPS|CELLS)/.test(o[0]) && RP.kinds[o[1]] === "transfer" && o[3] <= T && o[4] > T);  // tip box or cell reservoir
-    carried.visible = carriedRack.visible = false;
+    carried.visible = carriedRack.visible = false; SIM.regrasp = null;
     if (tr || rackJob) {
       const route = tr ? tr.op.route : (rackJob[0].startsWith("CELLS") ? "cells:" : "") + rackJob.route;
       const o = tr ? tr.op : rackJob, u = (T - o[3]) / Math.max(1, o[4] - o[3]);
-      const site = tr ? 0 : rackJob.site || 0, { q, holding, after } = armPose(route, u, site); setArm(q); showTrail(route, site);
+      const site = tr ? 0 : rackJob.site || 0, ends = ROUTE_ENDS[route] || ["hotel", "lh"];
+      // the camera flagged this placement: after the move, the arm re-grips the plate where it is and sets it on the
+      // nest, once per flag (a re-placement can miss too); offsets drawn x CAM_SCALE, as in the camera view
+      const flags = tr ? (RP.camera || []).filter((c) => c.detected && c.plate === tr.job && c.route === route && c.t >= o[3] && c.t < o[4]) : [];
+      let pose, re = null;
+      if (flags.length && T >= flags[0].t) {
+        const t0 = flags[0].t, seg = (o[4] - t0) / flags.length, k = Math.min(flags.length - 1, Math.floor((T - t0) / seg)), c = flags[k], P = stationXYZ(ends[1]);
+        const est = [P[0] + c.dx_mm * CAM_SCALE / 1000, P[1] + c.dy_mm * CAM_SCALE / 1000], tk = transferKeys(ends[0], ends[1], site);
+        pose = armPlay([[tk[tk.length - 1][0], 0, ""], ...replaceKeys(ends[1], est)], (T - t0 - k * seg) / seg); re = { P, est, c, k, n: flags.length };
+      } else pose = armPose(route, flags.length ? (T - o[3]) / Math.max(1e-6, flags[0].t - o[3]) : u, site);
+      const { q, holding, after } = pose; setArm(q); showTrail(route, site); SIM.regrasp = re;
       if (holding) { if (tr) carried.visible = true; else carriedRack.visible = true; }
+      else if (re) put(tr.job, after ? re.P[0] : re.est[0], after ? re.P[1] : re.est[1], re.P[2] + h + 0.001);
       else if (tr) { // not in the gripper: still at its pick-up nest, or already at its drop-off nest
-        const P = stationXYZ((ROUTE_ENDS[route] || ["hotel", "lh"])[after ? 1 : 0]); put(tr.job, P[0], P[1], P[2] + h + 0.001); }
+        const P = stationXYZ(ends[after ? 1 : 0]); put(tr.job, P[0], P[1], P[2] + h + 0.001); }
       if (u > .95) lastQ = q;
     } else { setArm(lastQ); trail.visible = false; }
     fingerA.position.x = carried.visible || carriedRack.visible ? 0.066 : 0.072; fingerB.position.x = -fingerA.position.x;
@@ -1828,7 +1859,8 @@ function initThree() {
     });
     const caps = [];
     const motion = (r) => { const c = CELL && CELL.motion && CELL.motion.checks && CELL.motion.checks[r]; return c ? ` · ${c.simulated_s.toFixed(1)} s, ${c.collisions.length ? "collides" : "collision-free"}` : ""; };
-    if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}${motion(tr.op.route)}</span>`);
+    if (tr && SIM.regrasp) { const g = SIM.regrasp; caps.push(`<span class="pill">arm <b>re-places</b> ${tr.job} · camera: off ${g.c.offset_mm.toFixed(1)} mm${g.n > 1 ? ` · try ${g.k + 1}/${g.n}` : ""}</span>`); }
+    else if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}${motion(tr.op.route)}</span>`);
     else if (rackJob && rackJob[0].startsWith("CELLS")) caps.push(`<span class="pill">arm <b>${rackJob.route === "lh>rackhotel" ? "used cell reservoir → rack hotel" : "next cell reservoir → source carrier"}</b></span>`);
     else if (rackJob) caps.push(`<span class="pill">arm <b>${{ "lh>rackwaste": `used tip box, site ${rackJob.site + 1} → waste bin`,
       "rackhotel>lh": `new tip box → site ${rackJob.site + 1}`, "handoff>rackwaste": `used tip box (site ${rackJob.site + 1}) handoff → waste bin`,
@@ -2772,7 +2804,7 @@ const HELP_INFO = {
         if (i < 3) harrow(s, x + 60, 35, x + 70, 35); });
       el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "the arm carries every plate", hmono(), "middle"); } },
   camera: { name: "Camera", tag: "after each plate move",
-    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged and put back before pipetting; otherwise wells get the wrong liquid."],
+    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Measured in MuJoCo: 6.5 s at the liquid handler (100% seated), 17 s at the reader (91%; a miss is flagged again)."],
     viz: (s) => { el("rect", { x: 30, y: 8, width: 120, height: 76, rx: 4, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "4 3" }, s); el("rect", { x: 39, y: 14, width: 120, height: 76, rx: 4, fill: "color-mix(in srgb, var(--critical) 8%, var(--surface))", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
       hv(s, 172, 34, "dashed: the nest", hmono()); hv(s, 172, 50, "red: the plate, off", hmono("var(--critical)")); hv(s, 172, 66, "→ flag, put back", hmono("var(--ink-2)")); } },
   reader: { name: "Reader", tag: "luminescence · 384 wells",
