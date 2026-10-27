@@ -36,6 +36,7 @@ from labloop.types import CONTROL_NEG, CONTROL_POS, PlateMap, WellRead
 MID_SWAP_MIN = 2  # arm swaps all racks during a protocol: two moves plus re-teach check
 ARM_SITES = 2  # tip-carrier sites the plate arm reaches (front two; MuJoCo: 0.42 / 0.52 m of 0.59 m)
 STALL_REPLANS = 2000  # replans in a row without any op starting: stop the run instead of spinning
+DEADLINE_MARGIN = 120  # minutes plans keep before a hard start deadline (a plate's dilutions expire)
 SUPPLY_RETRIES = 6  # fresh batches / reservoirs one plate may wait through before the run stops as a livelock
 CORE_MOVE_MIN = 1  # LH CO-RE gripper moves a tip box between a deep site and the handoff site
 OVERRUN_STEP = 0.25  # re-estimate an overrunning op as elapsed + this fraction of nominal
@@ -100,6 +101,7 @@ class Lab:
         self.batch_of: dict[str, int] = {}  # plate -> when the dilution batch it got was made
         self.n_supply_jobs = 0
         self.lh_line: dict[str, str] = {}  # liquid handler -> cell line it last seeded
+        self.lh_last_end: dict[str, int] = {}  # liquid handler -> when its last dispense ended
         # Constraints the lab was given (constraints/compile.py), applied to every plate it accepts.
         self.cons = constraints or Compiled()
         self.setup_min = self.cons.setup_min
@@ -296,8 +298,9 @@ class Lab:
                     prob.end_lb[oid] = max(now, r.start + op.dur_min)
             else:
                 prob.start_lb[oid] = now
-                if oid in self.start_ub and self.start_ub[oid] >= now:
-                    prob.start_ub[oid] = self.start_ub[oid]
+                if oid in self.start_ub and self.start_ub[oid] >= now:  # plan with slack: execution drifts (tips, swaps)
+                    ub = self.start_ub[oid]
+                    prob.start_ub[oid] = ub - DEADLINE_MARGIN if ub - DEADLINE_MARGIN >= now else ub
             prob.add_op(op)
             prob.release[op.job] = min(prob.release.get(op.job, now), self.release[op.job])
         for lag in self.lags:
@@ -328,6 +331,15 @@ class Lab:
         prob.family = {o: f for o, f in self.family.items() if o in live_set}
         prob.setup_min = dict(self.setup_min)
         prob.res_last = dict(self.res_last)
+        if self.supplies:  # a cell-line switch also swaps the cell reservoir (arm out, arm in): plans should know it
+            swap = self.durations.arm("lh>rackhotel") + self.durations.arm("rackhotel>lh") + 1
+            prob.setup_min["dispense"] = prob.setup_min.get("dispense", 0) + swap
+            for oid in live:
+                if self.ops[oid].kind == "dispense" and oid not in prob.family:
+                    prob.family[oid] = self.plates[self.ops[oid].job].cell_line
+            for lh, line in self.lh_line.items():
+                if lh not in prob.res_last:
+                    prob.res_last[lh] = (line, self.lh_last_end.get(lh, 0))
         prob.unavailable = {r: [(max(a, now), b) for a, b in w if b > now] for r, w in self.down.items() if w}
         prob.unavailable = {r: w for r, w in prob.unavailable.items() if w}
         prior = Schedule(solver="prior")
@@ -398,7 +410,7 @@ class Lab:
                 return False
             if self.ops[sp.link].kind == "dispense" and self.supplies and not self._supplies_ok(lh, self.ops[oid].job, now):
                 return False
-        if sp and (oid == sp.link or oid in sp.inner):  # runs inside its own held zone
+        if sp and oid != sp.first and (oid == sp.link or oid in sp.inner):  # runs inside its own held zone (its first op takes it)
             return self.zone[res] is sp
         return len(self.occupancy[res]) < self.resources[res].capacity
 
@@ -548,7 +560,16 @@ class Lab:
     # ------------------------------------------------------------------ liquids (execution/supplies.py)
     def _supplies_ok(self, lh: str, job: str, now: int) -> bool:
         pm, S = self.plates[job], self.supplies
+        # an older plate already waiting on supplies at this liquid handler goes first: a plate of another cell
+        # line must not swap its reservoir away (dispatch-rule schedulers would otherwise starve it)
+        if any((self.release.get(w, 0), w) < (self.release.get(job, 0), job) and self.plates[w].cell_line != pm.cell_line
+               and self.plan.assigned.get(f"{w}.dispense") == lh and getattr(self.run.get(f"{w}.mv_hotel_lh"), "status", None) == "pending"
+               and self.plan.start.get(f"{w}.mv_hotel_lh", 10**9) <= now + 60  # planned to load soon (not dropped, not planned later)
+               for w in self._supply_waits if w != job and w in self.plates):
+            return False
         ok_d, ok_c = S.drug_ok(lh, pm, now + 2), S.cells_ok(lh, pm)
+        if ok_d and ok_c:
+            self._supply_waits.pop(job, None)
         if not (ok_d and ok_c):  # a plate that no fresh batch or reservoir can serve would reorder forever
             seen = self._supply_waits.setdefault(job, set())
             key = (lh, "d" if not ok_d else "c", (S.batch.get(lh).made if S.batch.get(lh) else -1) if not ok_d
@@ -723,6 +744,8 @@ class Lab:
         self.occupancy[r.resource].discard(oid)
         if oid in self.family and self.ops[oid].kind in self.setup_min:
             self.res_last[r.resource] = (self.family[oid], now)
+        if self.ops[oid].kind == "dispense":
+            self.lh_last_end[r.resource] = now
         sp = self.spans.get(oid)
         if sp and oid == sp.last:
             self.zone[self.zone_res[sp]] = None

@@ -141,8 +141,10 @@ def serial_schedule(problem: Problem, job_order: list[str], name: str, max_tries
     t_wall = time.perf_counter()
     tl = Timeline(problem)
     sched = Schedule(solver=name, status="feasible")
-    # Jobs with running (pinned) ops go first: their timing is not negotiable.
-    pinned_jobs = [j for j in job_order if any(o.id in problem.pinned for o in problem.job_ops(j))]
+    # Jobs with running (pinned) ops go first: their timing is not negotiable. So do jobs whose plate already holds
+    # a deck zone (its span started): every other plate needs that zone, which frees only when this one moves on.
+    held = {problem.ops[sp.link].job for sp in problem.spans if sp.link in problem.span_start and sp.link in problem.ops}
+    pinned_jobs = [j for j in job_order if j in held or any(o.id in problem.pinned for o in problem.job_ops(j))]
     order = pinned_jobs + [j for j in job_order if j not in pinned_jobs]
     for job in order:
         ops = problem.job_ops(job)
@@ -181,6 +183,14 @@ def serial_schedule(problem: Problem, job_order: list[str], name: str, max_tries
     return sched
 
 
+def predecessors_first(problem: Problem, order: list[str]) -> list[str]:
+    """Jobs another job waits on (a cross-job lag, e.g. a tip box or dilution batch a plate needs) go first, in
+    the given order: placed after the plates that need them, they would start late and the plates with them."""
+    feeds = {problem.ops[l.before].job for l in problem.lags
+             if l.before in problem.ops and l.after in problem.ops and problem.ops[l.before].job != problem.ops[l.after].job}
+    return [j for j in order if j in feeds] + [j for j in order if j not in feeds]
+
+
 class FIFOScheduler:
     """Jobs in release order; ties by arrival (insertion) order."""
 
@@ -189,7 +199,7 @@ class FIFOScheduler:
     def schedule(self, problem: Problem, prior: Schedule | None = None, now: int = 0) -> Schedule:
         jobs = problem.jobs()
         order = sorted(jobs, key=lambda j: (problem.release.get(j, 0), jobs.index(j)))
-        return serial_schedule(problem, order, self.name)
+        return serial_schedule(problem, predecessors_first(problem, order), self.name)
 
 
 class PriorityScheduler:
@@ -217,4 +227,4 @@ class PriorityScheduler:
     def schedule(self, problem: Problem, prior: Schedule | None = None, now: int = 0) -> Schedule:
         jobs = problem.jobs()
         order = sorted(jobs, key=lambda j: (*self._key(problem, j), problem.release.get(j, 0), jobs.index(j)))
-        return serial_schedule(problem, order, self.name)
+        return serial_schedule(problem, predecessors_first(problem, order), self.name)

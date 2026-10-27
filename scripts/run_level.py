@@ -33,6 +33,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--seeds", type=int, default=10)
+    ap.add_argument("--seed-start", type=int, default=0, help="first seed (seeds run seed-start .. seed-start+seeds-1)")
     ap.add_argument("--vary", action="append", default=[])
     ap.add_argument("--set", action="append", default=[])
     ap.add_argument("--variant", action="append", default=[])
@@ -61,7 +62,7 @@ def main() -> None:
     rows = []
     for var in variants:
         overrides = {k: v for k, v in var.items() if k != "variant"}
-        jobs = [(cfg, s, overrides) for s in range(args.seeds)]
+        jobs = [(cfg, s, overrides) for s in range(args.seed_start, args.seed_start + args.seeds)]
         if args.workers > 1:
             with ProcessPoolExecutor(args.workers) as ex:
                 runs = list(ex.map(_run, jobs))
