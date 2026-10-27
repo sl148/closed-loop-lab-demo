@@ -27,23 +27,27 @@ labware and pipetting truth; 3 seeds, deterministic scheduling:
 
 | Run | Synergy missed (regret) | True best pairs found | Wrong values kept | Invalid plates | Hours to finish |
 |---|---|---|---|---|---|
-| No limits | 0.70 | 0 / 6 | 32 | 35.0 | 251 |
-| Agent, before launch | 0.15 | 3 / 6 | 380 | 10.3 | 325 |
-| Agent + in-run reviews | 0.10 | 3 / 6 | 117 | 10.3 | 321 |
+| No limits | 0.76 | 0 / 6 | 32 | 34.7 | 247 |
+| Agent, before launch | 0.13 | 3 / 6 | 364 | 10.3 | 320 |
+| Agent + in-run reviews | 0.11 | 3 / 6 | 93 | 10.3 | 320 |
 | All real limits (gold) | 0.03 | 5 / 6 | 3 | 0.0 | 288 |
 
 - Before launch the agent grounds 2 of the 3 real limits (drug dilutions within 1 day, Cayman datasheet;
   a 30 min room-temperature wait before reading, TB288 p. 7) and misses cell-line cleaning, which no
   document quantifies.
 - The data review then flags plates read after an uncleaned cell-line switch, adds a 15 min cleaning step
-  as a soft, assumed limit, and drops those plates: wrong values kept fall from 380 to 117 (all 3 seeds).
-- Most of the remaining gap is the agent's labware and prep (it uses fresh drug tips for every well: 118 vs 36 min
-  per plate). With the agent's labware and prep but every real limit known, regret is 0.08 (6 / 6).
+  as a soft, assumed limit, and drops those plates: wrong values kept fall from 364 to 93 (all 3 seeds).
+- The agent's labware is slower (it uses fresh drug tips for every well: 118 vs 36 min per plate). With the
+  agent's labware and prep but every real limit known, regret averages 0.20 (5 / 6) but spans 0.02 to 0.40 over
+  the 3 seeds; at 3 seeds, regret differences under about 0.1 between rows are within seed noise.
+- A plate the arm sets down off its nest is caught by the deck camera and re-gripped where it lies; the time
+  (1 min) and miss rate (4.7%) of that re-placement are measured in the MuJoCo cell (scripts/sim3d_replace.py).
 - Agent cost per campaign: about $0.13 (Haiku): limits $0.09, labware $0.005, prep $0.03, reviews $0.01.
 
 ## Ours vs. method baselines
 
-Same lab (all real limits known, gold labware and prep), so only the method differs. Pre-registered test
+Same lab (all real limits known, gold labware and prep), so only the method differs. These runs predate the measured re-placement (a
+flagged plate takes a hand-set 2 min to re-place, the same for every method). Pre-registered test
 (`scripts/confirm_eval.py`, written before the runs): 16 fresh seeds (30-45, none used for tuning), each campaign
 paired by seed; metric = hours until the reported best pair's true synergy reaches 90% of the best possible and
 stays there; ours beats a baseline if its median is lower and a one-sided paired Wilcoxon test gives p < 0.05.
