@@ -373,6 +373,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 .cam canvas, .cam svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .cam-cap { position: absolute; left: 0; right: 0; bottom: 0; font: 10.5px/1.35 var(--mono); color: var(--ink-2); background: var(--surface); padding: 2px 6px; opacity: .92; }
 .cam-cap b { color: var(--ink); font-weight: 600; }
+.cam.big { width: min(62%, 440px); box-shadow: 0 6px 22px rgba(0,0,0,.25); }  /* a re-placement: the camera view is the clearest picture of it */
 .iters { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; font: 500 11px var(--mono); color: var(--ink-2); margin-right: auto; margin-left: 10px; }
 .iter-row { display: flex; align-items: center; gap: 4px; }
 .iter-row .n { color: var(--ink); font-weight: 600; min-width: 3.2em; }
@@ -1771,6 +1772,21 @@ function initThree() {
   function poseCamera() {
     const lastTr = (() => { for (let i = RP.ops.length - 1; i >= 0; i--) { const o = RP.ops[i]; if (o[3] <= T && o.route && !/^(TIPS|CELLS)/.test(o[0])) return o; } return null; })();
     const ov = $("#cam-ov"); ov.innerHTML = ""; CAM.shift = null;
+    const RG = SIM.regrasp; $("#cam").classList.toggle("big", !!RG);
+    if (RG) {  // a flagged plate being re-placed: the nest (dashed), the plate where it is, the gripper, the slide back
+      const [nx, ny, nz] = RG.P; CAM.hw = 0.10; CAM.at = [nx, ny, nz];
+      camTop.position.set(nx, ny, nz + 0.0521); camTop.near = 0.002; camTop.lookAt(nx, ny, nz - 1);
+      const px = 2, pw = DK.PLATE[0] * 1000 * px, ph = DK.PLATE[1] * 1000 * px;
+      const dx = (RG.plate[0] - nx) * 1000 * px, dy = (RG.plate[1] - ny) * 1000 * px, col = RG.after ? "var(--good)" : "var(--critical)";
+      el("rect", { x: 200 - pw / 2, y: 150 - ph / 2, width: pw, height: ph, rx: 6, fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-dasharray": "6 4" }, ov);
+      el("rect", { x: 200 - pw / 2 + dx, y: 150 - ph / 2 - dy, width: pw, height: ph, rx: 6, fill: "none", stroke: col, "stroke-width": 3 }, ov);
+      if (!RG.after && Math.hypot(dx, dy) > 4) el("path", { d: `M${200 + dx},${150 - dy} L200,150`, stroke: col, "stroke-width": 2, "stroke-dasharray": "4 3", fill: "none" }, ov);
+      if (RG.holding) for (const sx of [-1, 1]) el("rect", { x: 200 + dx + sx * (pw / 2 + 6) - 5, y: 150 - dy - 30, width: 10, height: 60, rx: 3, fill: "var(--ink)", opacity: .85 }, ov);  // gripper fingers
+      if (RG.st === "lh" && deckObjs) CAM.shift = { d: [RG.plate[0] - nx, RG.plate[1] - ny], objs: [deckObjs.assayBase, deckObjs.assay.inst] };  // the deck's plate drawing moves with the plate
+      const step = RG.after ? "seated on the nest ✓" : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where it is";
+      $("#cam-cap").innerHTML = `<b>${RG.c.plate}</b> off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE})${RG.n > 1 ? ` · try ${RG.k + 1}/${RG.n}` : ""} · <b style="color:${col}">${step}</b>`;
+      return;
+    }
     const watch = lastTr && T >= lastTr[3] + 0.6 * (lastTr[4] - lastTr[3]) && T <= lastTr[4] + 3;
     if (!watch) { // overview of the liquid-handler deck
       CAM.hw = 0.40; CAM.at = [0.50, 0.33, DK.CAR_TOP]; camTop.near = 0.002; camTop.position.set(0.50, 0.33, 0.89); camTop.lookAt(0.50, 0.33, 0);
@@ -1894,7 +1910,7 @@ function initThree() {
     // arm: plate transfers and tip-rack resupply
     const tr = snap.arm.find((s) => s.op && s.op.route);
     const rackJob = RP.ops.find((o) => /^(TIPS|CELLS)/.test(o[0]) && RP.kinds[o[1]] === "transfer" && o[3] <= T && o[4] > T);  // tip box or cell reservoir
-    carried.visible = carriedRack.visible = false; SIM.regrasp = null;
+    carried.visible = carriedRack.visible = false; SIM.regrasp = null;  // set again below while a re-placement plays
     if (tr || rackJob) {
       const route = tr ? tr.op.route : (rackJob[0].startsWith("CELLS") ? "cells:" : "") + rackJob.route;
       const o = tr ? tr.op : rackJob, u = (T - o[3]) / Math.max(1, o[4] - o[3]);
@@ -1906,9 +1922,11 @@ function initThree() {
       if (flags.length && T >= flags[0].t) {
         const t0 = flags[0].t, seg = (o[4] - t0) / flags.length, k = Math.min(flags.length - 1, Math.floor((T - t0) / seg)), c = flags[k], P = stationXYZ(ends[1]);
         const est = [P[0] + c.dx_mm * CAM_SCALE / 1000, P[1] + c.dy_mm * CAM_SCALE / 1000], tk = transferKeys(ends[0], ends[1], site);
-        pose = armPlay([[tk[tk.length - 1][0], 0, ""], ...replaceKeys(ends[1], est)], (T - t0 - k * seg) / seg); re = { P, est, c, k, n: flags.length };
+        pose = armPlay([[tk[tk.length - 1][0], 0, ""], ...replaceKeys(ends[1], est)], (T - t0 - k * seg) / seg); re = { P, est, c, k, n: flags.length, st: ends[1] };
       } else pose = armPose(route, flags.length ? (T - o[3]) / Math.max(1e-6, flags[0].t - o[3]) : u, site);
-      const { q, holding, after } = pose; setArm(q); showTrail(route, site); SIM.regrasp = re;
+      const { q, holding, after } = pose; setArm(q); showTrail(route, site);
+      if (re) { const v = new THREE.Vector3(); if (holding) { carried.visible = true; carried.getWorldPosition(v); }
+        SIM.regrasp = { ...re, holding, after, plate: holding ? [v.x, v.y] : after ? [re.P[0], re.P[1]] : re.est }; }
       if (holding) { if (tr) carried.visible = true; else carriedRack.visible = true; }
       else if (re) put(tr.job, after ? re.P[0] : re.est[0], after ? re.P[1] : re.est[1], re.P[2] + h + 0.001);
       else if (tr) { // not in the gripper: still at its pick-up nest, or already at its drop-off nest
@@ -2013,7 +2031,10 @@ function initThree() {
     if (v.c.width !== Math.round(w * devicePixelRatio) || v.c.height !== Math.round(h * devicePixelRatio)) { v.r.setPixelRatio(devicePixelRatio); v.r.setSize(w, h, false); }
     if (c.isPerspectiveCamera) { c.aspect = w / h; c.updateProjectionMatrix(); } return true; };
   SIM.render = () => {
-    if (fit(V.main, cam)) V.main.r.render(scene, cam);
+    if (fit(V.main, cam)) { const sh = SIM.regrasp ? CAM.shift : null;  // a re-placement: the deck's plate drawing sits where the plate is
+      if (sh) for (const o of sh.objs) { o.position.x += sh.d[0]; o.position.y += sh.d[1]; }
+      V.main.r.render(scene, cam);
+      if (sh) for (const o of sh.objs) { o.position.x -= sh.d[0]; o.position.y -= sh.d[1]; } }
     if (fit(V.cam, camTop)) { const a = V.cam.c.clientWidth / V.cam.c.clientHeight; camTop.left = -CAM.hw; camTop.right = CAM.hw; camTop.top = CAM.hw / a; camTop.bottom = -CAM.hw / a; camTop.updateProjectionMatrix();
       const tv = trail.visible, sh = CAM.shift; trail.visible = false;
       if (sh) for (const o of sh.objs) { o.position.x += sh.d[0]; o.position.y += sh.d[1]; }
