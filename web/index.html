@@ -2697,13 +2697,17 @@ function deckValid(d) {
   const [lo, hi] = DKL.ARM;
   return lo <= d.dest_rail && d.dest_rail <= hi && lo <= d.tip_rail && d.tip_rail <= hi && d.racks_on_deck >= 1 && d.racks_on_deck <= 5;
 }
-function candidateDecks() {
-  const out = [];
+// Python's optimizer.allowed and optimize_deck's rule handling (agent/labware.py deck_rules)
+const deckAllowed = (d, r) => (!r.cell_tips || !r.cell_tips.length || r.cell_tips.includes(d.cell_tip)) && (!r.drug_tips || !r.drug_tips.length || r.drug_tips.includes(d.drug_tip));
+function candidateDecks(rules) {
+  const out = [], r = rules || {}, pip = r.pipetting || {};
   for (let t = 1; t < DKL.N_RAILS - 4; t++) for (let s = 1; s < DKL.N_RAILS - 4; s++) for (let a = 1; a < DKL.N_RAILS - 4; a++)
     for (const [cell_tip, drug_tip] of [["300uL", "50uL"], ["1000uL", "50uL"], ["300uL", "300uL"], ["50uL", "50uL"]]) for (let racks = 2; racks <= 5; racks++)
       for (const cell_source of ["trough", "plate"]) {
-        const d = { tip_rail: t, source_rail: s, dest_rail: a, cell_tip, drug_tip, racks_on_deck: racks, cell_source, tip_reuse: true };
-        if (deckValid(d)) out.push(d);
+        const d = { tip_rail: t, source_rail: s, dest_rail: a, cell_tip, drug_tip, racks_on_deck: racks, cell_source, tip_reuse: true, assay_plate: r.assay_plate || "clear",
+          cell_mode: "jet", drug_mode: "jet", cell_reuse: null, drug_reuse: null, drugs_first: false };
+        Object.assign(d, pip);
+        if (deckValid(d) && deckAllowed(d, r)) out.push(d);
       }
   return out;
 }
@@ -2721,23 +2725,26 @@ function planPlate(pm, d) {
   if (pm.rows <= 8) for (let r = 0; r < pm.rows; r++) lanes.push([0, r, r]);
   else for (const p of [0, 1]) for (let k = 0; k < pm.rows / 2; k++) lanes.push([p, k, 2 * k + p]);
   const parities = [...new Set(lanes.map((l) => l[0]))].sort((x, y) => x - y), passes = [], tips = {};
-  for (const { key, wells } of reagents.values()) {
+  let order = [...reagents.values()];
+  if (d.drugs_first) order = [...order.slice(1), order[0]];  // drugs into the empty plate, cells on top
+  for (const { key, wells } of order) {
     const isCells = key[0] === "cells", vol = isCells ? (size === 384 ? 16 : 40) : (size === 384 ? 2 : 5);
     const tipName = isCells ? d.cell_tip : d.drug_tip, [cap, dead] = TIPS_L[tipName];
-    const perAsp = d.tip_reuse ? Math.max(1, Math.floor((cap - dead) / vol)) : 1, srcCol = isCells ? 1 : ladders[key[1]].indexOf(key[2]);
+    const r0 = isCells ? d.cell_reuse : d.drug_reuse, reuse = r0 == null ? d.tip_reuse : r0, jet = (isCells ? d.cell_mode : d.drug_mode) !== "surface";
+    const perAsp = reuse ? Math.max(1, Math.floor((cap - dead) / vol)) : 1, srcCol = isCells ? 1 : ladders[key[1]].indexOf(key[2]);
     for (const parity of parities) {
       const laneWells = new Map();
       for (const [p, k, row] of lanes) { if (p !== parity) continue; const ws = wells.filter((w) => Math.floor(w / cols) === row).sort((x, y) => (x % cols) - (y % cols)); if (ws.length) laneWells.set(k, ws); }
       if (!laneWells.size) continue;
       const colsOf = (m) => [...new Set([...m.values()].flat().map((w) => w % cols))].sort((x, y) => x - y);
-      const chunks = d.tip_reuse ? [laneWells] : colsOf(laneWells).map((c) => new Map([...laneWells].filter(([, ws]) => ws.some((w) => w % cols === c)).map(([k, ws]) => [k, ws.filter((w) => w % cols === c)])));
+      const chunks = reuse ? [laneWells] : colsOf(laneWells).map((c) => new Map([...laneWells].filter(([, ws]) => ws.some((w) => w % cols === c)).map(([k, ws]) => [k, ws.filter((w) => w % cols === c)])));
       for (const ch of chunks) {
-        const nDisp = Math.max(...[...ch.values()].map((ws) => ws.length)), asps = Math.ceil(nDisp / perAsp), jet = d.tip_reuse, columns = colsOf(ch);
+        const nDisp = Math.max(...[...ch.values()].map((ws) => ws.length)), asps = Math.ceil(nDisp / perAsp), columns = colsOf(ch);
         tips[tipName] = (tips[tipName] || 0) + ch.size;
         const wp = [[0, 0, 0, 1.5, true]];  // zone: 0 tips, 1 source, 2 dest, 3 waste
         for (let a = 0; a < asps; a++) {
           wp.push([1, (srcCol - 1) * 9.0, 0, 1.8, true]);
-          for (const c of (d.tip_reuse ? columns.slice(a * perAsp, (a + 1) * perAsp) : columns)) wp.push([2, c * pitch, parity * pitch, jet ? 0.5 : 1.5, !jet]);
+          for (const c of (reuse ? columns.slice(a * perAsp, (a + 1) * perAsp) : columns)) wp.push([2, c * pitch, parity * pitch, jet ? 0.5 : 1.5, !jet]);
         }
         wp.push([3, 0, 0, 1.2, true]);
         passes.push({ n: ch.size, wp });
@@ -2777,8 +2784,8 @@ function deckScore(d, protos) {
   return { design: d, protocol_s: prot, swaps, total_s: prot + swaps * RACK_SWAP_S };
 }
 // The whole search, yielding to the page every few hundred decks so the histogram can fill as it runs
-async function optimizeDeck(plates, baseline, onProgress) {
-  const cands = candidateDecks(), groups = new Map();
+async function optimizeDeck(plates, baseline, onProgress, rules) {
+  const cands = candidateDecks(rules), groups = new Map();
   for (const d of cands) { const k = [d.cell_tip, d.drug_tip, d.cell_source, d.tip_reuse].join("|"); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
   const totals = [], t0 = performance.now(); let best = null, done = 0;
   for (const ds of groups.values()) {
@@ -2803,6 +2810,8 @@ async function deckSelfTest() {
   const fail = [], close = (a, b) => Math.abs(a - b) < 1e-3;
   for (const c of C.designs) { const s = deckScore(c.design, D.plates.map((pm) => planPlate(pm, c.design))); if (!close(s.total_s, c.total_s)) fail.push(["design", c.design, s.total_s, c.total_s]); }
   const res = await optimizeDeck(D.plates, D.baseline);
+  if (C.ruled) { const r = await optimizeDeck(D.plates, D.baseline, null, C.ruled.rules);
+    if (r.n !== C.ruled.n_candidates || !close(r.best.total_s, C.ruled.best.total_s) || JSON.stringify(r.best.design) !== JSON.stringify(C.ruled.best.design)) fail.push(["ruled", r.best.design, r.best.total_s, C.ruled.best.total_s]); }
   if (res.n !== C.n_candidates) fail.push(["n", res.n, C.n_candidates]);
   if (!close(res.best.total_s, C.best.total_s) || JSON.stringify(res.best.design) !== JSON.stringify(C.best.design)) fail.push(["best", res.best.design, res.best.total_s, C.best.total_s]);
   if (!close(res.baseline.total_s, C.baseline.total_s)) fail.push(["baseline", res.baseline.total_s, C.baseline.total_s]);
@@ -3122,9 +3131,9 @@ function liveCode() {  // which real limits the live agent found: E D C as 0/1
   return LIM_ORDER.map((k) => (found.has(k) ? "1" : "0")).join("");
 }
 async function fetchReplay(name) { return (await fetch(`data/replay_${name}.json`, { cache: "no-cache" })).json(); }
-function liveDeckData(res, base) {
+function liveDeckData(res, base, labware) {
   const hist = deckHist(res.totals.length ? res.totals : [base.total_s]), row = (s) => ({ design: s.design, lh_min_per_plate: s.total_s / 60, protocol_min: s.protocol_s / 60, swaps_per_plate: s.swaps });
-  return { live: true, baseline: row(base), best: res.best ? row(res.best) : row(base), candidates: { n: res.n || 0, done: res.done || 0, lh_min_hist: hist } };
+  return { live: true, baseline: row(base), best: res.best ? row(res.best) : row(base), candidates: { n: res.n || 0, done: res.done || 0, lh_min_hist: hist }, labware };
 }
 // the pre-launch clock in live mode: wait where a step is still working
 function liveGate(t) {
@@ -3137,9 +3146,10 @@ function liveGate(t) {
   if (t >= d0) {
     if (!MODE.started.deck) {
       MODE.started.deck = true;
-      (async () => { const D = await fetch("data/deck_live.json").then((r) => r.json()), base = deckScore(D.baseline, D.plates.map((pm) => planPlate(pm, D.baseline)));
-        const res = await optimizeDeck(D.plates, D.baseline, (p) => { RP.loop.deck = liveDeckData(p, base); MODE.deckFrac = p.done / p.n; ST.key = ""; });
-        RP.loop.deck = liveDeckData({ ...res, done: res.n }, base); MODE.deckBest = res.best.design; MODE.done.deck = true; ST.key = ""; })();
+      // the agent's labware rules (recorded): the search keeps only decks that follow them, as the replay's deck did
+      (async () => { const D = await fetch("data/deck_live.json").then((r) => r.json()), base = deckScore(D.baseline, D.plates.map((pm) => planPlate(pm, D.baseline))), LW = (RP.loop.deck || {}).labware;
+        const res = await optimizeDeck(D.plates, D.baseline, (p) => { RP.loop.deck = liveDeckData(p, base, LW); MODE.deckFrac = p.done / p.n; ST.key = ""; }, D.rules);
+        RP.loop.deck = liveDeckData({ ...res, done: res.n }, base, LW); MODE.deckBest = res.best.design; MODE.done.deck = true; ST.key = ""; })();
     }
     if (!MODE.done.deck) return Math.min(t, d0 + (d1 - d0) * 0.6 * (MODE.deckFrac || 0));
   }

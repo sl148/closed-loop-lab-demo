@@ -295,5 +295,44 @@
    "protocol_s": 1175.1909,
    "swaps": 1.130208
   }
- ]
+ ],
+ "ruled": {
+  "rules": {
+   "assay_plate": "white",
+   "cell_tips": [
+    "50uL"
+   ],
+   "drug_tips": [
+    "50uL"
+   ],
+   "pipetting": {
+    "cell_mode": "jet",
+    "cell_reuse": true,
+    "drug_mode": "surface",
+    "drug_reuse": false
+   }
+  },
+  "n_candidates": 4928,
+  "best": {
+   "design": {
+    "tip_rail": 25,
+    "source_rail": 19,
+    "dest_rail": 13,
+    "cell_tip": "50uL",
+    "drug_tip": "50uL",
+    "racks_on_deck": 3,
+    "cell_source": "trough",
+    "tip_reuse": true,
+    "assay_plate": "white",
+    "cell_mode": "jet",
+    "drug_mode": "surface",
+    "cell_reuse": true,
+    "drug_reuse": false,
+    "drugs_first": false
+   },
+   "total_s": 7085.1064,
+   "protocol_s": 6986.32,
+   "swaps": 3.799479
+  }
+ }
 }

@@ -16,11 +16,12 @@ def test_fixture_matches_python():
     fx = ROOT / "tests/fixtures/deck_cases.json"
     if not fx.exists():
         pytest.skip("run scripts/export_deck_live.py")
-    from export_deck_live import cases
+    from export_deck_live import cases, rules
     from optimize_deck import sample_plates
 
     sample = sample_plates(yaml.safe_load((ROOT / "configs/level4.yaml").read_text()))
-    want, got = json.loads(fx.read_text()), cases(sample)
+    want = json.loads(fx.read_text())
+    got = cases(sample, want["ruled"]["rules"] if "ruled" in want else None)
     assert got["n_candidates"] == want["n_candidates"]
     same = lambda x, y: {k: x[k] for k in y} == y  # the page port knows the fixture's fields; new ones keep their defaults
     assert same(got["best"]["design"], want["best"]["design"]) and same(got["baseline"]["design"], want["baseline"]["design"])
@@ -28,3 +29,7 @@ def test_fixture_matches_python():
         assert abs(got["best"][k] - want["best"][k]) < 1e-6 and abs(got["baseline"][k] - want["baseline"][k]) < 1e-6
     for a, b in zip(got["designs"], want["designs"]):
         assert same(a["design"], b["design"]) and abs(a["total_s"] - b["total_s"]) < 1e-6
+    if "ruled" in want:  # the agent's labware rules: same candidate count and best deck
+        assert got["ruled"]["n_candidates"] == want["ruled"]["n_candidates"]
+        assert got["ruled"]["best"]["design"] == want["ruled"]["best"]["design"]
+        assert abs(got["ruled"]["best"]["total_s"] - want["ruled"]["best"]["total_s"]) < 1e-6
