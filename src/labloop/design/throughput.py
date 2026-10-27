@@ -17,7 +17,8 @@ line and timepoint are features), so the designer may skip groups not worth a pl
 Groups are picked greedily, each pick added to the probe plan; wells inside a plate
 are filled by Thompson sampling with in-flight conditions as fantasies.
 
-Cost cooling (Lee et al. 2020, EI-cool): the score is value(g) / hours(g)^alpha with alpha the share of
+Every group gets one plate before cost decides (each arm once), so an unseen slow group is measured, not
+guessed. Cost cooling (Lee et al. 2020, EI-cool): the score is value(g) / hours(g)^alpha with alpha the share of
 the plate budget still left. Per-cost scores alone over-favour cheap groups (24 h reads come back three
 times sooner) even when the optimum sits at a slower one; cooling lets fast reads guide early exploration
 and spends the late plates where the value is.
@@ -93,8 +94,18 @@ class ThroughputAwareBO(BODesigner):
         values = self.group_values(model, history, rng, cap)
         budget = max(1, campaign.rounds * campaign.plates_per_round)
         alpha = max(0.0, 1.0 - campaign.plates_used / budget) if self.cooling else 1.0
+        # every (cell line, timepoint) group gets a plate before any is preferred for being fast: the GP only
+        # extrapolates to a group it has never seen, and the slowest group can hold the optimum (each arm once)
+        seen = {(c.cell_line, c.timepoint_h) for c in list(history.tested()) + list(pending)}
+        unseen = [g for g in campaign.groups() if g not in seen]
         order, probes = [], []
-        for _ in range(n_plates):
+        for g in unseen[:n_plates]:
+            order.append(g)
+            probes.append(self.hours_to_result(lab, probes, g, cap)[1])
+            if g in values:
+                values[g] *= self.diminish
+            self.decisions.append({"t": int(lab.env.now), "chosen": list(g), "scores": {}, "why": "unseen group"})
+        for _ in range(n_plates - len(order)):
             scored, free = {}, {}
             for g, v in values.items():
                 hours, _ = self.hours_to_result(lab, probes, g, cap)

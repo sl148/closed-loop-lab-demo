@@ -43,39 +43,31 @@ labware and pipetting truth; 3 seeds, deterministic scheduling:
 
 ## Ours vs. method baselines
 
-Same lab (all real limits known, gold labware and prep), so only the method differs; 8 fresh seeds (20-27),
-none used while choosing our settings (`scripts/run_baselines.sh`, `scripts/export_baselines.py`; the web
-page's Results tab toggles each baseline on and off). "Holds 90%" is when the mean of the reported best
-pair's true synergy reaches 90% of the best possible and stays there.
+Same lab (all real limits known, gold labware and prep), so only the method differs. Pre-registered test
+(`scripts/confirm_eval.py`, written before the runs): 16 fresh seeds (30-45, none used for tuning), each campaign
+paired by seed; metric = hours until the reported best pair's true synergy reaches 90% of the best possible and
+stays there; ours beats a baseline if its median is lower and a one-sided paired Wilcoxon test gives p < 0.05.
+The web page's Results tab toggles each baseline on and off.
 
-| Method | Holds 90% of best pair | Synergy found | Best pair found | Invalid plates |
-|---|---|---|---|---|
-| **Ours** (throughput-aware BO + CP-SAT repair) | **162 h** | 97% | 15/16 | 0.6 |
-| Plain BO (our scheduler) | 272 h | 97% | 16/16 | 0.3 |
-| Latin hypercube | 282 h | 96% | 15/16 | 0.9 |
-| Random | 270 h | 93% | 10/16 | 0.1 |
-| Dose grid | never | 81% | 8/16 | 0.1 |
-| FIFO dispatch (our optimizer) | 287 h | 98% | 15/16 | 0.9 |
-| Priority rules (our optimizer) | 252 h | 92% | 13/16 | 5.5 |
-| Full CP-SAT re-solve (our optimizer) | never | 92% | 13/16 | 0.6 |
+| Method | Median hours to hold 90% | Synergy found | Best pair found | Ours faster in (p) | Verdict |
+|---|---|---|---|---|---|
+| **Ours** (throughput-aware BO + CP-SAT repair) | **156** | 94% | 30/32 | | |
+| Plain BO (our scheduler) | 271 | 93% | 30/32 | 19/32 (0.023) | ours beats |
+| Latin hypercube | 265 | 90% | 25/32 | 24/32 (0.0004) | ours beats |
+| Random | 247 | 94% | 27/32 | 18/32 (0.066) | tie |
+| Dose grid | 278 | 82% | 15/32 | 18/32 (0.031) | ours beats |
+| FIFO dispatch (our optimizer) | 163 | 90% | 31/32 | 19/32 (0.22) | tie |
+| Priority rules (our optimizer)* | 240 | 93% | 25/30 | 19/30 (0.010) | ours beats |
+| Full CP-SAT re-solve (our optimizer) | 235 | 91% | 26/32 | 22/32 (0.011) | ours beats |
 
-Ours reaches a good answer 90-125 h sooner than every baseline; final quality ties the best of them (within
-about 1%). Getting there took fixes the baselines exposed: plans now cost a cell-line switch's reservoir
-swap, keep slack before the drug-dilution deadline, and the throughput-aware optimizer cools its cost term
-over the budget (Lee et al. 2020), since the best pair always sat at the slow 72 h read.
+\* Priority rules deadlocked on seed 35 (with the lab's supply-wait rule) and is compared on its other 15 seeds.
 
-## Headline results
-
-| Question | Result |
-|---|---|
-| Does online repair scale? (A) | At 64 plates in flight, repair re-plans within **5.4%** of the best schedule and moves **32 ops**; a 1 s full re-solve lands **35.8%** off and moves **244**. |
-| Does throughput-aware BO help? (B) | Choosing each plate's cell line and read time by expected gain per hour of lab time finishes the 15-plate campaign in **248 h vs 416 h** for BO-then-schedule, at similar final regret. |
-| Can an LLM run failure recovery? (C) | Claude (schema-validated, rule fallback) recovers in **8.3 vs 11.5 min** per failure, accepts **0** corrupt wells, needs **0** fallbacks, and replays bit-identically with no API calls. |
-| Does deck design matter? | Optimizing carrier placement, tip types and tip reuse cuts liquid-handler time from **94 to 14 min** per 384-well plate, and the async campaign from **161 to 150 h**. |
-| Is the solver sound? | CP-SAT reaches the known optimum on ft06, ft10, la01, ta01, ta02 and Brandimarte mk01-03. |
-| Is the motion physical? | Every arm route clears the STARlet housing in MuJoCo (0 collisions, 0.0 mm placement error); arm and gantry never share the deck. |
-
-Numbers are means over seeds; `RESULTS.md` has every table with spreads, and the web replay has the curves.
+Ours is faster than 5 of 7 baselines; random and FIFO dispatch are statistical ties on this test. FIFO runs our
+own optimizer, so that tie says the CP-SAT scheduler is not shown to beat simple dispatch here. Getting this far
+took fixes the baselines exposed: plans cost a cell-line switch's reservoir swap, keep slack before the
+drug-dilution deadline, the throughput-aware optimizer cools its cost term over the budget (Lee et al. 2020;
+the best pair always sat at the slow 72 h read), and four dispatch deadlocks in the lab were fixed. An earlier
+look at seeds 20-27 (used for these choices) had plain BO ahead, so the result is seed-sensitive.
 
 ## How the loop works
 

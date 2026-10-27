@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import wilcoxon
 
 from labloop.metrics import summarize
 
@@ -33,6 +34,17 @@ METHODS = [
 ]
 DEFAULT_ON = {"bo", "fifo"}  # one baseline per chart is shown on load
 STEP_MIN = 60
+
+
+def hold_hours(progress: list[dict], optimum: float, end_h: float) -> float:
+    """First time from which the reported best stays >= 90% of the optimum to the end (censored: end + 1)."""
+    ok = [p["best_true"] is not None and p["best_true"] >= 0.9 * optimum for p in progress]
+    if not ok or not ok[-1]:
+        return end_h + 1
+    i = len(ok)
+    while i > 0 and ok[i - 1]:
+        i -= 1
+    return progress[i]["t"] / 60.0
 
 
 def synergy_curve(runs: list[dict], tmax: int) -> list[float]:
@@ -61,6 +73,7 @@ def main() -> None:
     runs = {k: json.loads((res / f"{v}.json").read_text()) for k, v, *_ in METHODS if (res / f"{v}.json").exists()}
     tmax = max(r["makespan"] for rs in runs.values() for r in rs)
     out = {"step_min": STEP_MIN, "seeds": len(next(iter(runs.values()))), "methods": []}
+    hold_by: dict[str, dict] = {}
     for key, variant, label, group, desc in METHODS:
         if key not in runs:
             print("missing", variant)
@@ -77,11 +90,30 @@ def main() -> None:
             "invalid_plates": s["invalid_plates"], "replans": s["n_resched"],
         })
         m = out["methods"][-1]
-        below = [i for i, v in enumerate(m["synergy"]) if v < 0.9]  # the mean curve reaching 90% and staying there (the answer
-        cross = (below[-1] + 1 if below else 0) if m["synergy"][-1] >= 0.9 else None  # the lab hands over no longer gets worse)
-        m["ttt_h"] = round(cross * STEP_MIN / 60, 1) if cross is not None else None
+        by_run = {(r["seed"], n): hold_hours(c["progress"], c["optimum"]["excess"], r["makespan"] / 60.0)
+                  for r in rs for n, c in r["campaigns"].items()}
+        holds = list(by_run.values())
+        hold_by[key] = by_run
+        m["ttt_h"] = round(float(np.median(holds)), 1)  # per campaign, as scripts/confirm_eval.py: median hours to hold 90%
+        m["ttt_iqr"] = [round(float(np.percentile(holds, 25)), 1), round(float(np.percentile(holds, 75)), 1)]
         print(f"{label:16s} found {m['final']:.2f} hits {m['hits']}/{m['of']} ttt {m['ttt_h']} makespan {m['makespan_h']} "
               f"plates/day {m['plates_per_day']} moved {m['moved_ops']} replan {m['replan_ms']} ms invalid {m['invalid_plates']}")
+    # paired by (seed, campaign), as scripts/confirm_eval.py: does ours hold 90% sooner? (one-sided Wilcoxon)
+    seeds = sorted({s for k in hold_by.values() for s, _ in k})
+    out["seed_range"] = [seeds[0], seeds[-1]]
+    for m in out["methods"]:  # a seed a method could not finish (e.g. a dispatch deadlock) is reported, not hidden
+        mine = {s for s, _ in hold_by[m["key"]]}
+        if set(seeds) - mine:
+            m["missing_seeds"] = sorted(set(seeds) - mine)
+    for m in out["methods"]:
+        if m["key"] == "ours":
+            continue
+        keys = sorted(set(hold_by["ours"]) & set(hold_by[m["key"]]))
+        a, b = np.array([hold_by["ours"][k] for k in keys]), np.array([hold_by[m["key"]][k] for k in keys])
+        p = float(wilcoxon(a, b, alternative="less", zero_method="zsplit").pvalue)
+        m["vs_ours"] = {"faster": int((a < b).sum()), "of": len(keys), "p": round(p, 4),
+                        "beats": bool(np.median(a) < np.median(b) and p < 0.05)}
+        print(f"  ours vs {m['label']}: faster {m['vs_ours']['faster']}/{len(keys)}, p = {p:.4f}, {'BEATS' if m['vs_ours']['beats'] else 'tie'}")
     out_path.write_text(json.dumps(out, separators=(",", ":")))
     print(out_path, f"{out_path.stat().st_size / 1e3:.1f} kB")
 

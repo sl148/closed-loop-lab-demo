@@ -128,6 +128,8 @@ td.best { color: var(--accent); font-weight: 600; }
 #view-results.has-bl { grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.1fr); }
 .bl-panel { display: flex; flex-direction: column; gap: 6px; }
 .bl-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.bl-verdict { font-size: 12.5px; color: var(--ink-2); }
+.bl-verdict b { color: var(--ink); }
 .bl-gname { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 10px; }
 .bl-gname:first-child { margin-left: 0; }
 .bl-chip i, .bl-tab th i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
@@ -476,9 +478,10 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     </div>
     <div class="panel bl-panel" id="bl-panel" hidden>
       <div class="qhead"><h3>Ours vs. baselines</h3><span class="legend" id="bl-note">same lab, all real limits known · hover a chip for what it does</span></div>
+      <div class="bl-verdict" id="bl-verdict"></div>
       <div class="bl-toggles" id="bl-toggles" role="group" aria-label="Baselines shown"></div>
       <div class="bl-grid">
-        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs <span class="muted">(dot: reaches 90% and stays · labels: final, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
+        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs <span class="muted">(dot: median run holds 90% from here · labels: final answer, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
         <div class="bl-box"><div class="bl-cap">Scheduling · same optimizer, different scheduler</div><div class="bl-sched" id="bl-sched"></div></div>
       </div>
     </div>
@@ -2149,9 +2152,14 @@ async function blLoad() {
   const keys = new Set(BL.data.methods.map((m) => m.key));
   BL.on = new Set(Array.isArray(saved) ? saved.filter((k) => keys.has(k)) : BL.data.methods.filter((m) => m.default).map((m) => m.key));
   $("#bl-panel").hidden = false; $("#view-results").classList.add("has-bl");
-  $("#bl-note").textContent = `same lab, all real limits known, ${BL.data.seeds} seeds each · hover a chip for what it does`;
+  const sr = BL.data.seed_range ? ` (${BL.data.seed_range[0]}-${BL.data.seed_range[1]}, none used for tuning)` : "";
+  $("#bl-note").textContent = `same lab, all real limits known, ${BL.data.seeds} seeds each${sr} · hover a chip for what it does`;
+  const others = BL.data.methods.filter((m) => m.vs_ours), won = others.filter((m) => m.vs_ours.beats), tied = others.filter((m) => !m.vs_ours.beats);
+  if (others.length) $("#bl-verdict").innerHTML = `Ours holds 90% of the best pair sooner than <b>${won.length} of ${others.length}</b> baselines (paired by seed and campaign, one-sided Wilcoxon p &lt; 0.05)` +
+    (tied.length ? `; not shown to be faster than ${tied.map((m) => `<b>${esc(m.label)}</b> (p ${m.vs_ours.p.toFixed(2)})`).join(", ")}.` : ".") +
+    BL.data.methods.filter((m) => m.missing_seeds).map((m) => ` ${esc(m.label)} deadlocked on seed ${m.missing_seeds.join(", ")} and is compared on its other seeds.`).join("");
   const grp = (g, name) => `<span class="bl-gname">${name}</span>` + BL.data.methods.filter((m) => m.group === g).map((m) =>
-    `<button class="chip bl-chip" type="button" data-k="${m.key}" aria-pressed="${BL.on.has(m.key)}" title="${esc(m.desc)}"><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</button>`).join("");
+    `<button class="chip bl-chip" type="button" data-k="${m.key}" aria-pressed="${BL.on.has(m.key)}" title="${esc(m.desc + (m.vs_ours ? ` · ours faster in ${m.vs_ours.faster}/${m.vs_ours.of} campaigns, p ${m.vs_ours.p.toFixed(3)}` : ""))}"><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</button>`).join("");
   $("#bl-toggles").innerHTML = grp("discovery", "Discovery") + grp("schedule", "Scheduling");
   $("#bl-toggles").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k; if (BL.on.has(k)) BL.on.delete(k); else BL.on.add(k); b.setAttribute("aria-pressed", String(BL.on.has(k)));
@@ -2176,7 +2184,7 @@ function blSynChart(host, ms, W, H) {
   for (const v of [0, 0.25, 0.5, 0.75, 1]) { el("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, s); el("text", { x: L - 5, y: Y(v) + 4, "text-anchor": "end" }, s).textContent = `${Math.round(100 * v)}%`; }
   for (const h of niceTicks(xmax / 60, 6)) el("text", { x: X(h * 60), y: H - B + 15, "text-anchor": "middle" }, s).textContent = `${h} h`;
   el("line", { x1: L, x2: W - R, y1: Y(0.9), y2: Y(0.9), stroke: "var(--ink-2)", "stroke-dasharray": "4 3" }, s);
-  el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair (dot: reached and held)";
+  el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair";
   const ends = [];
   for (const m of [...ms].reverse()) {  // ours last, on top
     let d = ""; m.synergy.forEach((v, i) => { d += i ? `H${X(i * step)}V${Y(v)}` : `M${X(0)},${Y(v)}`; });
@@ -2196,11 +2204,11 @@ function blSynChart(host, ms, W, H) {
 }
 function blSchedTable(host, ms) {
   const mx = Math.max(...ms.map((m) => m.makespan_h)), f = (v, d) => (v == null ? "–" : (+v).toFixed(d));
-  const cols = [["hits", "Best pair found", "of"], ["ttt_h", "Hours until it holds 90%", 0], ["final", "Synergy found", "%"], ["plates_per_day", "Plates per day", 1], ["moved_ops", "Steps moved per replan", 1], ["replan_ms", "Replan ms", 0], ["invalid_plates", "Invalid plates", 1]];
+  const cols = [["hits", "Best pair found", "of"], ["ttt_h", "Median hours until it holds 90%", 0], ["final", "Synergy found", "%"], ["plates_per_day", "Plates per day", 1], ["moved_ops", "Steps moved per replan", 1], ["replan_ms", "Replan ms", 0], ["invalid_plates", "Invalid plates", 1], ["vs_ours", "Ours faster in (p)", "vs"]];
   host.innerHTML = `<table class="bl-tab"><thead><tr><th></th><th>Lab hours to finish</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
     ms.map((m) => `<tr><th><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</th><td class="bl-ms"><span class="bl-bar"><b style="width:${(100 * m.makespan_h / mx).toFixed(1)}%;background:${BL_COLOR[m.key]}"></b></span>${Math.round(m.makespan_h)}` +
       `${m.makespan_sd != null ? ` <small>±${Math.round(m.makespan_sd)}</small>` : ""}</td>` +
-      cols.map(([k, , d]) => `<td>${d === "%" ? `${Math.round(100 * m[k])}%` : d === "of" ? `${m.hits}/${m.of || 6}` : f(m[k], d)}</td>`).join("") + `</tr>`).join("") + `</tbody></table>`;
+      cols.map(([k, , d]) => `<td>${d === "%" ? `${Math.round(100 * m[k])}%` : d === "of" ? `${m.hits}/${m.of || 6}` : d === "vs" ? (m.vs_ours ? `${m.vs_ours.faster}/${m.vs_ours.of} (${m.vs_ours.p.toFixed(2)})` : "–") : f(m[k], d)}</td>`).join("") + `</tr>`).join("") + `</tbody></table>`;
 }
 
 /* ================================================================ data: the run's records (labloop/lims.py), rows appearing as the clock runs */

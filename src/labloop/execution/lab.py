@@ -565,6 +565,7 @@ class Lab:
         if any((self.release.get(w, 0), w) < (self.release.get(job, 0), job) and self.plates[w].cell_line != pm.cell_line
                and self.plan.assigned.get(f"{w}.dispense") == lh and getattr(self.run.get(f"{w}.mv_hotel_lh"), "status", None) == "pending"
                and self.plan.start.get(f"{w}.mv_hotel_lh", 10**9) <= now + 60  # planned to load soon (not dropped, not planned later)
+               and self.plan.start.get(f"{w}.mv_hotel_lh", 10**9) <= self.plan.start.get(f"{job}.mv_hotel_lh", 0)  # and before this one
                for w in self._supply_waits if w != job and w in self.plates):
             return False
         ok_d, ok_c = S.drug_ok(lh, pm, now + 2), S.cells_ok(lh, pm)
