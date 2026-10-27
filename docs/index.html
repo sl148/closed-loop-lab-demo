@@ -111,6 +111,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-vi
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; background: var(--surface); border-bottom: 1px solid var(--line);
   padding-block: 7px; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); }
 .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.side-link { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px var(--body); color: var(--accent); text-decoration: none;
+  border: 1px solid var(--accent); border-radius: 999px; padding: 4px 11px 4px 9px; white-space: nowrap; }
+.side-link:hover, .side-link:focus-visible { background: var(--accent-soft); }
+.side-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .brand h1 { font-size: 19px; letter-spacing: -.01em; }
 .brand span { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .tabs { display: flex; gap: 2px; flex-wrap: wrap; }
@@ -476,6 +480,8 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     <button role="tab" id="tab-results" aria-controls="view-results" aria-selected="false">Results</button>
     <button role="tab" id="tab-data" aria-controls="view-data" aria-selected="false">Data</button>
   </nav>
+  <a class="side-link" id="lc-link" href="https://sl148.github.io/liquid-class-bench/" target="_blank" rel="noopener"
+     aria-label="Liquid class bench: a simulated pipette to try liquid-class settings (opens a demo in a new tab)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8C8 1.8 3.6 7 3.6 9.9a4.4 4.4 0 0 0 8.8 0C12.4 7 8 1.8 8 1.8z"/><path d="M6 10.4a2 2 0 0 0 2 1.9"/></svg>Try: liquid class bench <span aria-hidden="true">↗</span></a>
 </header>
 
 <main style="min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr)">
@@ -2488,6 +2494,14 @@ const ICON = {
 const icon = (k, cls = "ic") => `<svg class="${cls}" viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
 function svgIcon(parent, k, x, y, size) { const g = el("g", { class: "cy-ic", transform: `translate(${x - size / 2},${y - size / 2}) scale(${size / 16})` }, parent); g.innerHTML = ICON[k]; return g; }
 function stSvg(host, W, H) { const s = svgRoot(host, W, H); s.setAttribute("class", "st-svg"); s.style.height = H + "px"; return s; }
+// header link to the liquid class bench (a separate demo): what it is, on hover or keyboard focus
+{
+  const a = document.getElementById("lc-link"), html = `<b>Liquid class bench</b> · demo<br>A liquid class tells the robot how to pipette one liquid: aspirate and dispense speeds, delays, blowout.
+    Wrong settings, wrong volumes: every dose in this lab depends on them, so its agent picks a tip and mode inside Hamilton's calibrated ranges for every liquid it pipettes.<br><b>Try it:</b> tune a simulated pipette tip and watch where the volume goes.`;
+  tipOn(a, html);
+  a.addEventListener("focus", () => { const r = a.getBoundingClientRect(); showTip({ clientX: r.left, clientY: r.bottom }, html); });
+  a.addEventListener("blur", hideTip);
+}
 function tipOn(node, html) { node.addEventListener("pointermove", (e) => showTip(e, typeof html === "function" ? html() : html)); node.addEventListener("pointerleave", hideTip); }
 function txt(s, x, y, t, style, anchor) { const e = el("text", { x, y, ...(anchor ? { "text-anchor": anchor } : {}), ...(style ? { style } : {}) }, s); e.textContent = t; return e; }
 
