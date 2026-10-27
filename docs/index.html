@@ -550,10 +550,9 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     <div class="ctrl clockbar">
       <span class="modesw" id="modesw" role="group" aria-label="Mode"><button type="button" data-m="rec" aria-pressed="true">Recorded</button><button type="button" data-m="live" aria-pressed="false" disabled title="Needs Claude in this view (open the page in claude.ai)">Live</button></span>
       <button class="play" id="play" type="button">Play</button>
-      <label for="speed">Speed</label>
-      <select id="speed"><option value="auto" selected>follow the action</option><option value="0.2">12 s / s</option><option value="1">1 min / s</option><option value="10">10 min / s</option>
-        <option value="60">1 h / s</option><option value="360">6 h / s</option></select>
       <button class="chip" id="reset" type="button" title="Back to the start (a live run is stopped and cleared)">↺ Reset</button>
+      <select id="speed" aria-label="Speed" title="Playback speed"><option value="auto" selected>follow the action</option><option value="0.2">12 s / s</option><option value="1">1 min / s</option><option value="10">10 min / s</option>
+        <option value="60">1 h / s</option><option value="360">6 h / s</option></select>
       <div class="grow"><input type="range" id="scrub" min="0" max="10000" value="0" aria-label="Simulation time"><div class="liveprog" id="liveprog" hidden><i><b></b></i><span></span></div><span class="clock" id="clock">0 h 00 m</span></div>
     </div>
   <section class="view" id="view-console" role="tabpanel" aria-labelledby="tab-console">
