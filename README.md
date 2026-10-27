@@ -41,6 +41,29 @@ labware and pipetting truth; 3 seeds, deterministic scheduling:
   36 min per plate). With the agent's labware and prep but the gold limit values, regret is 0.08 (4 / 6).
 - Agent cost per campaign: about $0.13 (Haiku): limits $0.09, labware $0.005, prep $0.03, reviews $0.01.
 
+## Ours vs. method baselines
+
+Same lab (all real limits known, gold labware and prep), so only the method differs; 8 fresh seeds (20-27),
+none used while choosing our settings (`scripts/run_baselines.sh`, `scripts/export_baselines.py`; the web
+page's Results tab toggles each baseline on and off). "Holds 90%" is when the mean of the reported best
+pair's true synergy reaches 90% of the best possible and stays there.
+
+| Method | Holds 90% of best pair | Synergy found | Best pair found | Invalid plates |
+|---|---|---|---|---|
+| **Ours** (throughput-aware BO + CP-SAT repair) | **162 h** | 97% | 15/16 | 0.6 |
+| Plain BO (our scheduler) | 272 h | 97% | 16/16 | 0.3 |
+| Latin hypercube | 282 h | 96% | 15/16 | 0.9 |
+| Random | 270 h | 93% | 10/16 | 0.1 |
+| Dose grid | never | 81% | 8/16 | 0.1 |
+| FIFO dispatch (our optimizer) | 287 h | 98% | 15/16 | 0.9 |
+| Priority rules (our optimizer) | 252 h | 92% | 13/16 | 5.5 |
+| Full CP-SAT re-solve (our optimizer) | never | 92% | 13/16 | 0.6 |
+
+Ours reaches a good answer 90-125 h sooner than every baseline; final quality ties the best of them (within
+about 1%). Getting there took fixes the baselines exposed: plans now cost a cell-line switch's reservoir
+swap, keep slack before the drug-dilution deadline, and the throughput-aware optimizer cools its cost term
+over the budget (Lee et al. 2020), since the best pair always sat at the slow 72 h read.
+
 ## Headline results
 
 | Question | Result |

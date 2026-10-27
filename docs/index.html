@@ -188,6 +188,24 @@ td.best { color: var(--accent); font-weight: 600; }
 .kpi .v { font: 600 18px var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #view-results { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
 .lr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-height: 0; }
+#view-results.has-bl { grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.1fr); }
+.bl-panel { display: flex; flex-direction: column; gap: 6px; }
+.bl-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.bl-gname { font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 10px; }
+.bl-gname:first-child { margin-left: 0; }
+.bl-chip i, .bl-tab th i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.bl-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; flex: 1 1 auto; min-height: 0; }
+.bl-box { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.bl-cap { font-size: 12px; color: var(--ink-2); margin-bottom: 2px; }
+.bl-sched { overflow: auto; min-height: 0; }
+.bl-tab { border-collapse: collapse; font-size: 12px; width: 100%; font-variant-numeric: tabular-nums; }
+.bl-tab th, .bl-tab td { padding: 5px 5px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bl-tab thead th { font: 500 10px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: normal; vertical-align: bottom; }
+.bl-tab tbody th { text-align: left; font-weight: 500; }
+.bl-tab td.bl-ms { text-align: left; }
+.bl-bar { display: inline-block; width: 60px; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.bl-bar b { display: block; height: 100%; border-radius: 4px; }
+.bl-tab small { color: var(--muted); }
 #view-data { display: grid; min-height: 0; }
 .dt-panel { min-height: 0; }
 .dt-tools { display: flex; gap: 10px; align-items: center; }
@@ -416,6 +434,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
   .quads > .panel { height: 440px; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lr-grid { grid-template-columns: minmax(0, 1fr); } .lr-grid > .panel { height: 300px; }
+  .bl-grid { grid-template-columns: minmax(0, 1fr); } #bl-syn { height: 260px; flex: none; }
   #view-data .dt-panel { height: 80vh; }
   .disc-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .two > .panel, .three > .panel { min-height: 360px; }
@@ -517,6 +536,14 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
       <div class="panel"><div class="qhead"><h3>Wrong values kept</h3><span class="legend">right edge: 3-seed means</span></div><div class="fill" id="lr-wrong"></div></div>
       <div class="panel"><div class="qhead"><h3>Synergy found</h3><span class="legend" id="lr-syn-leg"></span></div><div class="fill" id="lr-syn"></div></div>
       <div class="panel"><div class="qhead"><h3>Plates read</h3><span class="legend" id="lr-plates-leg"></span></div><div class="fill" id="lr-plates"></div></div>
+    </div>
+    <div class="panel bl-panel" id="bl-panel" hidden>
+      <div class="qhead"><h3>Ours vs. baselines</h3><span class="legend" id="bl-note">same lab, all real limits known · hover a chip for what it does</span></div>
+      <div class="bl-toggles" id="bl-toggles" role="group" aria-label="Baselines shown"></div>
+      <div class="bl-grid">
+        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs <span class="muted">(dot: reaches 90% and stays · labels: final, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
+        <div class="bl-box"><div class="bl-cap">Scheduling · same optimizer, different scheduler</div><div class="bl-sched" id="bl-sched"></div></div>
+      </div>
     </div>
   </section>
 
@@ -2170,6 +2197,73 @@ function renderLiveResults() {
   $("#lr-syn-leg").innerHTML = campNames().map((c) => `<span><i class="box" style="background:${campColor(c)}"></i>${campLabel(c)}</span>`).join("");
   $("#lr-plates-leg").innerHTML = `<span><i class="box" style="background:var(--ink-2)"></i>read</span><span><i class="box" style="background:var(--critical)"></i>invalid</span>` +
     (MODE.live ? "" : res.map((r) => `<span style="color:${VAR_COLOR[r.label]}">┆ ${VAR_SHORT[r.label]} done ${Math.round(r.mean.makespan_h || 0)} h</span>`).join(""));
+  blLoad(); renderBaselines();
+}
+
+/* ================================================================ results: ours against method baselines (data/baselines.json, scripts/export_baselines.py).
+   Every run knows all real limits and uses the gold labware and prep, so only the method differs; 3 seeds each. */
+const BL = { data: null, on: null, key: "", tried: false };
+const BL_COLOR = { ours: "var(--accent)", bo: "var(--s2)", lhs: "var(--s4)", random: "var(--s5)", grid: "var(--s7)", fifo: "var(--s2)", priority: "var(--s4)", cpsat: "var(--s1)" };
+async function blLoad() {
+  if (BL.tried) return; BL.tried = true;
+  try { BL.data = await (await fetch("data/baselines.json")).json(); } catch (e) { BL.data = null; }
+  if (!BL.data || !BL.data.methods.some((m) => m.key === "ours")) return;
+  let saved = null; try { saved = JSON.parse(localStorage.getItem("labloop-baselines") || "null"); } catch (e) { saved = null; }
+  const keys = new Set(BL.data.methods.map((m) => m.key));
+  BL.on = new Set(Array.isArray(saved) ? saved.filter((k) => keys.has(k)) : BL.data.methods.filter((m) => m.default).map((m) => m.key));
+  $("#bl-panel").hidden = false; $("#view-results").classList.add("has-bl");
+  $("#bl-note").textContent = `same lab, all real limits known, ${BL.data.seeds} seeds each · hover a chip for what it does`;
+  const grp = (g, name) => `<span class="bl-gname">${name}</span>` + BL.data.methods.filter((m) => m.group === g).map((m) =>
+    `<button class="chip bl-chip" type="button" data-k="${m.key}" aria-pressed="${BL.on.has(m.key)}" title="${esc(m.desc)}"><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</button>`).join("");
+  $("#bl-toggles").innerHTML = grp("discovery", "Discovery") + grp("schedule", "Scheduling");
+  $("#bl-toggles").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.k; if (BL.on.has(k)) BL.on.delete(k); else BL.on.add(k); b.setAttribute("aria-pressed", String(BL.on.has(k)));
+    try { localStorage.setItem("labloop-baselines", JSON.stringify([...BL.on])); } catch (e) { /* private window: not remembered */ }
+    BL.key = ""; renderBaselines(); }));
+  BL.key = ""; renderBaselines();
+}
+function renderBaselines() {
+  if (!BL.on || $("#view-results").hidden) return;
+  const host = $("#bl-syn"), [W, H] = boxSize(host), key = `${W}x${H}|${[...BL.on].sort()}`;
+  if (BL.key === key) return; BL.key = key;
+  const M = BL.data.methods, ours = M.find((m) => m.key === "ours"), on = (g) => [ours, ...M.filter((m) => m.group === g && BL.on.has(m.key))];
+  blSynChart(host, on("discovery"), W, H);
+  blSchedTable($("#bl-sched"), on("schedule"));
+}
+function blSynChart(host, ms, W, H) {
+  const s = svgRoot(host, W, H), step = BL.data.step_min, n = Math.max(...ms.map((m) => m.synergy.length)), xmax = (n - 1) * step;
+  const lab = (m) => `${m.label} ${Math.round(100 * m.final)}% · ${m.hits}/${m.of || 6}`;  // the confirmed answer, as in the table
+  const narrow = W < 560, R = narrow ? 14 : 16 + 6.4 * Math.max(...ms.map((m) => lab(m).length));  // room for the end labels; narrow: a legend below
+  $("#bl-syn-leg").innerHTML = narrow ? ms.map((m) => `<span><i class="box" style="background:${BL_COLOR[m.key]}"></i>${esc(lab(m))}</span>`).join("") : "";
+  const L = 40, Tp = 8, B = 24, X = (t) => L + (W - L - R) * t / xmax, Y = (v) => Tp + (H - Tp - B) * (1 - v);
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) { el("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, s); el("text", { x: L - 5, y: Y(v) + 4, "text-anchor": "end" }, s).textContent = `${Math.round(100 * v)}%`; }
+  for (const h of niceTicks(xmax / 60, 6)) el("text", { x: X(h * 60), y: H - B + 15, "text-anchor": "middle" }, s).textContent = `${h} h`;
+  el("line", { x1: L, x2: W - R, y1: Y(0.9), y2: Y(0.9), stroke: "var(--ink-2)", "stroke-dasharray": "4 3" }, s);
+  el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair (dot: reached and held)";
+  const ends = [];
+  for (const m of [...ms].reverse()) {  // ours last, on top
+    let d = ""; m.synergy.forEach((v, i) => { d += i ? `H${X(i * step)}V${Y(v)}` : `M${X(0)},${Y(v)}`; });
+    el("path", { d, fill: "none", stroke: BL_COLOR[m.key], "stroke-width": m.key === "ours" ? 3 : 2, "stroke-linejoin": "round" }, s);
+    if (m.ttt_h != null) el("circle", { cx: X(m.ttt_h * 60), cy: Y(0.9), r: 4, fill: BL_COLOR[m.key], stroke: "var(--surface)", "stroke-width": 1.5 }, s);
+    ends.push({ y: Y(m.synergy[m.synergy.length - 1]), m });
+  }
+  ends.sort((a, b) => a.y - b.y).forEach((e, i, a) => { e.ly = i && e.y - a[i - 1].ly < 15 ? a[i - 1].ly + 15 : e.y; });
+  if (!narrow) for (const e of ends) el("text", { x: W - R + 8, y: e.ly + 4, style: `font-size:11px; fill:${BL_COLOR[e.m.key]}; font-weight:${e.m.key === "ours" ? 600 : 500}` }, s).textContent =
+    lab(e.m);
+  const hit = el("rect", { x: L, y: Tp, width: W - L - R, height: H - Tp - B, fill: "transparent" }, s);
+  hit.addEventListener("pointermove", (evt) => {
+    const r = s.getBoundingClientRect(), x = (evt.clientX - r.left) * W / r.width, i = Math.max(0, Math.min(n - 1, Math.round((x - L) / (W - L - R) * xmax / step)));
+    showTip(evt, `<b>${Math.round(i * step / 60)} h</b><br>` + ms.map((m) => `<span style="color:${BL_COLOR[m.key]}">${esc(m.label)}</span> ${Math.round(100 * m.synergy[Math.min(i, m.synergy.length - 1)])}%`).join("<br>"));
+  });
+  hit.addEventListener("pointerleave", hideTip);
+}
+function blSchedTable(host, ms) {
+  const mx = Math.max(...ms.map((m) => m.makespan_h)), f = (v, d) => (v == null ? "–" : (+v).toFixed(d));
+  const cols = [["hits", "Best pair found", "of"], ["ttt_h", "Hours until it holds 90%", 0], ["final", "Synergy found", "%"], ["plates_per_day", "Plates per day", 1], ["moved_ops", "Steps moved per replan", 1], ["replan_ms", "Replan ms", 0], ["invalid_plates", "Invalid plates", 1]];
+  host.innerHTML = `<table class="bl-tab"><thead><tr><th></th><th>Lab hours to finish</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+    ms.map((m) => `<tr><th><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</th><td class="bl-ms"><span class="bl-bar"><b style="width:${(100 * m.makespan_h / mx).toFixed(1)}%;background:${BL_COLOR[m.key]}"></b></span>${Math.round(m.makespan_h)}` +
+      `${m.makespan_sd != null ? ` <small>±${Math.round(m.makespan_sd)}</small>` : ""}</td>` +
+      cols.map(([k, , d]) => `<td>${d === "%" ? `${Math.round(100 * m[k])}%` : d === "of" ? `${m.hits}/${m.of || 6}` : f(m[k], d)}</td>`).join("") + `</tr>`).join("") + `</tbody></table>`;
 }
 
 /* ================================================================ data: the run's records (labloop/lims.py), rows appearing as the clock runs */

@@ -136,11 +136,11 @@ td.best { color: var(--accent); font-weight: 600; }
 .bl-cap { font-size: 12px; color: var(--ink-2); margin-bottom: 2px; }
 .bl-sched { overflow: auto; min-height: 0; }
 .bl-tab { border-collapse: collapse; font-size: 12px; width: 100%; font-variant-numeric: tabular-nums; }
-.bl-tab th, .bl-tab td { padding: 5px 6px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bl-tab th, .bl-tab td { padding: 5px 5px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .bl-tab thead th { font: 500 10px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: normal; vertical-align: bottom; }
 .bl-tab tbody th { text-align: left; font-weight: 500; }
 .bl-tab td.bl-ms { text-align: left; }
-.bl-bar { display: inline-block; width: 80px; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.bl-bar { display: inline-block; width: 60px; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
 .bl-bar b { display: block; height: 100%; border-radius: 4px; }
 .bl-tab small { color: var(--muted); }
 #view-data { display: grid; min-height: 0; }
@@ -478,7 +478,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
       <div class="qhead"><h3>Ours vs. baselines</h3><span class="legend" id="bl-note">same lab, all real limits known · hover a chip for what it does</span></div>
       <div class="bl-toggles" id="bl-toggles" role="group" aria-label="Baselines shown"></div>
       <div class="bl-grid">
-        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time <span class="muted">(dot: reaches 90%)</span></div><div class="fill" id="bl-syn"></div></div>
+        <div class="bl-box"><div class="bl-cap">Discovery · synergy found over lab time, mean of all runs <span class="muted">(dot: reaches 90% and stays · labels: final, runs that found the best pair)</span></div><div class="fill" id="bl-syn"></div><div class="legend" id="bl-syn-leg"></div></div>
         <div class="bl-box"><div class="bl-cap">Scheduling · same optimizer, different scheduler</div><div class="bl-sched" id="bl-sched"></div></div>
       </div>
     </div>
@@ -2169,11 +2169,14 @@ function renderBaselines() {
 }
 function blSynChart(host, ms, W, H) {
   const s = svgRoot(host, W, H), step = BL.data.step_min, n = Math.max(...ms.map((m) => m.synergy.length)), xmax = (n - 1) * step;
-  const L = 40, R = 150, Tp = 8, B = 24, X = (t) => L + (W - L - R) * t / xmax, Y = (v) => Tp + (H - Tp - B) * (1 - v);
+  const lab = (m) => `${m.label} ${Math.round(100 * m.final)}% · ${m.hits}/${m.of || 6}`;  // the confirmed answer, as in the table
+  const narrow = W < 560, R = narrow ? 14 : 16 + 6.4 * Math.max(...ms.map((m) => lab(m).length));  // room for the end labels; narrow: a legend below
+  $("#bl-syn-leg").innerHTML = narrow ? ms.map((m) => `<span><i class="box" style="background:${BL_COLOR[m.key]}"></i>${esc(lab(m))}</span>`).join("") : "";
+  const L = 40, Tp = 8, B = 24, X = (t) => L + (W - L - R) * t / xmax, Y = (v) => Tp + (H - Tp - B) * (1 - v);
   for (const v of [0, 0.25, 0.5, 0.75, 1]) { el("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, s); el("text", { x: L - 5, y: Y(v) + 4, "text-anchor": "end" }, s).textContent = `${Math.round(100 * v)}%`; }
   for (const h of niceTicks(xmax / 60, 6)) el("text", { x: X(h * 60), y: H - B + 15, "text-anchor": "middle" }, s).textContent = `${h} h`;
   el("line", { x1: L, x2: W - R, y1: Y(0.9), y2: Y(0.9), stroke: "var(--ink-2)", "stroke-dasharray": "4 3" }, s);
-  el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair";
+  el("text", { x: L + 4, y: Y(0.9) - 4, style: "font-size:10px" }, s).textContent = "90% of the best pair (dot: reached and held)";
   const ends = [];
   for (const m of [...ms].reverse()) {  // ours last, on top
     let d = ""; m.synergy.forEach((v, i) => { d += i ? `H${X(i * step)}V${Y(v)}` : `M${X(0)},${Y(v)}`; });
@@ -2181,9 +2184,9 @@ function blSynChart(host, ms, W, H) {
     if (m.ttt_h != null) el("circle", { cx: X(m.ttt_h * 60), cy: Y(0.9), r: 4, fill: BL_COLOR[m.key], stroke: "var(--surface)", "stroke-width": 1.5 }, s);
     ends.push({ y: Y(m.synergy[m.synergy.length - 1]), m });
   }
-  ends.sort((a, b) => a.y - b.y).forEach((e, i, a) => { e.ly = i && e.y - a[i - 1].ly < 13 ? a[i - 1].ly + 13 : e.y; });
-  for (const e of ends) el("text", { x: W - R + 8, y: e.ly + 4, style: `font-size:11px; fill:${BL_COLOR[e.m.key]}; font-weight:${e.m.key === "ours" ? 600 : 500}` }, s).textContent =
-    `${e.m.label} ${Math.round(100 * e.m.synergy[e.m.synergy.length - 1])}% · ${e.m.hits}/${e.m.of || 6} hit`;
+  ends.sort((a, b) => a.y - b.y).forEach((e, i, a) => { e.ly = i && e.y - a[i - 1].ly < 15 ? a[i - 1].ly + 15 : e.y; });
+  if (!narrow) for (const e of ends) el("text", { x: W - R + 8, y: e.ly + 4, style: `font-size:11px; fill:${BL_COLOR[e.m.key]}; font-weight:${e.m.key === "ours" ? 600 : 500}` }, s).textContent =
+    lab(e.m);
   const hit = el("rect", { x: L, y: Tp, width: W - L - R, height: H - Tp - B, fill: "transparent" }, s);
   hit.addEventListener("pointermove", (evt) => {
     const r = s.getBoundingClientRect(), x = (evt.clientX - r.left) * W / r.width, i = Math.max(0, Math.min(n - 1, Math.round((x - L) / (W - L - R) * xmax / step)));
@@ -2193,7 +2196,7 @@ function blSynChart(host, ms, W, H) {
 }
 function blSchedTable(host, ms) {
   const mx = Math.max(...ms.map((m) => m.makespan_h)), f = (v, d) => (v == null ? "–" : (+v).toFixed(d));
-  const cols = [["hits", "Best pair found", "of"], ["ttt_h", "Hours to 90%", 0], ["final", "Synergy found", "%"], ["plates_per_day", "Plates per day", 1], ["idle_h", "Idle device hours", 0], ["moved_ops", "Steps moved per replan", 1], ["replan_ms", "Replan ms", 0], ["invalid_plates", "Invalid plates", 1]];
+  const cols = [["hits", "Best pair found", "of"], ["ttt_h", "Hours until it holds 90%", 0], ["final", "Synergy found", "%"], ["plates_per_day", "Plates per day", 1], ["moved_ops", "Steps moved per replan", 1], ["replan_ms", "Replan ms", 0], ["invalid_plates", "Invalid plates", 1]];
   host.innerHTML = `<table class="bl-tab"><thead><tr><th></th><th>Lab hours to finish</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
     ms.map((m) => `<tr><th><i style="background:${BL_COLOR[m.key]}"></i>${esc(m.label)}</th><td class="bl-ms"><span class="bl-bar"><b style="width:${(100 * m.makespan_h / mx).toFixed(1)}%;background:${BL_COLOR[m.key]}"></b></span>${Math.round(m.makespan_h)}` +
       `${m.makespan_sd != null ? ` <small>±${Math.round(m.makespan_sd)}</small>` : ""}</td>` +

@@ -10,6 +10,7 @@ best possible, mean over both campaigns and all seeds, against lab hours.
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -52,7 +53,12 @@ def synergy_curve(runs: list[dict], tmax: int) -> list[float]:
 
 
 def main() -> None:
-    runs = {k: json.loads((RES / f"{v}.json").read_text()) for k, v, *_ in METHODS if (RES / f"{v}.json").exists()}
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--res", default=str(RES), help="folder with the runs (default results/m9/level4)")
+    ap.add_argument("--out", default=str(OUT))
+    args = ap.parse_args()
+    res, out_path = Path(args.res), Path(args.out)
+    runs = {k: json.loads((res / f"{v}.json").read_text()) for k, v, *_ in METHODS if (res / f"{v}.json").exists()}
     tmax = max(r["makespan"] for rs in runs.values() for r in rs)
     out = {"step_min": STEP_MIN, "seeds": len(next(iter(runs.values()))), "methods": []}
     for key, variant, label, group, desc in METHODS:
@@ -71,10 +77,13 @@ def main() -> None:
             "invalid_plates": s["invalid_plates"], "replans": s["n_resched"],
         })
         m = out["methods"][-1]
+        below = [i for i, v in enumerate(m["synergy"]) if v < 0.9]  # the mean curve reaching 90% and staying there (the answer
+        cross = (below[-1] + 1 if below else 0) if m["synergy"][-1] >= 0.9 else None  # the lab hands over no longer gets worse)
+        m["ttt_h"] = round(cross * STEP_MIN / 60, 1) if cross is not None else None
         print(f"{label:16s} found {m['final']:.2f} hits {m['hits']}/{m['of']} ttt {m['ttt_h']} makespan {m['makespan_h']} "
               f"plates/day {m['plates_per_day']} moved {m['moved_ops']} replan {m['replan_ms']} ms invalid {m['invalid_plates']}")
-    OUT.write_text(json.dumps(out, separators=(",", ":")))
-    print(OUT, f"{OUT.stat().st_size / 1e3:.1f} kB")
+    out_path.write_text(json.dumps(out, separators=(",", ":")))
+    print(out_path, f"{out_path.stat().st_size / 1e3:.1f} kB")
 
 
 if __name__ == "__main__":
