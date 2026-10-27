@@ -221,8 +221,9 @@ def _set_weld(m, d, eq_name: str, active: bool) -> None:
 
 
 def joint_q(m, d) -> dict[str, float]:
-    return {m.joint(i).name: float(d.qpos[m.jnt_qposadr[i]]) for i in range(m.njnt)
-            if m.jnt_type[i] in (mujoco.mjtJoint.mjJNT_SLIDE, mujoco.mjtJoint.mjJNT_HINGE)}
+    # int(): MuJoCo 3.16's joint-type enum no longer compares equal to the numpy ints in m.jnt_type
+    kinds = (int(mujoco.mjtJoint.mjJNT_SLIDE), int(mujoco.mjtJoint.mjJNT_HINGE))
+    return {m.joint(i).name: float(d.qpos[m.jnt_qposadr[i]]) for i in range(m.njnt) if int(m.jnt_type[i]) in kinds}
 
 
 def set_joints(m, d, q: dict[str, float]) -> None:
