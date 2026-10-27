@@ -3431,7 +3431,7 @@ function setMode(live) {
   document.querySelectorAll("#modesw button").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.m === "live") === live)));
   if (live) {  // the pre-launch steps start from the recorded task; deck and camera results come from this page
     RP = JSON.parse(JSON.stringify(MODE.recRP)); const D = MODE.recRP.loop.deck;
-    RP.loop.deck = { live: true, baseline: D.baseline, best: D.baseline, candidates: { n: 0, done: 0, lh_min_hist: { edges: [0, 1], counts: [0] } } }; RP.loop.deck_check = null;
+    RP.loop.deck = { live: true, baseline: D.baseline, best: D.baseline, candidates: { n: 0, done: 0, lh_min_hist: { edges: [0, 1], counts: [0] } }, labware: D.labware }; RP.loop.deck_check = null;
     useReplay(RP, false, false);
   } else useReplay(MODE.recRP, false, false);
   if (!live) { RP.loop.deck = MODE.recRP.loop.deck; RP.loop.deck_check = MODE.recRP.loop.deck_check; }
