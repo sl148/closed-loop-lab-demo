@@ -428,6 +428,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
       <label for="speed">Speed</label>
       <select id="speed"><option value="auto" selected>follow the action</option><option value="0.2">12 s / s</option><option value="1">1 min / s</option><option value="10">10 min / s</option>
         <option value="60">1 h / s</option><option value="360">6 h / s</option></select>
+      <button class="chip" id="reset" type="button" title="Back to the start (a live run is stopped and cleared)">↺ Reset</button>
       <div class="grow"><input type="range" id="scrub" min="0" max="10000" value="0" aria-label="Simulation time"><div class="liveprog" id="liveprog" hidden><i><b></b></i><span></span></div><span class="clock" id="clock">0 h 00 m</span></div>
     </div>
   <section class="view" id="view-console" role="tabpanel" aria-labelledby="tab-console">
@@ -2167,6 +2168,13 @@ function frame(ts) {
   }
   requestAnimationFrame(frame);
 }
+// back to the start: before launch, paused; in Live mode a fresh live state (the running agent is stopped)
+$("#reset").addEventListener("click", () => {
+  if (MODE.live) { setMode(false); setMode(true); return; }
+  if (LIVE.run && !LIVE.run.done) LIVE.run.ctl.abort();
+  LIVE.run = null; playing = false; $("#play").textContent = "Play";
+  T = 0; PRE.on = true; PRE.t = 0; ST.key = ""; ST.lab = null; GW.t0 = null; selPlate = null; pinned = false; update();
+});
 $("#play").addEventListener("click", () => { playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) { T = 0; PRE.on = true; PRE.t = 0; update(); } });
 $("#scrub").addEventListener("input", (e) => { T = +e.target.value / 10000 * TMAX; update(); });
 addEventListener("resize", () => update());
@@ -3327,13 +3335,13 @@ const LIVE_TOOLS = (row, run) => {
 };
 async function liveRun() {
   if (!LIVE.sample) return;
-  await kbLoad();
   const ctl = new AbortController(), task = RP.loop.task;
-  const run = LIVE.run = { ctl, rows: [], props: {}, status: "Thinking…", done: false, err: null };
+  const run = LIVE.run = { ctl, rows: [], props: {}, status: "Loading the archive…", done: false, err: null }; renderLiveSoon();
   if (!MODE.live) { playing = false; $("#play").textContent = "Play"; stepGo("agent"); }
   const opts = (extra = {}) => ({ modelTier: "quick", signal: ctl.signal, ...extra });
   const head = `You extract scheduling limits for an automated cell-viability screening lab. Workflow steps: ${STEPS.join(", ")}. Constraint kinds: ${JSON.stringify(KINDS)}. How long a material that waits in this workflow stays usable limits the step that uses it (drug dilutions are made when a plate is released, so their shelf life is a deadline for dispense); storage advice for stocks that never wait in the workflow does not.`;
   try {
+    await kbLoad(); run.status = "Thinking…"; renderLiveSoon();  // the archive load can fail too (no session left today): caught below
     const ideas = [];  // three independent brainstorms (no response cache), merged: one alone can miss a limit
     for (let k = 1; k <= 3; k++) {
     const plan = { id: `brainstorm${k}`, label: `Brainstorm ${k}`, trace: [], text: "" }; run.rows.push(plan); renderLiveSoon();
@@ -3371,6 +3379,7 @@ function renderLive(box) {
   const run = LIVE.run; if (!run) { box.innerHTML = ""; return; }
   const found = liveFound(Object.values(run.props)), rec = liveFound(RP.loop.launch || []).length;
   let h = `<div class="eyebrow">Live · ${LIVE_WHO()} · ${esc(run.status)}</div>`;
+  if (run.done && !["Done", "Stopped"].includes(run.status)) h += `<div class="st-call bad">${icon("cross")}<span>${esc(run.status)}${run.err === "rate_limited" ? " Recorded mode still plays the full run." : ""}</span></div>`;
   h += run.done ? (MODE.live ? "" : `<button class="chip" type="button" id="lp-back">Show the recorded run</button>`) : `<button class="chip" type="button" id="lp-stop">Stop</button>`;
   h += run.rows.map((r) => {
     const res = r.result && typeof r.result === "object" ? `<span class="ok">✓ ${esc(limShort(r.result))}${r.result.value_assumed ? " · assumed" : ""}</span>` : r.result === "none" ? `<span class="muted">nothing found</span>` : r.result === "ok" ? "" : `<span class="muted">…</span>`;
@@ -3486,7 +3495,6 @@ function setMode(live) {
 }
 async function liveReview(rv) {
   if (!LIVE.sample) return null;
-  await kbLoad();
   const ctl = new AbortController(), row = { id: "review", label: "Data review", concern: rv.evidence.flag.summary, trace: [], text: "" }, run = { props: {} };
   MODE.review.row = row;
   const tools = LIVE_TOOLS(row, run), head = `You extract scheduling limits for an automated cell-viability screening lab. Workflow steps: ${STEPS.join(", ")}. Constraint kinds: ${JSON.stringify(KINDS)}.`;
@@ -3499,6 +3507,7 @@ async function liveReview(rv) {
   const nc = { name: "no_change", description: "Keep the limits as they are.", inputSchema: { type: "object", properties: { reason: { type: "string" } }, required: ["reason"] },
     execute: () => { answer = { action: "none" }; row.result = "none"; row.trace.push({ tool: "abstain", ok: true }); ST.key = ""; return "no change"; } };
   try {
+    await kbLoad();
     await LIVE.sample(`${head}\nThe lab is running. Its own reads support a limit you suspected before launch but could not ground in the archive. Evidence: ${JSON.stringify(rv.evidence.flag)}\nName the likely mechanism, then look in the archive for support: search snippets are cut, so read the full pages of the best hits (read_pages) before you conclude the archive does or does not state something. Then make exactly one decision: propose_data with the limit, or no_change if the evidence does not support it. The lab's own data is evidence: if it shows the limit exists but no document states a value, propose a modest value; it is added as a soft, assumed limit a person reviews. A missing number is a reason to assume one, not to change nothing. Never invent a number a quote does not contain. End with one short sentence.`,
       { modelTier: "quick", signal: ctl.signal, tools: [tools.search_corpus, tools.read_pages, pd, nc], onText: ({ text }) => { row.text = text; } });
   } catch (e) { row.err = e && e.code; }
