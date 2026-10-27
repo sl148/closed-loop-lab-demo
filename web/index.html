@@ -139,6 +139,11 @@ td.best { color: var(--accent); font-weight: 600; }
 .modesw button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
 .modesw button[data-m="live"][aria-pressed="true"] { background: var(--s7); color: #fff; }
 .modesw button:disabled { color: var(--muted); cursor: not-allowed; }
+.modesw button.blocked { color: var(--muted); }
+.toast { position: fixed; z-index: 60; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: max-content; max-width: min(520px, calc(100vw - 32px));
+  display: flex; gap: 10px; align-items: flex-start; background: var(--surface); color: var(--ink); border: 1px solid var(--warning); border-left-width: 4px; border-radius: 10px;
+  padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; line-height: 1.45; }
+.toast button { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
 .clockbar { padding: 8px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
 .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: grid; min-width: 0; }
@@ -567,6 +572,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-msg"></span><button type="button" id="toast-x" aria-label="Close">×</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -2582,7 +2588,7 @@ function stAgent(stage, u) {
     `<span>${icon("page")}${cnt("read_pages")}<small>pages read</small></span><span class="ok">${icon("check")}${found}<small>limits</small></span>` +
     (LIVE.sample ? `<button class="chip" type="button" id="st-live" title="Re-run this search now with your own Claude">▶ live</button>` : "") + `</div>` +
     `<div class="st-ribbon">${tr.slice(0, i + 1).map((t, j) => `<i data-j="${j}" style="background:${t.ok === false ? "var(--critical)" : TOOL_COLOR[t.tool] || "var(--axis)"}"${j === i ? ' class="cur"' : ""}></i>`).join("")}</div><div class="st-now"></div>`;
-  const lb = stage.querySelector("#st-live"); if (lb) lb.addEventListener("click", () => { if (!LIVE.run || LIVE.run.done) liveRun(); });
+  const lb = stage.querySelector("#st-live"); if (lb) lb.addEventListener("click", async () => { if (LIVE.blocked) { toast(LIVE.blocked); return; } if (!(await liveQuota())) return; if (!LIVE.run || LIVE.run.done) liveRun(); });
   const rb = stage.querySelector(".st-ribbon");
   rb.addEventListener("pointermove", (e) => { const b = e.target.closest("i[data-j]"); if (b) showTip(e, agentTip(tr[+b.dataset.j], tr)); else hideTip(); });
   rb.addEventListener("pointerleave", hideTip);
@@ -3369,6 +3375,7 @@ async function liveRun() {
     run.err = e && e.code; run.status = e && e.code === "cancelled" ? "Stopped" : e && ["not_granted", "sampling_disabled", "tools_unavailable"].includes(e.code) ? "Claude is not available here"
       : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : `Interrupted${e && e.message ? `: ${clip(String(e.message), 90)}` : ""}`;
     console.warn("live run stopped", e);
+    if (e && e.code === "rate_limited") { if (window.LABLOOP_LIVE) liveQuota().then((ok) => { if (ok) toast(run.status); }); else toast(run.status); }
   }
   run.done = true; renderLiveSoon();
 }
@@ -3509,7 +3516,7 @@ async function liveReview(rv) {
     await kbLoad();
     await LIVE.sample(`${head}\nThe lab is running. Its own reads support a limit you suspected before launch but could not ground in the archive. Evidence: ${JSON.stringify(rv.evidence.flag)}\nName the likely mechanism, then look in the archive for support: search snippets are cut, so read the full pages of the best hits (read_pages) before you conclude the archive does or does not state something. Then make exactly one decision: propose_data with the limit, or no_change if the evidence does not support it. The lab's own data is evidence: if it shows the limit exists but no document states a value, propose a modest value; it is added as a soft, assumed limit a person reviews. A missing number is a reason to assume one, not to change nothing. Never invent a number a quote does not contain. End with one short sentence.`,
       { modelTier: "quick", signal: ctl.signal, tools: [tools.search_corpus, tools.read_pages, pd, nc], onText: ({ text }) => { row.text = text; } });
-  } catch (e) { row.err = e && e.code; }
+  } catch (e) { row.err = e && e.code; if (row.err === "rate_limited") { if (window.LABLOOP_LIVE) liveQuota().then((ok) => { if (ok) toast(e.message || "Live runs are used up for today"); }); else toast(e.message || "Live runs are used up for today"); } }
   return answer;
 }
 // steps column, live mode: the dry-run step shows the match to a recorded lab run
@@ -3520,8 +3527,45 @@ function stDryLive(stage) {
     LIM_ORDER.map((k, i) => `<div class="st-call ${c[i] === "1" ? "ok" : "muted"}">${icon(c[i] === "1" ? "check" : "none")}<span>${LIM_NAME[k]}</span></div>`).join("") +
     `<div class="st-cap">${MODE.failed ? esc(MODE.failed) : MODE.done.dry ? `→ the recorded lab run made with these limits${c[2] === "0" ? ", with its cleaning review" : ""}` : "loading the matching lab run…"}</div>`;
 }
-$("#modesw").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { if (!b.disabled) setMode(b.dataset.m === "live"); }));
-function modeEnable() { const lb = $('#modesw [data-m="live"]'); lb.disabled = false; lb.title = `Run every step now with ${LIVE_WHO()}; the lab plays the recorded run made with the limits it finds`; }
+$("#modesw").querySelectorAll("button").forEach((b) => b.addEventListener("click", async () => {
+  if (b.disabled) return;
+  if (b.dataset.m === "live") {
+    if (LIVE.blocked) { toast(LIVE.blocked); return; }
+    if (!(await liveQuota())) return;
+  }
+  setMode(b.dataset.m === "live");
+}));
+// a floating notice (closes on ×, or by itself after a while)
+function toast(msg, ms = 9000) {
+  const t = $("#toast"); $("#toast-msg").textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, ms);
+}
+$("#toast-x").addEventListener("click", () => { $("#toast").hidden = true; });
+// GitHub Pages build: the proxy allows a few live runs per visitor per day; once they are used, Live is blocked
+// for the day (a click shows why) and a live run that is refused stops instead of playing on
+const liveResetAt = () => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); };
+function liveBlock(msg) {
+  LIVE.blocked = msg || `Today's live runs are used up. Live mode is back at ${liveResetAt()}. Recorded mode still plays the full run.`;
+  const lb = $('#modesw [data-m="live"]'); lb.classList.add("blocked"); lb.title = LIVE.blocked;
+  if (MODE.live) setMode(false);
+  toast(LIVE.blocked);
+}
+async function liveQuota() {  // true when a live run may start
+  const site = window.LABLOOP_LIVE; if (!site || !site.quota) return true;
+  const q = await site.quota(); if (!q) return true;  // unknown: let the session request decide
+  if (q.runs_left > 0 && q.site_left > 0) return true;
+  liveBlock(q.site_left > 0 ? `You have used today's ${q.per_ip} live runs. Live mode is back at ${liveResetAt()}. Recorded mode still plays the full run.`
+    : `This site's live runs for today are used up. Live mode is back at ${liveResetAt()}. Recorded mode still plays the full run.`);
+  return false;
+}
+function modeEnable() {
+  const lb = $('#modesw [data-m="live"]'); lb.disabled = false; lb.title = `Run every step now with ${LIVE_WHO()}; the lab plays the recorded run made with the limits it finds`;
+  const site = window.LABLOOP_LIVE;
+  if (site && site.quota) site.quota().then((q) => { if (q && (q.runs_left <= 0 || q.site_left <= 0)) {
+    LIVE.blocked = q.site_left > 0 ? `You have used today's ${q.per_ip} live runs. Live mode is back at ${liveResetAt()}. Recorded mode still plays the full run.`
+      : `This site's live runs for today are used up. Live mode is back at ${liveResetAt()}. Recorded mode still plays the full run.`;
+    lb.classList.add("blocked"); lb.title = LIVE.blocked; } });
+}
 const LIVE_WHO = () => (window.LABLOOP_LIVE ? "Claude Haiku" : "your Claude");
 
 /* ================================================================ boot */

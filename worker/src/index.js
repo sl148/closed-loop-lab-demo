@@ -22,6 +22,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "content-type": "application/json" } });
     const path = new URL(req.url).pathname;
     if (path === "/session" && req.method === "POST") return session(req, env, json);
+    if (path === "/quota" && req.method === "GET") return quota(req, env, json);
     const id = await verify(env, (req.headers.get("authorization") || "").replace(/^Bearer /, ""));
     if (!id) return json({ error: "session expired", code: "session" }, 401);
     if (path === "/kb" && req.method === "GET")
@@ -30,6 +31,13 @@ export default {
     return json({ error: "not found" }, 404);
   },
 };
+
+// runs left today for this visitor and for the site, read only (the page checks before offering Live)
+async function quota(req, env, json) {
+  const day = new Date().toISOString().slice(0, 10), ip = req.headers.get("CF-Connecting-IP") || "unknown";
+  const [nIp, nDay] = (await Promise.all([env.COUNTS.get(`ip:${day}:${ip}`), env.COUNTS.get(`day:${day}`)])).map((v) => Number(v) || 0);
+  return json({ runs_left: Math.max(0, Number(env.RUNS_PER_IP) - nIp), site_left: Math.max(0, Number(env.RUNS_PER_DAY) - nDay), per_ip: Number(env.RUNS_PER_IP) });
+}
 
 async function session(req, env, json) {
   const day = new Date().toISOString().slice(0, 10), ip = req.headers.get("CF-Connecting-IP") || "unknown";

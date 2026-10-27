@@ -40,6 +40,7 @@
   }
   const call = async (path, init) => (await send(path, init)).json();
   cfg.kb = () => call("/kb");
+  cfg.quota = async () => { try { const r = await fetch(`${base}/quota`); return r.ok ? r.json() : null; } catch (_) { return null; } };
   // one streamed turn (server-sent events of the Messages API), assembled into the message's content blocks
   async function turn(body, signal, onDelta) {
     const r = await send("/messages", { method: "POST", headers: { "content-type": "application/json" }, signal, body: JSON.stringify({ ...body, stream: true }) });
