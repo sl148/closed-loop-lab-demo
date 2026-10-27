@@ -269,6 +269,11 @@ td.best { color: var(--accent); font-weight: 600; }
 .toast { position: fixed; z-index: 60; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: max-content; max-width: min(520px, calc(100vw - 32px));
   display: flex; gap: 10px; align-items: flex-start; background: var(--surface); color: var(--ink); border: 1px solid var(--warning); border-left-width: 4px; border-radius: 10px;
   padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; line-height: 1.45; }
+.whatif { position: fixed; z-index: 59; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100vw - 32px));
+  display: grid; gap: 6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--accent); border-left-width: 4px; border-radius: 10px; padding: 10px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; line-height: 1.45; }
+.whatif b { color: var(--accent); font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.whatif .wi-btns { display: flex; flex-wrap: wrap; gap: 6px; } .whatif small { color: var(--muted); font-size: 11px; }
 .toast button { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
 .clockbar { padding: 8px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
 .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
@@ -567,7 +572,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     <aside class="panel steps" aria-label="Steps of the run"><div class="qhead"><h3>Steps</h3></div><div id="st-list"></div></aside>
     <div class="quads">
       <div class="panel">
-        <div class="qhead"><h3>Workcell</h3><div class="iters" id="iters" aria-label="Design iterations per campaign"></div></div>
+        <div class="qhead"><h3>Workcell</h3><button class="chip" type="button" id="perturb" title="Knock the next plate off its nest on the liquid handler: the camera finds it, the arm re-grips it, the schedule adapts (a what-if; the recorded run comes back)">⤨ Perturb plate</button><div class="iters" id="iters" aria-label="Design iterations per campaign"></div></div>
         <div class="fill">
           <canvas id="cell3d" tabindex="0" aria-label="3D workcell: drag to orbit, shift or right drag to pan, wheel to move in and out, click a plate"></canvas>
           <div class="scene-hint">drag · shift-drag pan · wheel zoom</div>
@@ -699,6 +704,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
+<div class="whatif" id="whatif" role="status" aria-live="polite" hidden><b>What-if</b><span id="whatif-msg"></span><div class="wi-btns"><button class="chip" type="button" id="whatif-again">⤨ Perturb again</button><button class="chip" type="button" id="whatif-back">Back to the recorded run</button></div><small>Camera: three.js, the camera check's reading rules · motion: the page's kinematic re-grasp (the lab simulates each in MuJoCo) · schedule: the page's shift-later repair (the lab re-plans with CP-SAT)</small></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-msg"></span><button type="button" id="toast-x" aria-label="Close">×</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1284,6 +1290,7 @@ function drawGantt(host, t0, t1, opts) {
       if (o[4] < t0 || o[3] > t1 || !shown(o[3])) continue;
       const x0 = Math.max(X(o[3]), L), x1 = Math.min(X(MODE.live ? Math.min(o[4], T) : o[4]), W - R), kind = RP.kinds[o[1]];
       const rect = el("rect", { x: x0, y: ys[i] + o.lane * laneH, width: Math.max(1, x1 - x0 - (opts.compact ? 0 : .8)), height: Math.max(1, laneH - (opts.compact ? 0 : .8)), fill: KIND_COLOR[kind], "fill-opacity": pinned ? (o[0] === selPlate ? 1 : .3) : .9 }, s);
+      if (o.wi) rect.setAttribute("stroke", o.wi === "re" ? "var(--critical)" : "var(--warning)"), rect.setAttribute("stroke-width", o.wi === "re" ? 2 : 1.4);  // what-if: re-grasp / shifted
       if (!opts.compact) { rect.style.cursor = "pointer"; rect.addEventListener("pointermove", (evt) => showTip(evt, `<b>${o[0]}</b> ${o.route || kind}<br>${r.res} · ${fmtH(o[3])} → ${fmtH(o[4])} (${o[4] - o[3]} min)`)); rect.addEventListener("pointerleave", hideTip);
         rect.addEventListener("click", () => { selPlate = o[0]; pinned = true; if (kind === "dispense") { LHSEL = o[2]; } update(); }); }
     }
@@ -1783,8 +1790,10 @@ function initThree() {
       if (!RG.after && Math.hypot(dx, dy) > 4) el("path", { d: `M${200 + dx},${150 - dy} L200,150`, stroke: col, "stroke-width": 2, "stroke-dasharray": "4 3", fill: "none" }, ov);
       if (RG.holding) for (const sx of [-1, 1]) el("rect", { x: 200 + dx + sx * (pw / 2 + 6) - 5, y: 150 - dy - 30, width: 10, height: 60, rx: 3, fill: "var(--ink)", opacity: .85 }, ov);  // gripper fingers
       if (RG.st === "lh" && deckObjs) CAM.shift = { d: [RG.plate[0] - nx, RG.plate[1] - ny], objs: [deckObjs.assayBase, deckObjs.assay.inst] };  // the deck's plate drawing moves with the plate
-      const step = RG.after ? "seated on the nest ✓" : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where it is";
-      $("#cam-cap").innerHTML = `<b>${RG.c.plate}</b> off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE})${RG.n > 1 ? ` · try ${RG.k + 1}/${RG.n}` : ""} · <b style="color:${col}">${step}</b>`;
+      const M = RG.c.regrasp;  // the MuJoCo re-grasp the lab ran for this flag (sim3d replace: mujoco)
+      const step = RG.after ? (M ? (M.ok ? `seated, ${M.final_mm.toFixed(1)} mm from center ✓` : `still ${M.final_mm.toFixed(1)} mm off: checked again`) : "seated on the nest ✓")
+        : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where it is";
+      $("#cam-cap").innerHTML = `<b>${RG.c.plate}</b> off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE})${RG.n > 1 ? ` · try ${RG.k + 1}/${RG.n}` : ""} · <b style="color:${M && RG.after && !M.ok ? "var(--warning)" : col}">${step}</b>${M ? ` · ${M.src === "page" ? "page" : "MuJoCo"} ${M.s.toFixed(1)} s` : ""}`;
       return;
     }
     const watch = lastTr && T >= lastTr[3] + 0.6 * (lastTr[4] - lastTr[3]) && T <= lastTr[4] + 3;
@@ -1803,7 +1812,11 @@ function initThree() {
     // overlay in the 400 x 300 viewBox: 2 px per mm at hw = 0.10 m
     const px = 2, pw = DK.PLATE[0] * 1000 * px, ph = DK.PLATE[1] * 1000 * px, rect = (dx, dy, attrs) => el("rect", { x: 200 - pw / 2 + dx, y: 150 - ph / 2 - dy, width: pw, height: ph, rx: 6, fill: "none", ...attrs }, ov);
     rect(0, 0, { stroke: "var(--accent)", "stroke-width": 2, "stroke-dasharray": "6 4" });
-    if (ev) {
+    const done = (RP.camera || []).filter((e) => e.plate === job && e.t >= lastTr[3] && e.t <= lastTr[4] + 1 && e.regrasp).pop();
+    if (done && done.regrasp.ok) {  // re-placed already: the plate sits on its nest
+      rect(0, 0, { stroke: "var(--good)", "stroke-width": 2.5 });
+      $("#cam-cap").innerHTML = `<b>${job}</b> at ${where} · re-placed, <b style="color:var(--good)">seated ${done.regrasp.final_mm.toFixed(1)} mm from center ✓</b>`;
+    } else if (ev) {
       rect(ev.dx_mm * px * CAM_SCALE, ev.dy_mm * px * CAM_SCALE, { stroke: ev.detected ? "var(--critical)" : "var(--warning)", "stroke-width": 2.5 });
       // the camera sees the plate where it really is: move it (and the deck's assay plate) for this view only
       CAM.shift = { d: [ev.dx_mm * CAM_SCALE / 1000, ev.dy_mm * CAM_SCALE / 1000], objs: [m, where === "lh" && deckObjs ? deckObjs.assayBase : null, where === "lh" && deckObjs ? deckObjs.assay.inst : null].filter(Boolean) };
@@ -2015,7 +2028,7 @@ function initThree() {
     });
     const caps = [];
     const motion = (r) => { const c = CELL && CELL.motion && CELL.motion.checks && CELL.motion.checks[r]; return c ? ` · ${c.simulated_s.toFixed(1)} s, ${c.collisions.length ? "collides" : "collision-free"}` : ""; };
-    if (tr && SIM.regrasp) { const g = SIM.regrasp; caps.push(`<span class="pill">arm <b>re-places</b> ${tr.job} · camera: off ${g.c.offset_mm.toFixed(1)} mm${g.n > 1 ? ` · try ${g.k + 1}/${g.n}` : ""}</span>`); }
+    if (tr && SIM.regrasp) { const g = SIM.regrasp; caps.push(`<span class="pill">arm <b>re-places</b> ${tr.job} · camera: off ${g.c.offset_mm.toFixed(1)} mm${g.n > 1 ? ` · try ${g.k + 1}/${g.n}` : ""}${g.c.regrasp ? ` · ${g.c.regrasp.src === "page" ? "what-if" : "MuJoCo"}: ${g.c.regrasp.s.toFixed(1)} s, ${g.c.regrasp.ok ? "seated" : "missed"} ${g.c.regrasp.final_mm.toFixed(1)} mm` : ""}</span>`); }
     else if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}${motion(tr.op.route)}</span>`);
     else if (rackJob && rackJob[0].startsWith("CELLS")) caps.push(`<span class="pill">arm <b>${rackJob.route === "lh>rackhotel" ? "used cell reservoir → rack hotel" : "next cell reservoir → source carrier"}</b></span>`);
     else if (rackJob) caps.push(`<span class="pill">arm <b>${{ "lh>rackwaste": `used tip box, site ${rackJob.site + 1} → waste bin`,
@@ -2321,13 +2334,13 @@ function frame(ts) {
   requestAnimationFrame(frame);
 }
 // back to the start: before launch, paused; in Live mode a fresh live state (the running agent is stopped)
-$("#reset").addEventListener("click", () => {
+$("#reset").addEventListener("click", () => { whatIfEnd();
   if (MODE.live) { setMode(false); setMode(true); return; }
   if (LIVE.run && !LIVE.run.done) LIVE.run.ctl.abort();
   LIVE.run = null; playing = false; $("#play").textContent = "Play";
   T = 0; PRE.on = true; PRE.t = 0; ST.key = ""; ST.lab = null; GW.t0 = null; selPlate = null; pinned = false; update();
 });
-$("#play").addEventListener("click", () => { playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) { T = 0; PRE.on = true; PRE.t = 0; update(); } });
+$("#play").addEventListener("click", () => { whatIfEnd(); playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) { T = 0; PRE.on = true; PRE.t = 0; update(); } });
 $("#scrub").addEventListener("input", (e) => { T = +e.target.value / 10000 * TMAX; update(); });
 addEventListener("resize", () => update());
 
@@ -2482,6 +2495,92 @@ function blSchedTable(host, ms) {
       `${m.makespan_sd != null ? ` <small>±${Math.round(m.makespan_sd)}</small>` : ""}</td>` +
       cols.map(([k, , d]) => `<td>${d === "%" ? `${Math.round(100 * m[k])}%` : d === "of" ? `${m.hits}/${m.of || 6}` : d === "vs" ? (m.vs_ours ? `${m.vs_ours.faster}/${m.vs_ours.of} (${m.vs_ours.p.toFixed(2)})` : "–") : f(m[k], d)}</td>`).join("") + `</tr>`).join("") + `</tbody></table>`;
 }
+
+/* ================================================================ Perturb: a what-if on the recorded run.
+   A plate the arm has just set down on the liquid handler is knocked off its nest. The deck camera (three.js, the
+   camera check's reading rules) estimates where it is; past tolerance it is flagged, the arm re-grips it where the
+   camera says and sets it on the nest; the camera checks again and the arm retries if needed. The re-grasp goes
+   on the arm's timeline and every later step shifts by a simple shift-later repair (each plate's step order, one
+   plate at a time per machine; the incubator holds 12). Kinematic motion, page-side repair: the lab itself
+   simulates each re-grasp in MuJoCo and repairs with CP-SAT. "Back to the recorded run" restores everything. */
+const WHATIF = { on: false, saved: null, raf: 0 };
+function perceiveAt(rail, dx, dy) {  // the deck camera's pose estimate of an assay plate (dx, dy) mm off its nest
+  const it = { id: "pz", group: "plates", carrier: "assay", rail, site: 0, kind: "plate", label: null, name: "assay plate" };
+  return ckRead(it, ckRender({ items: [it], carriers: [rail] }, { pz: { kind: "plate", label: null, dx_mm: dx, dy_mm: dy, yaw_deg: 0 } }));
+}
+const gauss01 = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+// shift-later repair: ops from T0 on start no earlier than before, after their plate's previous step and after the
+// previous op on a one-plate machine; the re-grasp holds the arm and the plate until T0 + D
+function shiftLater(ops, job, arm, T0, D) {
+  const cap = (RP.meta && RP.meta.resources) || {}, unit = (r) => (cap[r] || 1) === 1, out = ops.map((o) => { const c = o.slice(); c.route = o.route; c.site = o.site; return c; });  // copies: the recorded ops stay as they were
+  const resEnd = {}, jobEnd = {};
+  for (const o of out) if (o[3] < T0) { if (unit(o[2])) resEnd[o[2]] = Math.max(resEnd[o[2]] || 0, o[4]); jobEnd[o[0]] = Math.max(jobEnd[o[0]] || 0, o[4]); }
+  resEnd[arm] = Math.max(resEnd[arm] || 0, T0 + D); jobEnd[job] = T0 + D;
+  let moved = 0, maxShift = 0;
+  for (const o of out.filter((x) => x[3] >= T0).sort((a, b) => a[3] - b[3] || a[4] - b[4])) {
+    const d = o[4] - o[3], s = Math.max(o[3], jobEnd[o[0]] || 0, unit(o[2]) ? resEnd[o[2]] || 0 : 0);
+    if (s > o[3]) { moved++; maxShift = Math.max(maxShift, s - o[3]); o.wi = "moved"; }
+    o[3] = s; o[4] = s + d; jobEnd[o[0]] = o[4]; if (unit(o[2])) resEnd[o[2]] = o[4];
+  }
+  return { ops: out, moved, maxShift, end: Math.max(...out.map((o) => o[4])) };
+}
+function whatIfEnd() {
+  if (!WHATIF.on) return;
+  cancelAnimationFrame(WHATIF.raf); const S = WHATIF.saved;
+  RP.ops = S.ops; RP.camera = S.camera; TMAX = S.TMAX; buildJobs(); RP.rows = lanes(RP.ops);
+  WHATIF.on = false; $("#whatif").hidden = true; T = S.T; ST.key = ""; ST.lab = null; GW.t0 = null; update();
+}
+function perturb() {
+  if (MODE.live) return;
+  whatIfEnd();
+  const tk = RP.kinds.indexOf("transfer");
+  // the next plate the arm sets down on the liquid handler (or the last one)
+  const arrivals = RP.ops.filter((o) => o[1] === tk && o.route === "hotel>lh" && /^[A-Z]\d{3}$/.test(o[0])).sort((a, b) => a[4] - b[4]);
+  if (!arrivals.length) { toast("No plate reaches the liquid handler in this run."); return; }
+  const arr = arrivals.find((o) => o[4] >= (PRE.on ? 0 : T)) || arrivals[arrivals.length - 1], job = arr[0], T0 = arr[4], arm = arr[2];
+  PRE.on = false; playing = false; $("#play").textContent = "Play";
+  const rail = deckOf().dest_rail, TOL = CK_L.TOL_MM;
+  // knock it off: 2-6 mm in a random direction (no rotation: the re-grasp, like the cell's plan, does not turn it)
+  const a = Math.random() * 2 * Math.PI, r0 = 2 + 4 * Math.random();
+  let dx = r0 * Math.cos(a), dy = r0 * Math.sin(a);
+  const flags = [], rows = [];
+  for (let k = 0; k < 4; k++) {
+    const seen = perceiveAt(rail, dx, dy), off = Math.hypot(dx, dy);
+    if (seen.kind !== "plate") break;
+    const estOff = Math.hypot(seen.dx_mm, seen.dy_mm), flagged = estOff > TOL;
+    rows.push({ off, est: estOff, err: Math.hypot(seen.dx_mm - dx, seen.dy_mm - dy), flagged });
+    if (!flagged) break;
+    // grip where the camera says, set it on the nest: what is left is the camera's error, plus a little seating
+    const fx = dx - seen.dx_mm + 0.3 * gauss01(), fy = dy - seen.dy_mm + 0.3 * gauss01(), fin = Math.hypot(fx, fy);
+    flags.push({ t: T0, plate: job, dx_mm: dx, dy_mm: dy, offset_mm: off, detected: true, route: "hotel>lh", page: true,
+      regrasp: { s: 6.6, final_mm: fin, ok: fin <= TOL, est_err_mm: rows[rows.length - 1].err, src: "page" } });
+    dx = fx; dy = fy;
+  }
+  const D = Math.max(1, flags.length);  // a re-grasp at the liquid handler takes 6.6 s in the MuJoCo cell: one lab minute each
+  WHATIF.saved = { ops: RP.ops, camera: RP.camera, T, TMAX };
+  const rep = flags.length ? shiftLater(RP.ops, job, arm, T0, D) : { ops: RP.ops.slice(), moved: 0, maxShift: 0, end: TMAX };
+  const reOp = [job, tk, arm, T0, T0 + (flags.length ? D : 0), "hotel>lh", null]; reOp.wi = "re";
+  RP.ops = flags.length ? [...rep.ops, reOp] : rep.ops; RP.camera = [...(RP.camera || []), ...flags]; TMAX = Math.max(TMAX, rep.end);
+  buildJobs(); RP.rows = lanes(RP.ops); WHATIF.on = true; ST.key = ""; ST.lab = null; GW.t0 = null;
+  const first = rows[0], last = flags[flags.length - 1];
+  const summary = !first ? "The camera could not see the plate." : !first.flagged
+    ? `Knocked ${first.off.toFixed(1)} mm: within tolerance (${TOL} mm), so the camera lets it pass. No change to the schedule.`
+    : `Knocked ${first.off.toFixed(1)} mm off its nest. Camera: ${first.est.toFixed(1)} mm (its own error ${first.err.toFixed(1)} mm), flagged. ` +
+      `Re-gripped ${flags.length}× → ${last.regrasp.ok ? `seated ${last.regrasp.final_mm.toFixed(1)} mm from center` : `still ${last.regrasp.final_mm.toFixed(1)} mm off after 4 tries`}. ` +
+      `Schedule: the arm holds the plate ${D} min (red outline); ${rep.moved} later steps shift${rep.maxShift ? ` by up to ${rep.maxShift} min` : ""} (amber outlines).`;
+  $("#whatif-msg").textContent = summary; $("#whatif").hidden = false;
+  // play the episode: the lab clock walks through the re-grasp window
+  const t1 = T0 + (flags.length ? D : 0), dur = 1200 + 5200 * flags.length, start = performance.now();
+  T = T0 - 0.02; update();
+  let drawn = 0;  // the 3D view follows T every frame; the panels redraw ~12 times a second
+  const step = (now) => { const u = Math.min(1, (now - start) / dur); T = T0 - 0.02 + (t1 - T0 + 0.03) * u;
+    if (now - drawn > 80 || u >= 1) { drawn = now; update(); } if (u < 1 && WHATIF.on) WHATIF.raf = requestAnimationFrame(step); };
+  WHATIF.raf = requestAnimationFrame(step);
+}
+
+$("#perturb").addEventListener("click", () => { if (!$("#view-console").hidden) perturb(); });
+$("#whatif-again").addEventListener("click", perturb);
+$("#whatif-back").addEventListener("click", whatIfEnd);
 
 /* ================================================================ data: the run's records (labloop/lims.py), rows appearing as the clock runs */
 const DATA = { tab: "plates", plate: null, key: "", dl: null };
@@ -2978,7 +3077,7 @@ const HELP_INFO = {
         if (i < 3) harrow(s, x + 60, 35, x + 70, 35); });
       el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "the arm carries every plate", hmono(), "middle"); } },
   camera: { name: "Camera", tag: "after each plate move",
-    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Measured in MuJoCo: 6.5 s at the liquid handler (100% seated), 17 s at the reader (91%; a miss is flagged again)."],
+    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Each re-grasp is simulated in MuJoCo from where the plate lies (about 7 s at the liquid handler, 17 s at the reader); a plate left out of tolerance is checked and gripped again."],
     viz: (s) => { el("rect", { x: 30, y: 8, width: 120, height: 76, rx: 4, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "4 3" }, s); el("rect", { x: 39, y: 14, width: 120, height: 76, rx: 4, fill: "color-mix(in srgb, var(--critical) 8%, var(--surface))", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
       hv(s, 172, 34, "dashed: the nest", hmono()); hv(s, 172, 50, "red: the plate, off", hmono("var(--critical)")); hv(s, 172, 66, "→ flag, put back", hmono("var(--ink-2)")); } },
   reader: { name: "Reader", tag: "luminescence · 384 wells",
@@ -3631,6 +3730,7 @@ function liveLabGate(t) {
 }
 function setMode(live) {
   if (live === MODE.live) return;
+  whatIfEnd(); $("#perturb").hidden = live;  // a what-if needs the recorded run
   if (LIVE.run && !LIVE.run.done) LIVE.run.ctl.abort();
   playing = false; $("#play").textContent = "Play";
   MODE.recRP = MODE.recRP || RP;
