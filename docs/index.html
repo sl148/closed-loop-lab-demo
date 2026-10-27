@@ -269,11 +269,6 @@ td.best { color: var(--accent); font-weight: 600; }
 .toast { position: fixed; z-index: 60; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: max-content; max-width: min(520px, calc(100vw - 32px));
   display: flex; gap: 10px; align-items: flex-start; background: var(--surface); color: var(--ink); border: 1px solid var(--warning); border-left-width: 4px; border-radius: 10px;
   padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; line-height: 1.45; }
-.whatif { position: fixed; z-index: 59; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100vw - 32px));
-  display: grid; gap: 6px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--accent); border-left-width: 4px; border-radius: 10px; padding: 10px 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: 13px; line-height: 1.45; }
-.whatif b { color: var(--accent); font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.whatif .wi-btns { display: flex; flex-wrap: wrap; gap: 6px; } .whatif small { color: var(--muted); font-size: 11px; }
 .toast button { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
 .clockbar { padding: 8px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
 .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
@@ -373,6 +368,8 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 .disc-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 12px; }
 .replan-cap { font: 11.5px var(--mono); color: var(--ink-2); min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
 .replan-cap b { color: var(--accent); font-weight: 600; }
+.lh-camhost { position: relative; height: 0; }  /* the deck camera moves here during a re-grasp at the liquid handler */
+.cam.in-lh { right: 4px; bottom: 6px; width: min(66%, 470px); box-shadow: 0 6px 22px rgba(0,0,0,.25); z-index: 3; }
 .cam { position: absolute; right: 8px; bottom: 8px; width: min(36%, 260px); aspect-ratio: 4 / 3; max-width: 100%; border-radius: 6px; overflow: hidden;
   border: 1px solid var(--line); background: var(--scene); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
 .cam canvas, .cam svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -594,6 +591,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
         <div id="sub-lh" style="display:contents">
           <div class="lh-action" id="lh-action"></div>
           <div class="fill" id="lh"></div>
+          <div class="lh-camhost" id="lh-camhost"></div>
           <div class="legend" id="lh-legend"></div>
         </div>
         <div id="sub-plate" class="fill" style="display:none;flex-direction:column;gap:4px">
@@ -704,7 +702,6 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
-<div class="whatif" id="whatif" role="status" aria-live="polite" hidden><b>What-if</b><span id="whatif-msg"></span><div class="wi-btns"><button class="chip" type="button" id="whatif-again">⤨ Perturb again</button><button class="chip" type="button" id="whatif-back">Back to the recorded run</button></div><small>Camera: three.js, the camera check's reading rules · motion: the page's kinematic re-grasp (the lab simulates each in MuJoCo) · schedule: the page's shift-later repair (the lab re-plans with CP-SAT)</small></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-msg"></span><button type="button" id="toast-x" aria-label="Close">×</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1188,6 +1185,20 @@ function drawLH() {
     el("text", { x: X(dstCx - 60), y: Y(py - 43) - 4, class: "label-ink", style: "font-size:9.5px" }, s).textContent = "prep plate";
     hit(X(dstCx - 64), Y(py + 43), 128 * k, 86 * k, () => "<b>Prep plate</b> · site 4<br>column 12: each drug's DMSO stock · left: intermediate dilutions, row by drug");
   }
+  // a flagged plate being re-placed on the assay site: the nest, the plate where it lies (offset drawn x10), the
+  // gripper on it while it slides, seated; the same steps the workcell camera shows
+  const RG = SIM.regrasp && SIM.regrasp.st === "lh" ? SIM.regrasp : null;
+  if (RG) {
+    const cy = siteY(0) * 1000, ox = (RG.plate[0] - RG.P[0]) * 1000, oy = (RG.plate[1] - RG.P[1]) * 1000, M = RG.c.regrasp;
+    const col = RG.after ? (M && !M.ok ? "var(--warning)" : "var(--good)") : "var(--critical)";
+    R(dstCx, cy, 127.76, 85.48, { rx: 3, fill: "none", stroke: "var(--accent)", "stroke-width": 1.6, "stroke-dasharray": "5 3" });
+    R(dstCx + ox, cy + oy, 127.76, 85.48, { rx: 3, fill: `color-mix(in srgb, ${col} 12%, var(--surface))`, stroke: col, "stroke-width": 2.4 });
+    if (!RG.after && Math.hypot(ox, oy) > 2) el("path", { d: `M${X(dstCx + ox)},${Y(cy + oy)} L${X(dstCx)},${Y(cy)}`, stroke: col, "stroke-width": 1.6, "stroke-dasharray": "3 3", fill: "none" }, s);
+    if (RG.holding) for (const sx of [-1, 1]) R(dstCx + ox + sx * (127.76 / 2 + 5), cy + oy, 7, 34, { rx: 2, fill: "var(--ink)", opacity: .85 });  // gripper fingers
+    const step = RG.after ? (M ? (M.ok ? `seated ${M.final_mm.toFixed(1)} mm from center` : `still ${M.final_mm.toFixed(1)} mm off: checked again`) : "seated")
+      : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where the camera sees it";
+    $("#lh-action").innerHTML = `<b>${RG.c.plate}</b> · arm re-places it · camera: off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×10) · <b style="color:${col}">${step}</b>`;
+  }
   // handoff site (site 2): the CO-RE gripper and the arm pass tip boxes here
   const mineOps = RP.ops.filter(mine), parked = (a, b) => mineOps.some((o) => o[5] === a && o[4] <= T && mineOps.some((q) => q[0] === o[0] && q[5] === b && q[6] === o[6] && q[3] > T));
   const ho = siteY(1) * 1000, boxHere = parked("core_out", "handoff>rackwaste") || parked("rackhotel>handoff", "core_in");
@@ -1269,10 +1280,10 @@ function lanes(ops) {
   });
 }
 const REASON = { new_batch: "new batch", overrun: "an op ran long", tip_resupply: "tip resupply", tip_wait: "waiting on tips" };
-const SOLVER = { "repair:lns": "LNS repair", "repair:full": "full CP-SAT solve" };
+const SOLVER = { "repair:lns": "LNS repair", "repair:full": "full CP-SAT solve", page: "page re-plan (list scheduling)" };
 function drawReplan() {
   const rp = RP.replans.filter((r) => r.t <= T).pop();
-  $("#replan-cap").innerHTML = rp ? `replan ${fmtH(rp.t)} · ${rp.reasons.map((r) => REASON[r] || r.replace("failure:", "").replace(/_/g, " ")).join(", ")} → <b>${SOLVER[rp.solver] || rp.solver}</b> ${rp.ms} ms · ${rp.moved} of ${rp.ops} ops moved` : "";
+  $("#replan-cap").innerHTML = rp ? `replan ${fmtH(rp.t)} · ${rp.reasons.map((r) => REASON[r] || r.replace("failure:", "").replace(/_/g, " ")).join(", ")} → <b>${SOLVER[rp.solver] || rp.solver}</b> ${rp.ms} ms · ${rp.moved} of ${rp.ops} ops moved${rp.note ? ` · ${rp.note}` : ""}` : "";
   return rp;
 }
 function drawGantt(host, t0, t1, opts) {
@@ -1779,7 +1790,9 @@ function initThree() {
   function poseCamera() {
     const lastTr = (() => { for (let i = RP.ops.length - 1; i >= 0; i--) { const o = RP.ops[i]; if (o[3] <= T && o.route && !/^(TIPS|CELLS)/.test(o[0])) return o; } return null; })();
     const ov = $("#cam-ov"); ov.innerHTML = ""; CAM.shift = null;
-    const RG = SIM.regrasp; $("#cam").classList.toggle("big", !!RG);
+    const RG = SIM.regrasp, camEl = $("#cam"); CAM.home = CAM.home || camEl.parentElement;
+    const host = RG && RG.st === "lh" && SUB === "lh" ? $("#lh-camhost") : CAM.home;  // a re-grasp at the liquid handler: its camera, large, in that panel
+    if (camEl.parentElement !== host) { host.appendChild(camEl); camEl.classList.toggle("in-lh", host !== CAM.home); }
     if (RG) {  // a flagged plate being re-placed: the nest (dashed), the plate where it is, the gripper, the slide back
       const [nx, ny, nz] = RG.P; CAM.hw = 0.10; CAM.at = [nx, ny, nz];
       camTop.position.set(nx, ny, nz + 0.0521); camTop.near = 0.002; camTop.lookAt(nx, ny, nz - 1);
@@ -2326,7 +2339,8 @@ function frame(ts) {
     CUR_RATE = auto ? autoRate(T) : +$("#speed").value;
     if (playing && auto) followLH(T);
     if (playing && PRE.on) { PRE.t = MODE.live ? liveReach(liveGate(PRE.t + dt), "preMax") : PRE.t + dt; if (PRE.t >= PRE_END) { if (MODE.live) liveEnterLab(); PRE.on = false; T = 0; update(); } else if (con) stepsRender(); else if (ts - lastDraw > 250) { lastDraw = ts; update(); } }
-    else if (playing) { T = clampT(T + dt * CUR_RATE); if (MODE.live) T = liveReach(liveLabGate(T), "labMax"); if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; update(); }  // draw the last read and open Result
+    else if (playing) { T = clampT(T + dt * CUR_RATE); if (MODE.live) T = liveReach(liveLabGate(T), "labMax");
+      if (WHATIF.armed && T >= WHATIF.armed.T0) { T = WHATIF.armed.T0; if (MODE.live) liveReach(T, "labMax"); perturbFire(); } if (T >= TMAX) { playing = false; $("#play").textContent = "Play"; update(); }  // draw the last read and open Result
       if (ts - lastDraw > (con ? 60 : 120)) { lastDraw = ts; update(); } else if (con && SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); } }
     else if (con && SIM.ready) { SIM.pose(snapshot(T), wall); SIM.render(); }
     if (con) hoodTick();
@@ -2334,13 +2348,13 @@ function frame(ts) {
   requestAnimationFrame(frame);
 }
 // back to the start: before launch, paused; in Live mode a fresh live state (the running agent is stopped)
-$("#reset").addEventListener("click", () => { whatIfEnd();
+$("#reset").addEventListener("click", () => { whatIfEnd(); buildIters();
   if (MODE.live) { setMode(false); setMode(true); return; }
   if (LIVE.run && !LIVE.run.done) LIVE.run.ctl.abort();
   LIVE.run = null; playing = false; $("#play").textContent = "Play";
   T = 0; PRE.on = true; PRE.t = 0; ST.key = ""; ST.lab = null; GW.t0 = null; selPlate = null; pinned = false; update();
 });
-$("#play").addEventListener("click", () => { whatIfEnd(); playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) { T = 0; PRE.on = true; PRE.t = 0; update(); } });
+$("#play").addEventListener("click", () => { if (WHATIF.busy) return; playing = !playing; $("#play").textContent = playing ? "Pause" : "Play"; if (playing && T >= TMAX) { T = 0; PRE.on = true; PRE.t = 0; update(); } });
 $("#scrub").addEventListener("input", (e) => { T = +e.target.value / 10000 * TMAX; update(); });
 addEventListener("resize", () => update());
 
@@ -2496,91 +2510,152 @@ function blSchedTable(host, ms) {
       cols.map(([k, , d]) => `<td>${d === "%" ? `${Math.round(100 * m[k])}%` : d === "of" ? `${m.hits}/${m.of || 6}` : d === "vs" ? (m.vs_ours ? `${m.vs_ours.faster}/${m.vs_ours.of} (${m.vs_ours.p.toFixed(2)})` : "–") : f(m[k], d)}</td>`).join("") + `</tr>`).join("") + `</tbody></table>`;
 }
 
-/* ================================================================ Perturb: a what-if on the recorded run.
-   A plate the arm has just set down on the liquid handler is knocked off its nest. The deck camera (three.js, the
-   camera check's reading rules) estimates where it is; past tolerance it is flagged, the arm re-grips it where the
-   camera says and sets it on the nest; the camera checks again and the arm retries if needed. The re-grasp goes
-   on the arm's timeline and every later step shifts by a simple shift-later repair (each plate's step order, one
-   plate at a time per machine; the incubator holds 12). Kinematic motion, page-side repair: the lab itself
-   simulates each re-grasp in MuJoCo and repairs with CP-SAT. "Back to the recorded run" restores everything. */
-const WHATIF = { on: false, saved: null, raf: 0 };
+/* ================================================================ Perturb: knock a plate off its nest, and the run carries on.
+   Armed by the button, it fires when the arm next sets a plate down on the liquid handler (Recorded or Live, no
+   seeking). The deck camera (three.js, the camera check's reading rules) estimates where the plate is; past
+   tolerance it is flagged, the arm re-grips it where the camera says and sets it on the nest; the camera checks
+   again and the arm retries if needed. Then the steps after the bump are re-planned in the page (earliest feasible
+   start, each step no earlier than recorded, a plate's steps in order, one plate at a time per machine, the run's
+   minimum waits and cleaning kept; its maximum gaps and deadlines checked) and the run plays on with that plan.
+   The rest of the record (reads, model updates, failures) moves with its plate. Kinematic motion and a page-side
+   re-plan: the lab itself simulates each re-grasp in MuJoCo and re-plans with CP-SAT. Reset restores the record. */
+const WHATIF = { armed: null, busy: false, saved: null, raf: 0, n: 0 };
+const STEP_OF_ROUTE = { "hotel>lh": "load", "lh>incubator": "to_incubator", "incubator>reader": "to_reader", "reader>hotel": "unload" };
 function perceiveAt(rail, dx, dy) {  // the deck camera's pose estimate of an assay plate (dx, dy) mm off its nest
   const it = { id: "pz", group: "plates", carrier: "assay", rail, site: 0, kind: "plate", label: null, name: "assay plate" };
   return ckRead(it, ckRender({ items: [it], carriers: [rail] }, { pz: { kind: "plate", label: null, dx_mm: dx, dy_mm: dy, yaw_deg: 0 } }));
 }
 const gauss01 = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-// shift-later repair: ops from T0 on start no earlier than before, after their plate's previous step and after the
-// previous op on a one-plate machine; the re-grasp holds the arm and the plate until T0 + D
-function shiftLater(ops, job, arm, T0, D) {
-  const cap = (RP.meta && RP.meta.resources) || {}, unit = (r) => (cap[r] || 1) === 1, out = ops.map((o) => { const c = o.slice(); c.route = o.route; c.site = o.site; return c; });  // copies: the recorded ops stay as they were
-  const resEnd = {}, jobEnd = {};
-  for (const o of out) if (o[3] < T0) { if (unit(o[2])) resEnd[o[2]] = Math.max(resEnd[o[2]] || 0, o[4]); jobEnd[o[0]] = Math.max(jobEnd[o[0]] || 0, o[4]); }
-  resEnd[arm] = Math.max(resEnd[arm] || 0, T0 + D); jobEnd[job] = T0 + D;
+function limitsAt(t) {  // the run's limits in force at t (constraint history: the agent's, then the reviews')
+  const h = (RP.loop && RP.loop.constraint_history) || [], cur = h.filter((x) => x.t <= t).pop();
+  return cur ? cur.specs : (RP.loop && RP.loop.launch) || [];
+}
+// the page's re-plan of every step from T0 on: earliest feasible start, list scheduling
+function replan(ops, job, arm, T0, D) {
+  const t0 = performance.now(), cap = (RP.meta && RP.meta.resources) || {}, unit = (r) => (cap[r] || 1) === 1;
+  const out = ops.map((o) => { const c = o.slice(); c.route = o.route; c.site = o.site; c.wi = o.wi; return c; });  // copies: the record stays intact
+  const stepOf = (o) => { const k = RP.kinds[o[1]]; return k === "transfer" ? STEP_OF_ROUTE[o.route] : k; };
+  const specs = limitsAt(T0), line = (j) => (RP.plates[j] || {}).cell_line;
+  const minLag = specs.filter((s) => s.kind === "min_between"), maxLag = specs.filter((s) => s.kind === "max_between");
+  const dead = specs.filter((s) => s.kind === "deadline_from_release"), clean = specs.find((s) => s.kind === "changeover");
+  const at = {};  // job -> step -> [start, end]
+  const mark = (o) => { const st = stepOf(o); if (st) (at[o[0]] ||= {})[st] = [o[3], o[4]]; };
+  const resFree = {}, resLast = {}, jobEnd = {};
+  for (const o of out) if (o[3] < T0) { mark(o); jobEnd[o[0]] = Math.max(jobEnd[o[0]] || 0, o[4]);
+    if (unit(o[2]) && o[4] >= (resFree[o[2]] || 0)) { resFree[o[2]] = o[4]; resLast[o[2]] = o; } }
+  resFree[arm] = Math.max(resFree[arm] || 0, T0 + D); jobEnd[job] = Math.max(jobEnd[job] || 0, T0 + D);
+  const queue = {};
+  for (const o of out.filter((x) => x[3] >= T0).sort((a, b) => a[3] - b[3] || a[4] - b[4])) (queue[o[0]] ||= []).push(o);
+  const rel = new Map(), dur = new Map();
+  for (const q of Object.values(queue)) for (const o of q) { rel.set(o, o[3]); dur.set(o, o[4] - o[3]); }
+  const efs = (o) => {
+    let s = Math.max(rel.get(o), jobEnd[o[0]] || 0, unit(o[2]) ? resFree[o[2]] || 0 : 0);
+    const st = stepOf(o), a = at[o[0]] || {};
+    for (const c of minLag) if (c.b === st && a[c.a]) s = Math.max(s, a[c.a][c.a_anchor === "start" ? 0 : 1] + c.minutes);
+    if (clean && RP.kinds[o[1]] === "dispense" && unit(o[2]) && resLast[o[2]] && line(resLast[o[2]][0]) && line(o[0]) && line(resLast[o[2]][0]) !== line(o[0]))
+      s = Math.max(s, resLast[o[2]][4] + clean.minutes);  // cleaning before another cell line
+    return s;
+  };
   let moved = 0, maxShift = 0;
-  for (const o of out.filter((x) => x[3] >= T0).sort((a, b) => a[3] - b[3] || a[4] - b[4])) {
-    const d = o[4] - o[3], s = Math.max(o[3], jobEnd[o[0]] || 0, unit(o[2]) ? resEnd[o[2]] || 0 : 0);
-    if (s > o[3]) { moved++; maxShift = Math.max(maxShift, s - o[3]); o.wi = "moved"; }
-    o[3] = s; o[4] = s + d; jobEnd[o[0]] = o[4]; if (unit(o[2])) resEnd[o[2]] = o[4];
+  for (;;) {
+    let best = null, bs = Infinity;
+    for (const q of Object.values(queue)) { if (!q.length) continue; const s = efs(q[0]); if (s < bs || (s === bs && rel.get(q[0]) < rel.get(best))) { best = q[0]; bs = s; } }
+    if (!best) break;
+    queue[best[0]].shift();
+    const was = best[3]; best[3] = bs; best[4] = bs + dur.get(best);
+    if (bs !== was) { moved++; maxShift = Math.max(maxShift, bs - was); best.wi = best.wi || "moved"; }
+    mark(best); jobEnd[best[0]] = best[4]; if (unit(best[2])) { resFree[best[2]] = best[4]; resLast[best[2]] = best; }
   }
-  return { ops: out, moved, maxShift, end: Math.max(...out.map((o) => o[4])) };
+  // limits the page cannot enforce while placing steps: check them, and report those this re-plan broke
+  const broken = [], before = {};
+  for (const o of ops) { const st = (RP.kinds[o[1]] === "transfer" ? STEP_OF_ROUTE[o.route] : RP.kinds[o[1]]); if (st) (before[o[0]] ||= {})[st] = [o[3], o[4]]; }
+  const check = (A, j) => { const a = A[j] || {}, bad = [];
+    for (const c of maxLag) if (a[c.a] && a[c.b] && a[c.b][0] - a[c.a][c.a_anchor === "start" ? 0 : 1] > c.minutes) bad.push(c.id);
+    for (const c of dead) { const r = RP.submits && RP.submits[j]; if (r != null && a[c.step] && a[c.step][0] - r > c.minutes) bad.push(c.id); }
+    return bad; };
+  for (const j of Object.keys(at)) { const was = new Set(check(before, j)); for (const id of check(at, j)) if (!was.has(id)) broken.push(`${j}: ${id}`); }
+  return { ops: out, moved, maxShift, broken, end: Math.max(...out.map((o) => o[4])), ms: Math.round(performance.now() - t0) };
 }
-function whatIfEnd() {
-  if (!WHATIF.on) return;
-  cancelAnimationFrame(WHATIF.raf); const S = WHATIF.saved;
-  RP.ops = S.ops; RP.camera = S.camera; TMAX = S.TMAX; buildJobs(); RP.rows = lanes(RP.ops);
-  WHATIF.on = false; $("#whatif").hidden = true; T = S.T; ST.key = ""; ST.lab = null; GW.t0 = null; update();
+// the record follows its plates: an event at old time t moves by its plate's shift at t
+function remapRecord(oldOps, newOps) {
+  const shifts = {};
+  oldOps.forEach((o, i) => { const d = newOps[i][3] - o[3]; (shifts[o[0]] ||= []).push([o[3], d]); });
+  for (const s of Object.values(shifts)) s.sort((a, b) => a[0] - b[0]);
+  const at = (j, t) => { const s = shifts[j]; if (!s) return 0; let d = 0; for (const [t0, dd] of s) { if (t0 > t) break; d = dd; } return d; };
+  const readMap = new Map();
+  RP.reads = RP.reads.map((r) => { const d = at(r.plate, r.t); if (d) readMap.set(r.t, r.t + d); return d ? { ...r, t: r.t + d } : r; });
+  RP.failures = RP.failures.map((f) => { const d = f.plate ? at(f.plate, f.t) : 0; return d ? { ...f, t: f.t + d } : f; });
+  RP.camera = (RP.camera || []).map((c) => { const d = at(c.plate, c.t); return d && !c.page ? { ...c, t: c.t + d } : c; });
+  if (readMap.size) for (const P of Object.values(RP.progress)) {
+    P.points = P.points.map((q) => readMap.has(q.t) ? { ...q, t: readMap.get(q.t) } : q);
+    P.decisions = (P.decisions || []).map((q) => readMap.has(q.t) ? { ...q, t: readMap.get(q.t) } : q);
+    if (P.discovery && P.discovery.tested) P.discovery.tested = P.discovery.tested.map((r) => readMap.has(r[0]) ? [readMap.get(r[0]), ...r.slice(1)] : r);
+  }
 }
-function perturb() {
-  if (MODE.live) return;
-  whatIfEnd();
-  const tk = RP.kinds.indexOf("transfer");
-  // the next plate the arm sets down on the liquid handler (or the last one)
-  const arrivals = RP.ops.filter((o) => o[1] === tk && o.route === "hotel>lh" && /^[A-Z]\d{3}$/.test(o[0])).sort((a, b) => a[4] - b[4]);
-  if (!arrivals.length) { toast("No plate reaches the liquid handler in this run."); return; }
-  const arr = arrivals.find((o) => o[4] >= (PRE.on ? 0 : T)) || arrivals[arrivals.length - 1], job = arr[0], T0 = arr[4], arm = arr[2];
-  PRE.on = false; playing = false; $("#play").textContent = "Play";
-  const rail = deckOf().dest_rail, TOL = CK_L.TOL_MM;
-  // knock it off: 2-6 mm in a random direction (no rotation: the re-grasp, like the cell's plan, does not turn it)
+function perturbSave() {  // the record, kept once so Reset can bring it back
+  if (WHATIF.saved) return;
+  WHATIF.saved = { ops: RP.ops, camera: RP.camera, reads: RP.reads, failures: RP.failures, replans: RP.replans, TMAX,
+    progress: JSON.parse(JSON.stringify(RP.progress)) };
+}
+function whatIfEnd() {  // back to the record (Reset, a new mode)
+  cancelAnimationFrame(WHATIF.raf); WHATIF.armed = null; WHATIF.busy = false; perturbButton();
+  const S = WHATIF.saved; if (!S) return;
+  Object.assign(RP, { ops: S.ops, camera: S.camera, reads: S.reads, failures: S.failures, replans: S.replans, progress: S.progress });
+  TMAX = S.TMAX; buildJobs(); RP.rows = lanes(RP.ops); WHATIF.saved = null; RP._live = null; ST.key = ""; ST.lab = null; GW.t0 = null;
+}
+function perturbButton() {
+  const b = $("#perturb"); b.setAttribute("aria-pressed", String(!!WHATIF.armed));
+  b.textContent = WHATIF.armed ? "⤨ Armed: next plate on the liquid handler" : "⤨ Perturb plate";
+}
+function perturbArm() {
+  if (WHATIF.busy) return;
+  if (WHATIF.armed) { WHATIF.armed = null; perturbButton(); return; }
+  const tk = RP.kinds.indexOf("transfer"), now = PRE.on ? 0 : T;
+  const next = RP.ops.filter((o) => o[1] === tk && o.route === "hotel>lh" && /^[A-Z]\d{3}$/.test(o[0]) && o[4] > now).sort((a, b) => a[4] - b[4])[0];
+  if (!next) { toast("No more plates reach the liquid handler in this run."); return; }
+  WHATIF.armed = { job: next[0], T0: next[4], arm: next[2] }; perturbButton();
+  if (!playing) $("#play").click();  // it happens when the run gets there
+}
+function perturbFire() {
+  const A = WHATIF.armed; WHATIF.armed = null; WHATIF.busy = true; perturbButton();
+  const { job, T0, arm } = A, tk = RP.kinds.indexOf("transfer"), rail = deckOf().dest_rail, TOL = CK_L.TOL_MM;
+  playing = false;
+  // knocked 2-6 mm in a random direction (no rotation: the re-grasp, like the cell's plan, does not turn the plate)
   const a = Math.random() * 2 * Math.PI, r0 = 2 + 4 * Math.random();
   let dx = r0 * Math.cos(a), dy = r0 * Math.sin(a);
-  const flags = [], rows = [];
+  const flags = [];
   for (let k = 0; k < 4; k++) {
-    const seen = perceiveAt(rail, dx, dy), off = Math.hypot(dx, dy);
-    if (seen.kind !== "plate") break;
-    const estOff = Math.hypot(seen.dx_mm, seen.dy_mm), flagged = estOff > TOL;
-    rows.push({ off, est: estOff, err: Math.hypot(seen.dx_mm - dx, seen.dy_mm - dy), flagged });
-    if (!flagged) break;
-    // grip where the camera says, set it on the nest: what is left is the camera's error, plus a little seating
-    const fx = dx - seen.dx_mm + 0.3 * gauss01(), fy = dy - seen.dy_mm + 0.3 * gauss01(), fin = Math.hypot(fx, fy);
-    flags.push({ t: T0, plate: job, dx_mm: dx, dy_mm: dy, offset_mm: off, detected: true, route: "hotel>lh", page: true,
-      regrasp: { s: 6.6, final_mm: fin, ok: fin <= TOL, est_err_mm: rows[rows.length - 1].err, src: "page" } });
+    const seen = perceiveAt(rail, dx, dy); if (seen.kind !== "plate" || Math.hypot(seen.dx_mm, seen.dy_mm) <= TOL) break;
+    const fx = dx - seen.dx_mm + 0.3 * gauss01(), fy = dy - seen.dy_mm + 0.3 * gauss01(), fin = Math.hypot(fx, fy);  // left: the camera's error, plus seating
+    flags.push({ t: T0, plate: job, dx_mm: dx, dy_mm: dy, offset_mm: Math.hypot(dx, dy), detected: true, route: "hotel>lh", page: true,
+      regrasp: { s: 6.6, final_mm: fin, ok: fin <= TOL, est_err_mm: Math.hypot(seen.dx_mm - dx, seen.dy_mm - dy), src: "page" } });
     dx = fx; dy = fy;
   }
-  const D = Math.max(1, flags.length);  // a re-grasp at the liquid handler takes 6.6 s in the MuJoCo cell: one lab minute each
-  WHATIF.saved = { ops: RP.ops, camera: RP.camera, T, TMAX };
-  const rep = flags.length ? shiftLater(RP.ops, job, arm, T0, D) : { ops: RP.ops.slice(), moved: 0, maxShift: 0, end: TMAX };
-  const reOp = [job, tk, arm, T0, T0 + (flags.length ? D : 0), "hotel>lh", null]; reOp.wi = "re";
-  RP.ops = flags.length ? [...rep.ops, reOp] : rep.ops; RP.camera = [...(RP.camera || []), ...flags]; TMAX = Math.max(TMAX, rep.end);
-  buildJobs(); RP.rows = lanes(RP.ops); WHATIF.on = true; ST.key = ""; ST.lab = null; GW.t0 = null;
-  const first = rows[0], last = flags[flags.length - 1];
-  const summary = !first ? "The camera could not see the plate." : !first.flagged
-    ? `Knocked ${first.off.toFixed(1)} mm: within tolerance (${TOL} mm), so the camera lets it pass. No change to the schedule.`
-    : `Knocked ${first.off.toFixed(1)} mm off its nest. Camera: ${first.est.toFixed(1)} mm (its own error ${first.err.toFixed(1)} mm), flagged. ` +
-      `Re-gripped ${flags.length}× → ${last.regrasp.ok ? `seated ${last.regrasp.final_mm.toFixed(1)} mm from center` : `still ${last.regrasp.final_mm.toFixed(1)} mm off after 4 tries`}. ` +
-      `Schedule: the arm holds the plate ${D} min (red outline); ${rep.moved} later steps shift${rep.maxShift ? ` by up to ${rep.maxShift} min` : ""} (amber outlines).`;
-  $("#whatif-msg").textContent = summary; $("#whatif").hidden = false;
-  // play the episode: the lab clock walks through the re-grasp window
-  const t1 = T0 + (flags.length ? D : 0), dur = 1200 + 5200 * flags.length, start = performance.now();
-  T = T0 - 0.02; update();
-  let drawn = 0;  // the 3D view follows T every frame; the panels redraw ~12 times a second
-  const step = (now) => { const u = Math.min(1, (now - start) / dur); T = T0 - 0.02 + (t1 - T0 + 0.03) * u;
-    if (now - drawn > 80 || u >= 1) { drawn = now; update(); } if (u < 1 && WHATIF.on) WHATIF.raf = requestAnimationFrame(step); };
+  perturbSave();
+  const D = flags.length;  // a re-grasp at the liquid handler takes 6.6 s in the MuJoCo cell: one lab minute each
+  if (D) {
+    const old = RP.ops, rep = replan(old, job, arm, T0, D);
+    remapRecord(old, rep.ops);
+    const reOp = [job, tk, arm, T0, T0 + D, "hotel>lh", null]; reOp.wi = "re";
+    RP.ops = [...rep.ops, reOp]; RP.camera = [...RP.camera, ...flags]; TMAX = Math.max(TMAX, rep.end);
+    RP.replans = [...RP.replans, { t: T0, reasons: ["failure:plate_misplaced"], solver: "page", ms: rep.ms, moved: rep.moved, ops: rep.ops.filter((o) => o[3] >= T0).length,
+      note: rep.broken.length ? `${rep.broken.length} limit${rep.broken.length > 1 ? "s" : ""} broken` : "all limits kept" }].sort((x, y) => x.t - y.t);
+    buildJobs(); RP.rows = lanes(RP.ops); RP._live = null; ST.key = ""; ST.lab = null; GW.t0 = null;
+    WHATIF.n++;
+  } else toast(`Knocked ${r0.toFixed(1)} mm: the camera reads it within ${TOL} mm, so it stays. The run goes on.`);
+  if ($("#view-console").hidden === false) showSub("lh");  // the liquid handler's deck shows the re-grasp from above
+  // play the recovery, then the run goes on with the new plan
+  const t1 = T0 + D, dur = D ? 1000 + 5200 * D : 300, start = performance.now();
+  let drawn = 0;
+  const step = (now) => {
+    const u = Math.min(1, (now - start) / dur); T = T0 + (t1 - T0 + 0.01) * u; if (MODE.live) liveReach(T, "labMax");
+    if (now - drawn > 80 || u >= 1) { drawn = now; update(); }
+    if (u < 1) { WHATIF.raf = requestAnimationFrame(step); return; }
+    WHATIF.busy = false; playing = true; $("#play").textContent = "Pause";
+  };
   WHATIF.raf = requestAnimationFrame(step);
 }
-
-$("#perturb").addEventListener("click", () => { if (!$("#view-console").hidden) perturb(); });
-$("#whatif-again").addEventListener("click", perturb);
-$("#whatif-back").addEventListener("click", whatIfEnd);
+$("#perturb").addEventListener("click", perturbArm);
 
 /* ================================================================ data: the run's records (labloop/lims.py), rows appearing as the clock runs */
 const DATA = { tab: "plates", plate: null, key: "", dl: null };
@@ -3730,7 +3805,7 @@ function liveLabGate(t) {
 }
 function setMode(live) {
   if (live === MODE.live) return;
-  whatIfEnd(); $("#perturb").hidden = live;  // a what-if needs the recorded run
+  whatIfEnd();  // a perturbed run goes back to its record
   if (LIVE.run && !LIVE.run.done) LIVE.run.ctl.abort();
   playing = false; $("#play").textContent = "Play";
   MODE.recRP = MODE.recRP || RP;
