@@ -10,8 +10,11 @@
   const fail = async (r) => {
     let e = {};
     try { e = await r.json(); } catch (_) { /* not json */ }
-    throw { code: e.code || (r.status === 429 ? "rate_limited" : "error"), message: e.error || `proxy ${r.status}` };
+    const up = e.error && typeof e.error === "object" ? e.error : null;  // the Claude API's own error, passed through by the proxy
+    throw { code: e.code || (up && up.type) || (r.status === 429 ? "rate_limited" : "error"), status: r.status,
+            message: up ? `${up.type}: ${up.message}` : e.error || `proxy ${r.status}` };
   };
+  const TRANSIENT = [429, 500, 502, 503, 504, 529], WAIT_MS = [2000, 6000, 15000];  // overloaded or busy: wait and send the turn again
   async function token() {
     if (sess && sess.expires - Date.now() > 60000) return sess.token;
     const r = await fetch(`${base}/session`, { method: "POST" });
@@ -21,10 +24,13 @@
     return sess.token;
   }
   async function call(path, init = {}, retry = true) {
-    const r = await fetch(base + path, { ...init, headers: { ...(init.headers || {}), authorization: `Bearer ${await token()}` } });
-    if (r.status === 401 && retry) { sess = null; return call(path, init, false); }
-    if (!r.ok) await fail(r);
-    return r.json();
+    for (let k = 0; ; k++) {
+      const r = await fetch(base + path, { ...init, headers: { ...(init.headers || {}), authorization: `Bearer ${await token()}` } });
+      if (r.status === 401 && retry) { sess = null; return call(path, init, false); }
+      if (r.ok) return r.json();
+      if (k < WAIT_MS.length && TRANSIENT.includes(r.status)) { await new Promise((ok) => setTimeout(ok, WAIT_MS[k])); continue; }
+      await fail(r);
+    }
   }
   cfg.kb = () => call("/kb");
 
@@ -3423,7 +3429,8 @@ async function liveRun() {
     run.status = "Done";
   } catch (e) {
     run.err = e && e.code; run.status = e && e.code === "cancelled" ? "Stopped" : e && ["not_granted", "sampling_disabled", "tools_unavailable"].includes(e.code) ? "Claude is not available here"
-      : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : "Interrupted";
+      : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : `Interrupted${e && e.message ? `: ${clip(String(e.message), 90)}` : ""}`;
+    console.warn("live run stopped", e);
   }
   run.done = true; renderLiveSoon();
 }

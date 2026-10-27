@@ -3360,7 +3360,8 @@ async function liveRun() {
     run.status = "Done";
   } catch (e) {
     run.err = e && e.code; run.status = e && e.code === "cancelled" ? "Stopped" : e && ["not_granted", "sampling_disabled", "tools_unavailable"].includes(e.code) ? "Claude is not available here"
-      : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : "Interrupted";
+      : e && e.code === "rate_limited" ? (e.message || "Live runs are used up for today") : `Interrupted${e && e.message ? `: ${clip(String(e.message), 90)}` : ""}`;
+    console.warn("live run stopped", e);
   }
   run.done = true; renderLiveSoon();
 }

@@ -49,17 +49,19 @@ async function messages(req, env, json, id, cors) {
     if (!success) return json({ error: "Too many turns too fast.", code: "rate_limited" }, 429);
   }
   const raw = await req.text();
-  if (raw.length > MAX_BODY) return json({ error: "request too large" }, 413);
+  const reject = (error, status) => { console.log("rejected", status, error, raw.length); return json({ error }, status); };  // visible in `wrangler tail`
+  if (raw.length > MAX_BODY) return reject("request too large", 413);
   let b;
-  try { b = JSON.parse(raw); } catch { return json({ error: "bad json" }, 400); }
+  try { b = JSON.parse(raw); } catch { return reject("bad json", 400); }
   const msgs = Array.isArray(b.messages) ? b.messages : [], tools = Array.isArray(b.tools) ? b.tools : [];
   const first = msgs[0] && msgs[0].content, text = typeof first === "string" ? first : Array.isArray(first) ? first.map((c) => c.text || "").join("") : "";
-  if (!msgs.length || msgs.length > 120 || msgs[0].role !== "user" || !text.startsWith(PREFIX)) return json({ error: "not a labloop request" }, 400);
-  if (tools.length > 8 || tools.some((t) => !TOOLS.has(t && t.name))) return json({ error: "tool not allowed" }, 400);
+  if (!msgs.length || msgs.length > 120 || msgs[0].role !== "user" || !text.startsWith(PREFIX)) return reject("not a labloop request", 400);
+  if (tools.length > 8 || tools.some((t) => !TOOLS.has(t && t.name))) return reject(`tool not allowed: ${tools.map((t) => t && t.name).join(",")}`, 400);
   const body = { model: MODEL, max_tokens: Math.min(Number(b.max_tokens) || 2000, MAX_TOKENS), messages: msgs, ...(tools.length ? { tools } : {}) };
   const headers = { "content-type": "application/json", "anthropic-version": "2023-06-01" };
   if (env.ANTHROPIC_API_KEY) headers["x-api-key"] = env.ANTHROPIC_API_KEY;
   const up = await fetch(env.UPSTREAM || "https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify(body) });
+  if (!up.ok) console.log("upstream", up.status, (await up.clone().text()).slice(0, 300));  // the API's error type and message only
   return new Response(up.body, { status: up.status, headers: { ...cors, "content-type": "application/json" } });
 }
 
