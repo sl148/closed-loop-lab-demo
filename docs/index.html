@@ -204,6 +204,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-vi
 .loop-steps li b::before { counter-increment: step; content: counter(step) "  "; font: 500 11px var(--mono); color: var(--accent); }
 .loop-steps.pre { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .ex-sec { font: 500 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; }
+.ex-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.ex-badge { display: inline-flex; gap: 6px; align-items: baseline; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; background: var(--surface-2); font-size: 12px; color: var(--ink-2); }
+.ex-badge b { color: var(--ink); font-weight: 600; } .ex-badges.sw .ex-badge b { font-family: var(--mono); font-size: 11.5px; }
+.ex-badge.ai { border-color: var(--s7); } .ex-badge.ai b { color: var(--s7); }
+.explain-card p.ex-note { font-size: 12px; color: var(--muted); margin-top: -4px; }
 .ex-map { display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 18px; align-items: start; }
 .ex-map figure { margin: 0; min-width: 0; } #explain-cycle svg { width: 100%; height: auto !important; }
 .ex-detail { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; align-content: start; }
@@ -371,10 +376,10 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 /* liquid handler panel: the deck plan and, beside it, the top-down deck camera (wider during a re-grasp there) */
 .lh-row { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; }
 .lh-row > #lh { flex: 1 1 0; min-width: 0; }
-.lh-camcol { flex: 0 0 clamp(150px, 30%, 280px); min-width: 0; transition: flex-basis .25s; }
-.lh-row.rg .lh-camcol { flex-basis: clamp(220px, 50%, 460px); }
-.lh-camcol .cam { position: relative; right: auto; bottom: auto; width: 100%; }
-@media (max-width: 700px) { .lh-row { flex-direction: column; } .lh-row > #lh { flex: none; height: 320px; } .lh-camcol { flex-basis: auto; width: min(100%, 320px); } }
+.lh-camcol { flex: 0 0 clamp(140px, 26%, 240px); min-width: 0; display: flex; flex-direction: column; gap: 6px; transition: flex-basis .25s; }
+.lh-row.rg .lh-camcol { flex-basis: clamp(200px, 42%, 380px); }
+.lh-camcol .cam { position: relative; right: auto; bottom: auto; width: 100%; flex: 1 1 0; min-height: 0; aspect-ratio: auto; }
+@media (max-width: 700px) { .lh-row { flex-direction: column; } .lh-row > #lh { flex: none; height: 320px; } .lh-camcol { flex-basis: auto; flex-direction: row; width: 100%; height: 120px; } }
 .cam { position: absolute; right: 8px; bottom: 8px; width: min(36%, 260px); aspect-ratio: 4 / 3; max-width: 100%; border-radius: 6px; overflow: hidden;
   border: 1px solid var(--line); background: var(--scene); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
 .cam canvas, .cam svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -594,9 +599,11 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
         </div>
         <div id="sub-lh" style="display:contents">
           <div class="lh-action" id="lh-action"></div>
-          <div class="lh-row" id="lh-row"><div class="fill" id="lh"></div><div class="lh-camcol">
+          <div class="lh-row" id="lh-row"><div class="lh-camcol" aria-label="Cameras">
+            <div class="cam"><canvas id="cam-overview" aria-label="Deck camera: the liquid handler deck from above"></canvas><div class="cam-cap"><b>deck</b> · top-down</div></div>
           <div class="cam" id="cam"><canvas id="cam-deck" aria-label="Deck camera, top-down"></canvas><svg id="cam-ov" viewBox="0 0 400 300" preserveAspectRatio="none"></svg><div class="cam-cap" id="cam-cap"></div></div>
-          </div></div>
+            <div class="cam"><canvas id="cam-gripper" aria-label="Gripper camera, looking down between the fingers"></canvas><div class="cam-cap" id="cam-grip-cap"><b>gripper</b> camera</div></div>
+          </div><div class="fill" id="lh"></div></div>
           <div class="legend" id="lh-legend"></div>
         </div>
         <div id="sub-plate" class="fill" style="display:none;flex-direction:column;gap:4px">
@@ -703,6 +710,25 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
         </div>
       </div>
     </div>
+    <div class="ex-sec">Machines and software</div>
+    <div class="ex-badges">
+      <span class="ex-badge"><b>Hamilton Microlab STARlet</b> liquid handler, 8 channels + CO-RE gripper</span>
+      <span class="ex-badge"><b>SCARA plate arm</b> PF400 class</span>
+      <span class="ex-badge"><b>Incubator</b> 12 plates, 37 °C</span>
+      <span class="ex-badge"><b>Plate reader</b> luminescence</span>
+      <span class="ex-badge"><b>Plate hotel</b> + tip-box hotel</span>
+      <span class="ex-badge"><b>Deck camera</b> depth + color</span>
+    </div>
+    <div class="ex-badges sw">
+      <span class="ex-badge"><b>PyLabRobot</b> drives the simulated STARlet, tracks every tip and volume</span>
+      <span class="ex-badge"><b>MuJoCo</b> arm, gripper, re-grasps, camera</span>
+      <span class="ex-badge"><b>OR-Tools CP-SAT</b> scheduling</span>
+      <span class="ex-badge"><b>BoTorch / GPyTorch</b> the model and optimizer</span>
+      <span class="ex-badge"><b>SimPy</b> the lab clock</span>
+      <span class="ex-badge ai"><b>Claude Haiku</b> the agents</span>
+      <span class="ex-badge"><b>three.js</b> this page's 3D</span>
+    </div>
+    <p class="ex-note">All machines are simulated; the names say what each model is built to behave like.</p>
     <div class="explain-foot"><button class="play" id="help-close" type="button">Got it</button></div>
   </div>
 </div>
@@ -1613,7 +1639,7 @@ const ease = (t) => t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
 function initThree() {
   if (!window.THREE) { $("#scene-cap").innerHTML = `<span class="pill">3D viewer unavailable: three.js did not load</span>`; return; }
   const mk = (id) => { const c = $(id); const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true }); return { c, r }; };
-  const V = { main: mk("#cell3d"), cam: mk("#cam-deck") };
+  const V = { main: mk("#cell3d"), cam: mk("#cam-deck"), ovw: mk("#cam-overview"), grip: mk("#cam-gripper") };
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4450, 0.85));
   const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(0.8, -1.2, 2.5); scene.add(sun);
@@ -1743,6 +1769,8 @@ function initThree() {
   box(0.16, 0.03, 0.01, mats.dark, 0, 0, 0.016, gripper);
   const fingerA = box(0.008, 0.05, 0.03, mats.black, 0.07, 0, 0, gripper), fingerB = box(0.008, 0.05, 0.03, mats.black, -0.07, 0, 0, gripper);
   const carried = box(DK.PLATE[0], DK.PLATE[1], 0.0142, mats.plate, 0, 0, -0.0, gripper); carried.visible = false;
+  const gripCam = new THREE.PerspectiveCamera(78, 4 / 3, 0.004, 3); gripCam.position.set(0, 0.035, 0.05); gripper.add(gripCam);  // looks down (-z) between the fingers
+  const ovwCam = new THREE.OrthographicCamera(-0.4, 0.4, 0.3, -0.3, 0.05, 2); ovwCam.up.set(0, 1, 0); ovwCam.position.set(0.47, 0.31, 0.60); ovwCam.lookAt(0.47, 0.31, 0);
   const carriedRack = box(DK.PLATE[0], DK.PLATE[1], 0.02, mats.rack, 0, 0, 0, gripper); carriedRack.visible = false;
   // planned gripper path of the current arm move: forward kinematics through the motion keyframes
   const trail = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x0b6e78, transparent: true, opacity: .7 }));
@@ -1814,8 +1842,8 @@ function initThree() {
     }
     const watch = lastTr && T >= lastTr[3] + 0.6 * (lastTr[4] - lastTr[3]) && T <= lastTr[4] + 3;
     if (!watch) { // overview of the liquid-handler deck
-      CAM.hw = 0.40; CAM.at = [0.50, 0.33, DK.CAR_TOP]; camTop.near = 0.002; camTop.position.set(0.50, 0.33, 0.89); camTop.lookAt(0.50, 0.33, 0);
-      $("#cam-cap").innerHTML = "deck camera"; return;
+      const n = stationXYZ("lh"); CAM.hw = 0.10; CAM.at = [n[0], n[1], n[2]]; camTop.near = 0.002; camTop.position.set(n[0], n[1], n[2] + 0.0521); camTop.lookAt(n[0], n[1], n[2] - 1);
+      $("#cam-cap").innerHTML = "<b>placement</b> · assay nest"; return;
     }
     const job = lastTr[0], m = platePool[job], v = new THREE.Vector3();
     const NEST = { lh: [stationXYZ("lh")[0], stationXYZ("lh")[1], DK.CAR_TOP + 0.0071], incubator: [0.25, -0.74, 0.0471], reader: [0.80, -0.75, 0.2051], hotel: [1.05, -0.58, 0.0671] };
@@ -2070,6 +2098,10 @@ function initThree() {
       V.cam.r.render(scene, camTop);
       if (sh) for (const o of sh.objs) { o.position.x -= sh.d[0]; o.position.y -= sh.d[1]; }
       trail.visible = tv; }
+    const tv = trail.visible; trail.visible = false;
+    if (fit(V.ovw, ovwCam)) { const a = V.ovw.c.clientWidth / V.ovw.c.clientHeight, hw = Math.max(0.44, 0.30 * a); ovwCam.left = -hw; ovwCam.right = hw; ovwCam.top = hw / a; ovwCam.bottom = -hw / a; ovwCam.updateProjectionMatrix(); V.ovw.r.render(scene, ovwCam); }
+    if (fit(V.grip, gripCam)) V.grip.r.render(scene, gripCam);
+    trail.visible = tv;
   };
   // screen position (canvas px) of a device, for the under-the-hood layer; null when behind the camera
   const pv = new THREE.Vector3();
@@ -2175,9 +2207,9 @@ function hoodTick() {
   HOOD.lastT = T;
   HOOD.pulses = HOOD.pulses.filter((p) => wall < p.start + HDUR + 0.5).slice(-40);
   // layout: module nodes around the scene, devices projected from 3D
-  const host = $("#hood"), W = host.clientWidth, H = host.clientHeight, cb = $("#cam"), camTop = cb.offsetTop, top = Math.max(0.17 * H, 76);
+  const host = $("#hood"), W = host.clientWidth, H = host.clientHeight, camTop = 0.72 * H, top = Math.max(0.17 * H, 76);
   const P = { opt: [0.15 * W, top], sched: [0.47 * W, top], exec: [0.80 * W, top], model: [0.13 * W, 0.62 * H], recovery: [0.40 * W, H - 24],
-    motion: [0.90 * W, Math.min(0.46 * H, camTop - 40)], camera: [cb.offsetLeft + cb.offsetWidth / 2, camTop - 16] };
+    motion: [0.90 * W, Math.min(0.46 * H, camTop - 40)], camera: [0.86 * W, 0.80 * H] };
   for (const d of ["arm", "lh", "reader"]) { P["@" + d] = SIM.project(d); const c = HOOD.els.devs[d];
     if (P["@" + d]) { c.setAttribute("cx", P["@" + d][0]); c.setAttribute("cy", P["@" + d][1]); c.setAttribute("visibility", "visible"); } else c.setAttribute("visibility", "hidden"); }
   for (const [k, n] of Object.entries(HOOD.els.nodes)) { n.style.left = P[k][0] + "px"; n.style.top = P[k][1] + "px"; }
@@ -3111,7 +3143,7 @@ const HELP_INFO = {
       let x = 4; (m.drugs || ["drug 1", "drug 2", "drug 3", "drug 4"]).forEach((d, i) => { x += hchip(s, x, 16, d.toLowerCase(), DRUG_COLOR[i % 4]) + 4; });
       x = 4; (m.cell_lines || []).forEach((c) => { x += hchip(s, x, 40, c, "var(--ink-2)") + 4; });
       x = 4; ["timing limits?", "labware?", "recipes?"].forEach((c) => { const w = 8 + c.length * 6.1; el("rect", { x, y: 53, width: w, height: 16, rx: 8, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 2" }, s); hv(s, x + w / 2, 65, c, hmono(), "middle"); x += w + 4; });
-      hv(s, 4, 90, "1 arm · 1 liquid handler · 1 incubator · 1 reader", hmono()); } },
+      hv(s, 4, 90, "Hamilton STARlet · SCARA arm · 12-plate incubator · reader", hmono()); } },
   agentpre: { name: "Agent", tag: "Claude Haiku · before launch",
     steps: ["Lists what could limit this lab: waits, deadlines, cleaning.", "Searches 7 documents: assay protocol, drug datasheets, culture guide, catalog.", "Proposes a limit only with a quote that holds the number; a checker rejects impossible or duplicate ones.", "Also picks labware (plate, tips, pipetting) and the liquid prep."],
     stat: () => { const tr = (RP.loop.agent || {}).trace || [], c = (k) => tr.filter((t) => t.tool === k).length; return tr.length ? `this run: ${c("hypothesize")} ideas · ${c("search_corpus")} searches · ${(RP.loop.launch || []).length} limits` : ""; },
@@ -3149,11 +3181,12 @@ const HELP_INFO = {
       el("path", { d: "M246,20 V27 H258 V20", stroke: "var(--good)", fill: "none", "stroke-width": 1.5 }, s);
       hv(s, 205, 82, "incubator, 24 to 72 h", hmono(), "middle"); hv(s, 4, 98, "a limit keeps a gap: ≥ 30 min before the read", hmono("var(--good)")); } },
   robots: { name: "Robots", tag: "simulated · PyLabRobot",
-    steps: ["The arm moves each plate: hotel → liquid handler → incubator → reader → hotel.", "The liquid handler adds cells and drug doses (a simulated Hamilton STARlet).", "The incubator holds plates 24 to 72 h at 37 °C.", "Faults happen at random: tip pickups, clogs, machines going down."],
-    viz: (s) => { [["hotel", "list"], ["liquid h.", "lab"], ["incubator", "incubator"], ["reader", "reader"]].forEach(([n, ic], i) => { const x = 6 + i * 72;
-        el("rect", { x, y: 12, width: 58, height: 46, rx: 6, fill: "var(--surface-2)", stroke: "var(--axis)" }, s); svgIcon(el("g", { style: "stroke: var(--ink-2)" }, s), ic, x + 29, 30, 18); hv(s, x + 29, 52, n, "font: 9.5px var(--body); fill: var(--ink-2)", "middle");
+    steps: ["A SCARA plate arm (PF400 class, simulated in MuJoCo) moves each plate: hotel → liquid handler → incubator → reader → hotel.", "The liquid handler, a Hamilton Microlab STARlet simulated through PyLabRobot, adds cells and drug doses.", "The incubator holds plates 24 to 72 h at 37 °C.", "Faults happen at random: tip pickups, clogs, machines going down."],
+    viz: (s) => { [["hotel", "list", ""], ["STARlet", "lab", "PyLabRobot"], ["incubator", "incubator", "12 plates"], ["reader", "reader", "luminescence"]].forEach(([n, ic, sub], i) => { const x = 6 + i * 72;
+        el("rect", { x, y: 8, width: 58, height: 50, rx: 6, fill: "var(--surface-2)", stroke: "var(--axis)" }, s); svgIcon(el("g", { style: "stroke: var(--ink-2)" }, s), ic, x + 29, 24, 16); hv(s, x + 29, 44, n, "font: 600 9.5px var(--body); fill: var(--ink)", "middle");
+        if (sub) hv(s, x + 29, 54, sub, "font: 8px var(--mono); fill: var(--muted)", "middle");
         if (i < 3) harrow(s, x + 60, 35, x + 70, 35); });
-      el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "the arm carries every plate", hmono(), "middle"); } },
+      el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "a SCARA arm (MuJoCo) carries every plate", hmono(), "middle"); } },
   camera: { name: "Camera", tag: "after each plate move",
     steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Each re-grasp is simulated in MuJoCo from where the plate lies (about 7 s at the liquid handler, 17 s at the reader); a plate left out of tolerance is checked and gripped again."],
     viz: (s) => { el("rect", { x: 30, y: 8, width: 120, height: 76, rx: 4, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "4 3" }, s); el("rect", { x: 39, y: 14, width: 120, height: 76, rx: 4, fill: "color-mix(in srgb, var(--critical) 8%, var(--surface))", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
