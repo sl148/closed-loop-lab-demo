@@ -52,6 +52,22 @@ class Handler(BaseHTTPRequestHandler):
 
         client = anthropic.Anthropic()
         req = {k: body[k] for k in ("system", "messages", "tools") if body.get(k)}
+        if body.get("stream"):  # pass the API's server-sent events straight through, as the Worker does
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "text/event-stream")
+            self.end_headers()
+            with client.messages.stream(model=MODEL, max_tokens=min(int(body.get("max_tokens", 4000)), 8000), **req) as st:
+                for ev in st:
+                    if ev.type in ("message_start", "content_block_start", "content_block_delta", "content_block_stop", "message_delta", "message_stop"):
+                        self.wfile.write(f"event: {ev.type}\ndata: {json.dumps(ev.model_dump(mode='json'))}\n\n".encode())
+                        self.wfile.flush()
+                u = st.get_final_message().usage
+            Handler.usage["input"] += u.input_tokens
+            Handler.usage["output"] += u.output_tokens
+            Handler.usage["calls"] += 1
+            print(json.dumps({"turn": Handler.usage["calls"], "stream": True, "usage": Handler.usage}), flush=True)
+            return
         try:
             msg = client.messages.create(model=MODEL, max_tokens=min(int(body.get("max_tokens", 4000)), 8000), **req)
             out = msg.model_dump()
