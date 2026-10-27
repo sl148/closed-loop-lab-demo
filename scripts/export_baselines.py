@@ -6,6 +6,9 @@ Ours (gold_v3: throughput-aware BO + CP-SAT repair) against discovery and schedu
 lab (scripts/run_baselines.sh): every run knows all real limits and uses the gold labware and prep, so only
 the method differs. Fresh seeds (10-17), none used while choosing our settings. Discovery curves: the reported best pair's true synergy as a share of the
 best possible, mean over both campaigns and all seeds, against lab hours.
+
+    --suffix agentlab --out web/data/baselines_lab.json   # the web replay's lab (LAB=agent run_baselines.sh),
+                                                          # overlaid on the Results tab's running synergy chart
 """
 
 from __future__ import annotations
@@ -68,15 +71,17 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--res", default=str(RES), help="folder with the runs (default results/m9/level4)")
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--suffix", default="v3", help="variant suffix: v3 (gold lab) or agentlab (the replay's lab)")
     args = ap.parse_args()
     res, out_path = Path(args.res), Path(args.out)
-    runs = {k: json.loads((res / f"{v}.json").read_text()) for k, v, *_ in METHODS if (res / f"{v}.json").exists()}
+    name = lambda v: v[: -len("_v3")] + "_" + args.suffix  # base_ours_v3 -> base_ours_<suffix>
+    runs = {k: json.loads((res / f"{name(v)}.json").read_text()) for k, v, *_ in METHODS if (res / f"{name(v)}.json").exists()}
     tmax = max(r["makespan"] for rs in runs.values() for r in rs)
     out = {"step_min": STEP_MIN, "seeds": len(next(iter(runs.values()))), "methods": []}
     hold_by: dict[str, dict] = {}
     for key, variant, label, group, desc in METHODS:
         if key not in runs:
-            print("missing", variant)
+            print("missing", name(variant))
             continue
         rs, s = runs[key], summarize(runs[key])
         reads = [sum(1 for e in r["events"] if e["kind"] == "read") for r in rs]

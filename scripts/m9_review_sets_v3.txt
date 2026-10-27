@@ -1,6 +1,6 @@
 designer=throughput-bo
 scheduler=repair
-scheduler_cfg={deterministic: true}
+scheduler_cfg={deterministic: true, stability: 0, objective: {makespan: 1, flow: 10}}
 deck=configs/deck_level4_agentlw2.json
 sim3d={misplace_sigma_mm: 1.5, perception: true}
 truth=configs/truth_prep.yaml

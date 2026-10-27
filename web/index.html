@@ -295,7 +295,8 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
 .st-counts .ok { color: var(--good); }
 .st-counts .chip { margin-left: auto; padding: 1px 9px; font-size: 11.5px; color: var(--accent); border-color: var(--accent); }
 .st-ribbon { display: flex; flex-wrap: wrap; gap: 1.5px; }
-.st-ribbon i { width: 5px; height: 9px; border-radius: 1.5px; opacity: .8; }
+.st-ribbon i { width: 6px; height: 10px; border-radius: 1.5px; opacity: .8; cursor: default; }
+.st-ribbon i:hover { opacity: 1; outline: 1.5px solid var(--ink-2); }
 .st-ribbon i.cur { outline: 1.5px solid var(--ink); opacity: 1; }
 .st-now { display: grid; gap: 4px; min-height: 66px; align-content: start; background: var(--surface-2); border-radius: 8px; padding: 7px 9px; }
 .st-call { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: var(--ink); min-width: 0; }
@@ -473,7 +474,7 @@ select { font: 12.5px var(--body); background: var(--surface); color: var(--ink)
     <div class="kpis" id="lr-kpis"></div>
     <div class="lr-grid">
       <div class="panel"><div class="qhead"><h3>Wrong values kept</h3><span class="legend">right edge: 3-seed means</span></div><div class="fill" id="lr-wrong"></div></div>
-      <div class="panel"><div class="qhead"><h3>Synergy found</h3><span class="legend" id="lr-syn-leg"></span></div><div class="fill" id="lr-syn"></div></div>
+      <div class="panel"><div class="qhead"><h3>Synergy found</h3><span class="legend" id="lr-syn-leg"></span><button class="chip" type="button" id="lr-cmp" aria-pressed="true" hidden title="Overlay ours and the baselines run in this same lab (3 seeds each); pick baselines in the panel below">Compare methods</button></div><div class="fill" id="lr-syn"></div></div>
       <div class="panel"><div class="qhead"><h3>Plates read</h3><span class="legend" id="lr-plates-leg"></span></div><div class="fill" id="lr-plates"></div></div>
     </div>
     <div class="panel bl-panel" id="bl-panel" hidden>
@@ -2108,11 +2109,11 @@ function lrChart(host, { series, ymax, yfmt, markers = [], xmarks = [], ylabel, 
   for (const sr of series) {
     const pts = sr.pts.filter((p) => p[0] <= T); if (!pts.length) continue;
     let d = `M${X(pts[0][0])},${Y(pts[0][1])}`; for (const p of pts.slice(1)) d += `H${X(p[0])}V${Y(p[1])}`; d += `H${X(T)}`;
-    el("path", { d, fill: "none", stroke: sr.color, "stroke-width": 2.4, "stroke-linejoin": "round" }, s);
-    const v = pts[pts.length - 1][1]; ends.push({ x: X(T), y: Y(v), v, color: sr.color });
+    el("path", { d, fill: "none", stroke: sr.color, "stroke-width": sr.w || 2.4, "stroke-linejoin": "round", ...(sr.dash ? { "stroke-dasharray": sr.dash } : {}) }, s);
+    const v = pts[pts.length - 1][1]; ends.push({ x: X(T), y: Y(v), v, color: sr.color, r: sr.dash ? 2.5 : 3.5 });
   }
   el("line", { x1: X(T), x2: X(T), y1: Tp, y2: H - B, stroke: "var(--ink)", "stroke-width": 1.2 }, s);
-  for (const e of ends) { el("circle", { cx: e.x, cy: e.y, r: 3.5, fill: e.color }, s); }
+  for (const e of ends) { el("circle", { cx: e.x, cy: e.y, r: e.r, fill: e.color }, s); }
   // right edge: others' final values, labels kept apart
   const lab = markers.map((m) => ({ ...m, y: Y(m.v) })).sort((a, b) => a.y - b.y);
   lab.forEach((m, i) => { if (i && m.y - lab[i - 1].ly < 11) m.ly = lab[i - 1].ly + 11; else m.ly = m.y; });
@@ -2130,11 +2131,12 @@ function renderLiveResults() {
   $("#lr-kpis").innerHTML = tiles.map(([k, v]) => `<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
   const ownW = S.wrong[S.wrong.length - 1][1];
   lrChart($("#lr-wrong"), { series: [{ pts: S.wrong, color: "var(--s7)" }], ymax: Math.max(10, ownW, ...res.map((r) => r.mean.corrupt_accepted || 0)) * 1.05, yfmt: (v) => Math.round(v), markers: finals("corrupt_accepted") });
-  lrChart($("#lr-syn"), { series: S.syn.map((x) => ({ pts: x.pts, color: campColor(x.c) })), ymax: 1, yfmt: (v) => `${Math.round(100 * v)}%`, markers: finals("regret", (v) => clamp01(1 - v)) });
+  const cmp = lrCmpSeries(S);
+  lrChart($("#lr-syn"), { series: cmp ? cmp.series : S.syn.map((x) => ({ pts: x.pts, color: campColor(x.c) })), ymax: 1, yfmt: (v) => `${Math.round(100 * v)}%`, markers: cmp ? [] : finals("regret", (v) => clamp01(1 - v)) });
   lrChart($("#lr-plates"), { series: [{ pts: S.read, color: "var(--ink-2)" }, { pts: S.bad, color: "var(--critical)" }], ymax: nP * 1.05, yfmt: (v) => Math.round(v),
     xmarks: MODE.live ? [] : res.map((r) => ({ t: (r.mean.makespan_h || 0) * 60, color: VAR_COLOR[r.label] || "var(--muted)" })),
     xmax: MODE.live ? viewMax() : Math.max(TMAX, ...res.map((r) => (r.mean.makespan_h || 0) * 60)) * 1.02 });
-  $("#lr-syn-leg").innerHTML = campNames().map((c) => `<span><i class="box" style="background:${campColor(c)}"></i>${campLabel(c)}</span>`).join("");
+  $("#lr-syn-leg").innerHTML = cmp ? cmp.legend : campNames().map((c) => `<span><i class="box" style="background:${campColor(c)}"></i>${campLabel(c)}</span>`).join("");
   $("#lr-plates-leg").innerHTML = `<span><i class="box" style="background:var(--ink-2)"></i>read</span><span><i class="box" style="background:var(--critical)"></i>invalid</span>` +
     (MODE.live ? "" : res.map((r) => `<span style="color:${VAR_COLOR[r.label]}">┆ ${VAR_SHORT[r.label]} done ${Math.round(r.mean.makespan_h || 0)} h</span>`).join(""));
   blLoad(); renderBaselines();
@@ -2143,7 +2145,8 @@ function renderLiveResults() {
 /* ================================================================ results: ours against method baselines (data/baselines.json, scripts/export_baselines.py).
    Every run knows all real limits and uses the gold labware and prep, so only the method differs; 3 seeds each. */
 const BL = { data: null, on: null, key: "", tried: false };
-const BL_COLOR = { ours: "var(--accent)", bo: "var(--s2)", lhs: "var(--s4)", random: "var(--s5)", grid: "var(--s7)", fifo: "var(--s2)", priority: "var(--s4)", cpsat: "var(--s1)" };
+// one color per method: the Results synergy overlay can show discovery and scheduling baselines together
+const BL_COLOR = { ours: "var(--accent)", bo: "var(--s2)", lhs: "var(--s4)", random: "var(--s5)", grid: "var(--s7)", fifo: "var(--s1)", priority: "var(--s3)", cpsat: "var(--s6)" };
 async function blLoad() {
   if (BL.tried) return; BL.tried = true;
   try { BL.data = await (await fetch("data/baselines.json")).json(); } catch (e) { BL.data = null; }
@@ -2164,8 +2167,31 @@ async function blLoad() {
   $("#bl-toggles").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k; if (BL.on.has(k)) BL.on.delete(k); else BL.on.add(k); b.setAttribute("aria-pressed", String(BL.on.has(k)));
     try { localStorage.setItem("labloop-baselines", JSON.stringify([...BL.on])); } catch (e) { /* private window: not remembered */ }
-    BL.key = ""; renderBaselines(); }));
+    BL.key = ""; renderBaselines(); update(); }));
   BL.key = ""; renderBaselines();
+}
+// Results "Synergy found" with methods compared: this run (mean of its cell lines, the baselines' measure) against
+// ours and the baselines run in this run's lab (data/baselines_lab.json, LAB=agent scripts/run_baselines.sh), drawn up to the clock
+const LRC = { data: null, on: true };
+try { LRC.on = localStorage.getItem("labloop-compare") !== "0"; } catch (e) { /* default on */ }
+fetch("data/baselines_lab.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+  if (!d || !d.methods || !d.methods.some((m) => m.key === "ours")) return;
+  LRC.data = d; const b = $("#lr-cmp"); b.hidden = false; b.setAttribute("aria-pressed", String(LRC.on));
+  b.addEventListener("click", () => { LRC.on = !LRC.on; b.setAttribute("aria-pressed", String(LRC.on)); try { localStorage.setItem("labloop-compare", LRC.on ? "1" : "0"); } catch (e) { /* not remembered */ } update(); });
+}).catch(() => {});
+function lrCmpSeries(S) {
+  const b = $("#lr-cmp"); if (b) b.hidden = !LRC.data || !!MODE.live;
+  if (!LRC.on || !LRC.data || MODE.live) return null;
+  const ts = [...new Set(S.syn.flatMap((x) => x.pts.map((p) => p[0])))].sort((a, b) => a - b);
+  const run = ts.map((t) => [t, S.syn.reduce((a, x) => a + (atT(x.pts, t) || [0, 0])[1], 0) / S.syn.length]);
+  const on = BL.on || new Set(LRC.data.methods.filter((m) => m.default).map((m) => m.key)), step = LRC.data.step_min, xmax = viewMax();
+  const ms = LRC.data.methods.filter((m) => m.key === "ours" || on.has(m.key)).reverse();  // ours drawn last of the dashed
+  const series = ms.map((m) => ({ pts: m.synergy.map((v, i) => [i * step, v]).filter((p) => p[0] <= xmax), color: BL_COLOR[m.key], dash: m.key === "ours" ? "6 3" : "3 3", w: m.key === "ours" ? 2.2 : 1.6 }));
+  series.push({ pts: run, color: "var(--ink)", w: 2.6 });
+  const n = LRC.data.seeds;
+  const legend = `<span><i class="box" style="background:var(--ink)"></i>this run</span>` + ms.slice().reverse().map((m) =>
+    `<span title="${esc(m.desc)}"><i class="box" style="background:none;border-top:2px dashed ${BL_COLOR[m.key]};height:0;width:14px"></i>${esc(m.label)}</span>`).join("") + `<span class="muted">dashed: ${n} seeds, same lab</span>`;
+  return { series, legend };
 }
 function renderBaselines() {
   if (!BL.on || $("#view-results").hidden) return;
@@ -2394,20 +2420,29 @@ function stTask(stage, u) {
     `<span class="st-dev">${icon("list")}<b>${Object.keys(RP.progress).length}</b>campaigns share them</span>`;
 }
 
-/* 2. agent: hypotheses as arcs over the workflow, the tool call in progress below */
-let AGL = null;  // layout of the hypothesis arcs, stable over the episode
-function agentLayout() {
-  const tr = RP.loop.agent.trace, hyp = tr.filter((t) => t.tool === "hypothesize" && t.ok);
-  const sweep = tr.filter((t) => t.tool === "propose" && t.ok && t.slot === "sweep" && STEPS.includes(t.spec.a) && STEPS.includes(t.spec.b));
-  const arcs = hyp.map((h) => ({ id: h.limit_id, t: h.t, concern: h.concern, steps: (h.steps || []).filter((x) => STEPS.includes(x)) }))
-    .concat(sweep.map((p, k) => ({ id: "sweep" + k, t: p.t, sweep: p, concern: "found while skimming the archive", steps: [p.spec.a, p.spec.b] })));
-  const levels = [];
-  for (const a of arcs) {
-    const ix = a.steps.map((x) => STEPS.indexOf(x)).sort((p, q) => p - q); a.i0 = ix[0] ?? 0; a.i1 = ix[ix.length - 1] ?? a.i0;
-    let lv = 0; while ((levels[lv] || []).some(([p, q]) => a.i0 < q && p < a.i1 || (a.i0 === a.i1 && p <= a.i0 && a.i0 <= q) || (p === q && a.i0 <= p && p <= a.i1))) lv++;
-    (levels[lv] ||= []).push([a.i0, a.i1]); a.lv = lv;
+/* 2. agent: one block per tool call (hover: what it asked, what came back, what it is for), the call in progress below */
+let AGL = null;  // episode length, stable over the episode
+function agentLayout() { const tr = RP.loop.agent.trace; return AGL = { end: tr[tr.length - 1].t + 4 }; }
+const TOOL_NAME = { describe_lab: "Reads the task", list_documents: "Lists the documents", list_parameters: "Reads the lab's settings", merge_hypotheses: "Merges duplicate ideas",
+  hypothesize: "Idea", search_corpus: "Search", read_pages: "Reads pages", propose: "Proposes a limit", abstain: "Gives up on a number" };
+const stepPair = (sp) => sp.step ? `before ${STEP_SHORT[sp.step] || sp.step}` : `${STEP_SHORT[sp.a] || sp.a} → ${STEP_SHORT[sp.b] || sp.b}`;
+// hover card for one trace entry: the question, what came back, and which idea / limit it serves
+function agentTip(t, tr) {
+  const idea = tr.find((x) => x.tool === "hypothesize" && x.limit_id === t.slot), row = (k, v) => `<div><span class="muted">${k}</span> ${v}</div>`;
+  const forWhat = t.slot === "sweep" ? "skimming every document for limits no idea covered" : idea ? esc(clip(idea.concern, 110)) : t.slot && /^plan/.test(t.slot) ? "planning: what could limit this lab" : null;
+  let q = "", a = "", use = forWhat ? row("for", forWhat) : "";
+  if (t.tool === "search_corpus") { q = esc(t.query || ""); a = (t.hits || []).slice(0, 3).map((h) => `${esc(docShort(h.doc))} p.${h.page}`).join(" · ") || "no matches"; }
+  else if (t.tool === "read_pages") { q = `${esc(docShort(t.doc))} p.${t.first}${t.last && t.last !== t.first ? "–" + t.last : ""}`; a = "the full page text"; }
+  else if (t.tool === "hypothesize") { q = esc(clip(t.concern || t.limit_id, 160)); a = (t.steps || []).length ? t.steps.map((x) => STEP_SHORT[x] || x).join(" → ") : ""; use = (t.steps || []).length ? row("next", "search the archive for a number") : ""; }
+  else if (t.tool === "propose") {
+    q = `${esc(limShort(t.spec))} · ${esc(stepPair(t.spec))}` + (t.quote ? `<br><i>“${esc(clip(t.quote, 120))}”</i> ${esc(docShort(t.doc))} p.${t.page}` : "");
+    a = t.ok ? "accepted" : `rejected: ${esc(clip(String(t.result || "").replace(/^rejected:?\s*/, ""), 110))}`;
+    if (t.ok) use += row("used", "the scheduler keeps every plate within it");
   }
-  return AGL = { arcs, nlv: levels.length, end: tr[tr.length - 1].t + 4 };
+  else if (t.tool === "abstain") { q = "a number for this idea"; a = esc(clip(t.reason || "no number in the archive", 140)); use += row("used", "no limit: the lab's default stays"); }
+  else { q = ""; a = ""; }
+  return `<b>${TOOL_NAME[t.tool] || t.tool}</b>` + (q ? row(t.tool === "propose" ? "limit" : t.tool === "hypothesize" ? "asks" : t.tool === "abstain" ? "looked for" : t.tool === "read_pages" ? "reads" : "asks", q) : "") +
+    (a ? row(t.tool === "propose" ? "check" : t.tool === "hypothesize" ? "steps" : "got", a) : "") + use;
 }
 function agentState(i) {
   const tr = RP.loop.agent.trace, res = {}, started = {};
@@ -2426,30 +2461,16 @@ function stAgent(stage, u) {
   const L = AGL || agentLayout(), tr = RP.loop.agent.trace, tau = u * L.end;
   let i = 0; while (i + 1 < tr.length && tr[i + 1].t <= tau) i++;
   const key = "agent" + i + "|" + stage.clientWidth; if (ST.key === key) return; ST.key = key;
-  const cur = tr[i], { res, started } = agentState(i), cnt = (k) => tr.slice(0, i + 1).filter((t) => t.tool === k).length;
+  const cur = tr[i], { res } = agentState(i), cnt = (k) => tr.slice(0, i + 1).filter((t) => t.tool === k).length;
   const found = Object.values(res).filter((r) => r && r !== "none").length;
   stage.innerHTML = `<div class="st-counts"><span>${icon("idea")}${cnt("hypothesize")}<small>ideas</small></span><span>${icon("search")}${cnt("search_corpus")}<small>searches</small></span>` +
     `<span>${icon("page")}${cnt("read_pages")}<small>pages read</small></span><span class="ok">${icon("check")}${found}<small>limits</small></span>` +
     (LIVE.sample ? `<button class="chip" type="button" id="st-live" title="Re-run this search now with your own Claude">▶ live</button>` : "") + `</div>` +
-    `<div class="st-fig"></div><div class="st-ribbon">${tr.slice(0, i + 1).map((t, j) => `<i style="background:${t.ok === false ? "var(--critical)" : TOOL_COLOR[t.tool] || "var(--axis)"}"${j === i ? ' class="cur"' : ""}></i>`).join("")}</div><div class="st-now"></div>`;
+    `<div class="st-ribbon">${tr.slice(0, i + 1).map((t, j) => `<i data-j="${j}" style="background:${t.ok === false ? "var(--critical)" : TOOL_COLOR[t.tool] || "var(--axis)"}"${j === i ? ' class="cur"' : ""}></i>`).join("")}</div><div class="st-now"></div>`;
   const lb = stage.querySelector("#st-live"); if (lb) lb.addEventListener("click", () => { if (!LIVE.run || LIVE.run.done) liveRun(); });
-  // arcs over the workflow
-  const W = stageW(stage), LV = 15, base = 16 + L.nlv * LV, H = base + 30, s = stSvg(stage.querySelector(".st-fig"), W, H);
-  const xs = workflowAxis(s, W, base);
-  const rank = (a) => { const r = res[a.id]; return r && r !== "none" ? 2 : cur.slot === a.id ? 1 : 0; };  // found arcs drawn last, on top
-  for (const a of L.arcs.filter((x) => x.t <= tau).sort((p, q) => rank(p) - rank(q))) {
-    const r = res[a.id], active = cur.slot === a.id && cur.tool !== "hypothesize", y = base - (a.lv + 1) * LV - 4;
-    const xa = xs[STEPS[a.i0]] + (a.i0 === a.i1 ? 0 : 3), xb = xs[STEPS[a.i1]] - (a.i0 === a.i1 ? 0 : 3);
-    const col = r && r !== "none" ? "var(--good)" : active ? "var(--s1)" : "var(--axis)";
-    const attrs = { fill: "none", stroke: col, "stroke-width": r && r !== "none" ? 2.4 : active ? 2.6 : 1.4, class: active ? "pulse" : "" };
-    if (r === "none") attrs["stroke-dasharray"] = "1.5 3"; else if (!r && !active && !started[a.id]) attrs["stroke-dasharray"] = "4 3";
-    const g = el("g", {}, s);
-    if (a.i0 === a.i1) el("circle", { cx: xa, cy: y, r: 3.5, ...attrs }, g);
-    else el("path", { d: `M${xa},${y} H${xb}`, "stroke-linecap": "round", ...attrs }, g);  // a bar over the steps the limit spans
-    if (r && r !== "none") { const t = txt(g, (xa + xb) / 2 + (a.i0 === a.i1 ? 7 : 0), y - 3, limShort(r), "font: 600 9px var(--mono); fill: var(--good); paint-order: stroke; stroke: var(--surface); stroke-width: 3px", a.i0 === a.i1 ? "start" : "middle"); }
-    el("rect", { x: Math.min(xa, xb) - 5, y: y - 5, width: Math.abs(xb - xa) + 10, height: 10, fill: "transparent" }, g);
-    tipOn(g, () => `<b>${esc(a.concern)}</b><br>${r && r !== "none" ? `found: ${esc(limShort(r))}` : r === "none" ? "no number in the archive: lab default kept" : active ? "searching…" : "not checked yet"}`);
-  }
+  const rb = stage.querySelector(".st-ribbon");
+  rb.addEventListener("pointermove", (e) => { const b = e.target.closest("i[data-j]"); if (b) showTip(e, agentTip(tr[+b.dataset.j], tr)); else hideTip(); });
+  rb.addEventListener("pointerleave", hideTip);
   // the call in progress
   const nowEl = stage.querySelector(".st-now"); let h = "";
   if (cur.tool === "search_corpus") {
