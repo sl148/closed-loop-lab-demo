@@ -67,6 +67,11 @@ class FailureModel:
     human_min: int = 30
     repair_min: int = 90
     perception_curve: tuple[tuple[float, float], ...] = ()
+    # sim3d replace: mujoco: each flagged misplacement is re-gripped in the MuJoCo cell from where the plate lies
+    # (sim3d/regrasp.py); that trial's time is the re-placement time, and a plate it leaves out of tolerance is
+    # checked and re-gripped again. The camera's position error where it has no view of the station:
+    regrasp: bool = False
+    regrasp_est_err_mm: float = 0.0
 
 
 @dataclass
@@ -812,6 +817,10 @@ class Lab:
         elif op.kind == "read":
             checks = [(F.MEASUREMENT, f.p_measurement)]
         for ftype, p in checks:
+            if ftype is F.PLATE_MISPLACED and f.regrasp and f.perception_curve:
+                if p > 0 and self.rng.random() < p:
+                    self._misplaced(oid, op, r)
+                continue
             attempt = 1
             while p > 0 and self.rng.random() < (p if attempt == 1 or ftype is not F.PLATE_MISPLACED
                                                  or f.p_replace_fail is None else f.p_replace_fail):
@@ -859,6 +868,40 @@ class Lab:
             if r.extra:
                 extra, r.extra = r.extra, 0
                 yield self.env.timeout(extra)
+
+    def _misplaced(self, oid: str, op, r) -> None:
+        """A plate set down off its nest (sim3d replace: mujoco). The camera checks it; a flagged plate is
+        re-gripped in the MuJoCo cell from where it lies, and checked again until it is seated (at most 4 tries)."""
+        from labloop.sim3d.regrasp import regrasp
+
+        f = self.failures
+        station = oid.split(".")[1][3:].split("_")[1]  # "B001.mv_hotel_lh" -> "lh"
+        dx, dy = (float(v) for v in self.rng.normal(0, f.misplace_sigma_mm, 2))
+        xs, ys = zip(*f.perception_curve)
+        for attempt in range(1, 5):
+            offset = float(np.hypot(dx, dy))
+            detected = self.rng.random() < float(np.interp(offset, xs, ys))
+            self._log("camera_check", plate=op.job, op=oid, dx_mm=round(dx, 2), dy_mm=round(dy, 2),
+                      offset_mm=round(offset, 2), detected=bool(detected), attempt=attempt)
+            if not detected:
+                names = sorted(self.plates[op.job].spec.well_name(*w) for w, c in self.plates[op.job].wells.items()
+                               if not isinstance(c, str))
+                harmful = oid.endswith(("mv_hotel_lh", "mv_incubator_reader"))  # about to be pipetted or read
+                k = min(2 * f.wells_per_failure, len(names)) if harmful else 0
+                lost = tuple(sorted(names[i] for i in self.rng.choice(len(names), k, replace=False))) if k else ()
+                self.corrupt.setdefault(op.job, set()).update(lost)
+                self._log("undetected_misplacement", plate=op.job, op=oid, offset_mm=round(offset, 2), wells=list(lost))
+                return
+            decision = self._failure(FailureEvent(F.PLATE_MISPLACED, int(self.env.now), plate=op.job, op=oid,
+                                                  resource=r.resource, wells=(), attempt=attempt))
+            if not any(a.type is A.RETRY for a in decision.actions):
+                return
+            g = regrasp(station, dx, dy, self.rng, f.regrasp_est_err_mm)
+            r.extra += max(1, math.ceil(g["s"] / 60))
+            self._log("regrasp", plate=op.job, op=oid, station=station, attempt=attempt, **g)
+            if g["ok"]:
+                return
+            dx, dy = g["final_dx_mm"], g["final_dy_mm"]
 
     def _drop(self, oid: str) -> None:
         """The arm lost the plate on this transfer: the plate's remaining steps cannot run. After
@@ -914,7 +957,8 @@ class Lab:
         now = int(self.env.now)
         f = self.failures
         if act.type is A.RETRY and ev.op:
-            self.run[ev.op].extra += f.retry_min.get(ev.type.value, 1)
+            if not (ev.type is F.PLATE_MISPLACED and f.regrasp):  # a MuJoCo re-grasp adds its own simulated time
+                self.run[ev.op].extra += f.retry_min.get(ev.type.value, 1)
         elif act.type is A.SUBSTITUTE and ev.op:
             self.run[ev.op].extra += f.substitute_min
         elif act.type is A.HUMAN and ev.op:

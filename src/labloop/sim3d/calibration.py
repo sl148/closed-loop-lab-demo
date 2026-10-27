@@ -43,4 +43,8 @@ def apply_sim3d(cfg: dict, durations: DurationModel, failures):
         ok = float(np.mean([v["success_rate"] for v in s.values()]))
         failures = dataclasses.replace(failures, retry_min={**failures.retry_min, "plate_misplaced": max(1, math.ceil(mean_s / 60))},
                                        p_replace_fail=round(1 - ok, 4))
+    if cfg.get("replace") == "mujoco":  # each flagged plate re-gripped in the MuJoCo cell (sim3d/regrasp.py)
+        rows = json.loads((d / "perception.json").read_text())
+        est = [r["est_err_mm"] for r in rows if r["offset_mm"] > 0 and r.get("est_err_mm") is not None]
+        failures = dataclasses.replace(failures, regrasp=True, regrasp_est_err_mm=round(float(np.nanmean(est)), 3) if est else 0.7)
     return durations, failures

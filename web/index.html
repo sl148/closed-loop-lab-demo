@@ -1657,8 +1657,10 @@ function initThree() {
       if (!RG.after && Math.hypot(dx, dy) > 4) el("path", { d: `M${200 + dx},${150 - dy} L200,150`, stroke: col, "stroke-width": 2, "stroke-dasharray": "4 3", fill: "none" }, ov);
       if (RG.holding) for (const sx of [-1, 1]) el("rect", { x: 200 + dx + sx * (pw / 2 + 6) - 5, y: 150 - dy - 30, width: 10, height: 60, rx: 3, fill: "var(--ink)", opacity: .85 }, ov);  // gripper fingers
       if (RG.st === "lh" && deckObjs) CAM.shift = { d: [RG.plate[0] - nx, RG.plate[1] - ny], objs: [deckObjs.assayBase, deckObjs.assay.inst] };  // the deck's plate drawing moves with the plate
-      const step = RG.after ? "seated on the nest ✓" : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where it is";
-      $("#cam-cap").innerHTML = `<b>${RG.c.plate}</b> off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE})${RG.n > 1 ? ` · try ${RG.k + 1}/${RG.n}` : ""} · <b style="color:${col}">${step}</b>`;
+      const M = RG.c.regrasp;  // the MuJoCo re-grasp the lab ran for this flag (sim3d replace: mujoco)
+      const step = RG.after ? (M ? (M.ok ? `seated, ${M.final_mm.toFixed(1)} mm from center ✓` : `still ${M.final_mm.toFixed(1)} mm off: checked again`) : "seated on the nest ✓")
+        : RG.holding ? "gripped, sliding onto the nest" : "flagged: re-gripping it where it is";
+      $("#cam-cap").innerHTML = `<b>${RG.c.plate}</b> off ${RG.c.offset_mm.toFixed(1)} mm (drawn ×${CAM_SCALE})${RG.n > 1 ? ` · try ${RG.k + 1}/${RG.n}` : ""} · <b style="color:${M && RG.after && !M.ok ? "var(--warning)" : col}">${step}</b>${M ? ` · MuJoCo ${M.s.toFixed(1)} s` : ""}`;
       return;
     }
     const watch = lastTr && T >= lastTr[3] + 0.6 * (lastTr[4] - lastTr[3]) && T <= lastTr[4] + 3;
@@ -1889,7 +1891,7 @@ function initThree() {
     });
     const caps = [];
     const motion = (r) => { const c = CELL && CELL.motion && CELL.motion.checks && CELL.motion.checks[r]; return c ? ` · ${c.simulated_s.toFixed(1)} s, ${c.collisions.length ? "collides" : "collision-free"}` : ""; };
-    if (tr && SIM.regrasp) { const g = SIM.regrasp; caps.push(`<span class="pill">arm <b>re-places</b> ${tr.job} · camera: off ${g.c.offset_mm.toFixed(1)} mm${g.n > 1 ? ` · try ${g.k + 1}/${g.n}` : ""}</span>`); }
+    if (tr && SIM.regrasp) { const g = SIM.regrasp; caps.push(`<span class="pill">arm <b>re-places</b> ${tr.job} · camera: off ${g.c.offset_mm.toFixed(1)} mm${g.n > 1 ? ` · try ${g.k + 1}/${g.n}` : ""}${g.c.regrasp ? ` · MuJoCo: ${g.c.regrasp.s.toFixed(1)} s, ${g.c.regrasp.ok ? "seated" : "missed"} ${g.c.regrasp.final_mm.toFixed(1)} mm` : ""}</span>`); }
     else if (tr) caps.push(`<span class="pill">arm <b>${tr.op.route.replace(">", " → ")}</b> ${tr.job}${motion(tr.op.route)}</span>`);
     else if (rackJob && rackJob[0].startsWith("CELLS")) caps.push(`<span class="pill">arm <b>${rackJob.route === "lh>rackhotel" ? "used cell reservoir → rack hotel" : "next cell reservoir → source carrier"}</b></span>`);
     else if (rackJob) caps.push(`<span class="pill">arm <b>${{ "lh>rackwaste": `used tip box, site ${rackJob.site + 1} → waste bin`,
@@ -2852,7 +2854,7 @@ const HELP_INFO = {
         if (i < 3) harrow(s, x + 60, 35, x + 70, 35); });
       el("path", { d: "M276,62 C276,92 34,92 34,62", fill: "none", stroke: "var(--axis)", "stroke-dasharray": "3 3", "marker-end": "url(#helparrow2)" }, s); hv(s, 155, 86, "the arm carries every plate", hmono(), "middle"); } },
   camera: { name: "Camera", tag: "after each plate move",
-    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Measured in MuJoCo: 6.5 s at the liquid handler (100% seated), 17 s at the reader (91%; a miss is flagged again)."],
+    steps: ["A plate can land off its nest.", "The camera checks each plate the arm puts down.", "A plate too far off is flagged; the arm re-grips it where the camera sees it and sets it on the nest.", "Each re-grasp is simulated in MuJoCo from where the plate lies (about 7 s at the liquid handler, 17 s at the reader); a plate left out of tolerance is checked and gripped again."],
     viz: (s) => { el("rect", { x: 30, y: 8, width: 120, height: 76, rx: 4, fill: "none", stroke: "var(--axis)", "stroke-dasharray": "4 3" }, s); el("rect", { x: 39, y: 14, width: 120, height: 76, rx: 4, fill: "color-mix(in srgb, var(--critical) 8%, var(--surface))", stroke: "var(--critical)", "stroke-width": 1.8 }, s);
       hv(s, 172, 34, "dashed: the nest", hmono()); hv(s, 172, 50, "red: the plate, off", hmono("var(--critical)")); hv(s, 172, 66, "→ flag, put back", hmono("var(--ink-2)")); } },
   reader: { name: "Reader", tag: "luminescence · 384 wells",

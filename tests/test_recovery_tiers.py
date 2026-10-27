@@ -76,3 +76,29 @@ def test_replace_plan_recenters_a_misplaced_plate():
     p = d.xpos[m.body("plate0").id]
     assert pb.collisions == []
     assert 1000 * math.hypot(p[0] - c[0], p[1] - c[1]) < 1.5
+
+
+@pytest.mark.parametrize("station", ["lh", "incubator", "reader"])
+def test_regrasp_seats_a_misplaced_plate(station):
+    pytest.importorskip("mujoco")
+    import numpy as np
+
+    from labloop.sim3d.regrasp import regrasp
+
+    g = regrasp(station, 3.0, -2.0, np.random.default_rng(0), 0.7)
+    assert g["ok"] and g["collisions"] == [] and g["final_mm"] < 1.5 and g["s"] > 0
+
+
+def test_flagged_misplacements_are_regrasped_in_mujoco():
+    pytest.importorskip("mujoco")
+    fail = {"p_misplace": 0.4, "regrasp": True, "regrasp_est_err_mm": 0.7, "perception_curve": ((0.0, 1.0), (100.0, 1.0))}
+    run = run_campaign(dict(LEVEL1, rounds=1, failures=fail), 0)
+    checks = [e for e in run["events"] if e["kind"] == "camera_check"]
+    grasps = [e for e in run["events"] if e["kind"] == "regrasp"]
+    assert checks and grasps
+    for g in grasps:  # one MuJoCo trial per flagged check, logged with its outcome
+        assert any(c["op"] == g["op"] and c["attempt"] == g["attempt"] and c["detected"] for c in checks)
+        assert g["s"] > 0 and g["station"] in ("lh", "incubator", "reader", "hotel")
+    for c in checks:  # a plate left out of tolerance is checked again
+        if c["attempt"] > 1:
+            assert any(g["op"] == c["op"] and g["attempt"] == c["attempt"] - 1 and not g["ok"] for g in grasps)

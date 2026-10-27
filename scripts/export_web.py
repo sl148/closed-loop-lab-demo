@@ -388,7 +388,10 @@ def replay(run: dict, title: str, seed: int) -> dict:
         "kinds": KINDS,
         "ops": [[o["job"], KINDS.index(o["kind"]), o["resource"], o["start"], o["end"], *op_route(o)] for o in ops],
         "failures": failures,
+        # each camera check, with the MuJoCo re-grasp it triggered (sim3d replace: mujoco) when it flagged the plate
         "camera": [{k: e[k] for k in ("t", "plate", "dx_mm", "dy_mm", "offset_mm", "detected")} | {"route": op_route({"op": e["op"], "kind": "transfer"})[0]}
+                   | ({"regrasp": {k: g[k] for k in ("s", "final_mm", "ok", "est_err_mm")}} if (g := next((g for g in run["events"] if g["kind"] == "regrasp"
+                      and g["op"] == e["op"] and g["attempt"] == e.get("attempt")), None)) else {})
                    for e in run["events"] if e["kind"] == "camera_check"],
         "replans": [{"t": r["t"], "reasons": r["reasons"], "solver": r["solver"], "ms": round(1000 * r["time_s"], 1),
                      "moved": r["moved"], "free": r["n_free"], "ops": r["n_ops"]} for r in run["reschedules"]],
