@@ -27,21 +27,24 @@ labware and pipetting truth; 3 seeds, deterministic scheduling:
 
 | Run | Synergy missed (regret) | True best pairs found | Wrong values kept | Invalid plates | Hours to finish |
 |---|---|---|---|---|---|
-| No limits | 0.76 | 0 / 6 | 32 | 34.7 | 247 |
-| Agent, before launch | 0.13 | 3 / 6 | 364 | 10.3 | 320 |
-| Agent + in-run reviews | 0.11 | 3 / 6 | 93 | 10.3 | 320 |
-| All real limits (gold) | 0.03 | 5 / 6 | 3 | 0.0 | 288 |
+| No limits | 0.59 | 0 / 6 | 32 | 35.7 | 262 |
+| Agent, before launch | 0.15 | 2 / 6 | 434 | 10.0 | 320 |
+| Agent + in-run reviews | 0.10 | 4 / 6 | 160 | 10.3 | 316 |
+| All real limits (gold) | 0.03 | 5 / 6 | 3 | 0.0 | 287 |
 
 - Before launch the agent grounds 2 of the 3 real limits (drug dilutions within 1 day, Cayman datasheet;
   a 30 min room-temperature wait before reading, TB288 p. 7) and misses cell-line cleaning, which no
   document quantifies.
 - The data review then flags plates read after an uncleaned cell-line switch, adds a 15 min cleaning step
-  as a soft, assumed limit, and drops those plates: wrong values kept fall from 364 to 93 (all 3 seeds).
-- The agent's labware is slower (it uses fresh drug tips for every well: 118 vs 36 min per plate). With the
-  agent's labware and prep but every real limit known, regret averages 0.20 (5 / 6) but spans 0.02 to 0.40 over
-  the 3 seeds; at 3 seeds, regret differences under about 0.1 between rows are within seed noise.
-- A plate the arm sets down off its nest is caught by the deck camera and re-gripped where it lies; the time
-  (1 min) and miss rate (4.7%) of that re-placement are measured in the MuJoCo cell (scripts/sim3d_replace.py).
+  as a soft, assumed limit, and drops those plates: wrong values kept fall from 434 to 160 (all 3 seeds).
+- The agent's labware is slower (it uses fresh drug tips for every well: 118 vs 36 min per plate), but with
+  the agent's labware and prep and every real limit known, regret is 0.02 (6 / 6): the remaining gap is in the
+  limits (cleaning is found only mid-run, and data read before then is dropped), not the labware. Seeds vary
+  (agent + reviews: 0.03 to 0.15); at 3 seeds, differences under about 0.1 are within seed noise.
+- A plate the arm sets down off its nest is caught by the deck camera and re-gripped from where it lies, each
+  time simulated in the MuJoCo cell (src/labloop/sim3d/regrasp.py): over these runs 165 re-grasps, 149 seated
+  (6.6 s and 47 / 47 at the liquid handler, 17 s and 28 / 34 at the reader); a plate left out of tolerance is
+  checked again, and a second miss calls a person.
 - Agent cost per campaign: about $0.13 (Haiku): limits $0.09, labware $0.005, prep $0.03, reviews $0.01.
 
 ## Ours vs. method baselines
