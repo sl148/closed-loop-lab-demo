@@ -5,7 +5,7 @@ compatibility_date = "2026-09-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://sl148.github.io"
-RUNS_PER_IP = "20"    # live runs per visitor per day (20 while testing; 3 for the public demo)
+RUNS_PER_IP = "10"    # live runs per visitor per day
 RUNS_PER_DAY = "60"   # live runs per day for the whole site
 SESSION_MIN = "30"    # one run's session lifetime (agent before launch + the data review)
 
