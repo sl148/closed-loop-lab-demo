@@ -2953,8 +2953,10 @@ function helpMap(host, detail) {
   f.nodes.agent.g.querySelector("text").textContent = "Review";
   { const n = f.nodes.robots, x = +n.cnt.getAttribute("x"), y = +n.cnt.getAttribute("y"); n.cnt.remove(); n.cnt = null;
     ["STARlet · SCARA arm", "incubator · reader"].forEach((t, i) => txt(n.g, x, y + i * 11, t, "font: 500 9.5px var(--mono); fill: var(--muted)"));
-    el("image", { href: PLR_LOGO, x, y: y + 15, width: 12, height: 12 }, n.g);
-    txt(n.g, x + 15, y + 25, "PyLabRobot", "font: 600 9.5px var(--mono); fill: var(--ink-2)"); }
+    const ln = el("a", { href: "https://docs.pylabrobot.org/", target: "_blank", rel: "noopener", class: "plr-link" }, n.g);  // its docs
+    ln.addEventListener("click", (e) => e.stopPropagation()); el("title", {}, ln).textContent = "PyLabRobot documentation";
+    el("image", { href: PLR_LOGO, x, y: y + 14, width: 20, height: 20 }, ln);
+    txt(ln, x + 23, y + 29, "PyLabRobot", "font: 600 12.5px var(--mono); fill: var(--accent); text-decoration: underline"); }
   HELP_PRE.forEach(([k, name, ic], i) => {
     if (i) f.edges["pre" + i] = el("path", { class: "cy-edge", d: `M${xs[i - 1] + r0 + 3},${y0} H${xs[i] - r0 - 5}`, "marker-end": "url(#helparrow)" }, s);
     const g = el("g", { class: "cy-node" + (k === "agentpre" ? " agent" : "") }, s);
