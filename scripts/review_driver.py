@@ -56,7 +56,8 @@ def main() -> None:
     log.touch()
     remote = f"results/m9/reviews/{args.variant}"
     sets = " ".join(shlex.quote(f"--set={s.strip()}") for s in Path(args.sets_file).read_text().splitlines() if s.strip())
-    run = (f"cd {args.repo} && mkdir -p {remote} && export PYTHONPATH=src PYTHONHASHSEED=0 LABLOOP_TORCH_THREADS=2 "
+    # MUJOCO_GL=egl: per-event MuJoCo re-grasps render the deck camera on the server
+    run = (f"cd {args.repo} && mkdir -p {remote} && export PYTHONPATH=src PYTHONHASHSEED=0 MUJOCO_GL=egl LABLOOP_TORCH_THREADS=2 "
            f"OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 && .venv/bin/python scripts/run_review.py --config {args.config} {sets} "
            f"--variant {args.variant} --seeds {args.seeds} --workers {args.workers} --log {remote}/decisions.jsonl "
            f"> {remote}/run.log 2>&1")
